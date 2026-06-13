@@ -1,0 +1,609 @@
+"use client";
+
+import {
+  AlertCircle,
+  BookOpen,
+  CheckCircle2,
+  FileSearch,
+  GraduationCap,
+  List,
+  Loader2,
+  Menu,
+  MessageSquareText,
+  PanelRightOpen,
+  Send,
+  ShieldCheck,
+  X,
+} from "lucide-react";
+import { FormEvent, useMemo, useState } from "react";
+
+type Role = "user" | "assistant";
+
+type Source = {
+  title: string;
+  sourceType?: string;
+  catalogYear?: string;
+  program?: string;
+  url?: string;
+  lastCheckedDate?: string;
+  fileName?: string;
+  score?: number;
+  snippet?: string;
+};
+
+type ChatMessage = {
+  id: string;
+  role: Role;
+  content: string;
+  sources?: Source[];
+  confidence?: "High" | "Medium" | "Low";
+  advisorVerificationNote?: string;
+  error?: boolean;
+};
+
+type ChatResponse = {
+  answer: string;
+  sources: Source[];
+  confidence: "High" | "Medium" | "Low";
+  advisorVerificationNote: string;
+};
+
+const exampleQuestions = [
+  "What are the Software Engineering degree requirements?",
+  "How does Computer Science differ from Software Engineering?",
+  "What courses count toward the AI Engineering certificate?",
+  "Which prerequisites should I verify before planning senior-year CSSE courses?",
+];
+
+const programs = [
+  "Software Engineering",
+  "Computer Science",
+  "Artificial Intelligence Engineering certificate",
+];
+
+const advisorNote =
+  "Advisor verification required: use this as preparation and verify your plan with an Auburn academic advisor.";
+
+function confidenceClass(confidence?: ChatMessage["confidence"]) {
+  if (confidence === "High") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  }
+
+  if (confidence === "Medium") {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+
+  return "border-orange-200 bg-orange-50 text-orange-800";
+}
+
+function sourceLabel(source: Source) {
+  return [source.program, source.catalogYear].filter(Boolean).join(" | ");
+}
+
+function ProgramPanel({ onSelect }: { onSelect: (question: string) => void }) {
+  return (
+    <aside className="flex h-full flex-col border-r border-slate-200 bg-white">
+      <div className="border-b border-slate-200 px-4 py-4">
+        <div className="flex items-center gap-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[#03244d]">
+            <List aria-hidden="true" size={19} strokeWidth={2.2} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold leading-5 text-slate-950">
+              Explore topics
+            </p>
+            <p className="text-[12px] font-medium text-slate-500">
+              Programs and example questions
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
+        <section>
+          <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            Programs
+          </h2>
+          <div className="mt-3 space-y-2">
+            {programs.map((program) => (
+              <div
+                className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-[13px] font-medium leading-5 text-slate-700"
+                key={program}
+              >
+                {program}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            Ask about CSSE requirements
+          </h2>
+          <div className="mt-3 space-y-2">
+            {exampleQuestions.map((question) => (
+              <button
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-left text-[13px] leading-5 text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] focus:outline-none focus:ring-2 focus:ring-[#dd550c]/35"
+                key={question}
+                onClick={() => onSelect(question)}
+                type="button"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
+          <div className="flex gap-3">
+            <ShieldCheck
+              aria-hidden="true"
+              className="mt-0.5 shrink-0 text-[#b84300]"
+              size={18}
+            />
+            <p className="text-[13px] leading-5 text-slate-700">
+              Verify Auburn degree plans and policy interpretations with your
+              assigned academic advisor before making registration decisions.
+            </p>
+          </div>
+        </section>
+      </div>
+    </aside>
+  );
+}
+
+function SourcesPanel({ message }: { message?: ChatMessage }) {
+  const sources = message?.sources ?? [];
+
+  return (
+    <aside className="flex h-full flex-col border-l border-slate-200 bg-white">
+      <div className="border-b border-slate-200 px-4 py-4">
+        <div className="flex items-center gap-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[#03244d]">
+            <FileSearch aria-hidden="true" size={19} strokeWidth={2.2} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-[15px] font-semibold text-slate-950">
+              Sources
+            </h2>
+            <p className="text-[12px] font-medium text-slate-500">
+              Retrieved Auburn material
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        {!message ? (
+          <div className="rounded-md border border-dashed border-slate-300 p-4 text-[13px] leading-5 text-slate-500">
+            Sources will appear after an assistant answer uses retrieved Auburn
+            material.
+          </div>
+        ) : sources.length === 0 ? (
+          <div className="rounded-md border border-orange-200 bg-orange-50 p-4">
+            <div className="flex gap-3">
+              <AlertCircle
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-orange-700"
+                size={18}
+              />
+              <div>
+                <p className="text-[13px] font-semibold text-orange-900">
+                  No retrieved Auburn source found
+                </p>
+                <p className="mt-1 text-[13px] leading-5 text-orange-800">
+                  The answer should be treated as low confidence until Auburn
+                  source materials are uploaded and retrieved.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sources.map((source, index) => (
+              <article
+                className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                key={`${source.fileName ?? source.title}-${index}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-[13px] font-semibold leading-5 text-slate-950">
+                    {source.url ? (
+                      <a
+                        className="hover:text-[#dd550c]"
+                        href={source.url}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {source.title}
+                      </a>
+                    ) : (
+                      source.title
+                    )}
+                  </h3>
+                  {typeof source.score === "number" ? (
+                    <span className="shrink-0 rounded-sm bg-white px-2 py-1 text-[11px] font-semibold text-slate-500">
+                      {Math.round(source.score * 100)}%
+                    </span>
+                  ) : null}
+                </div>
+                {sourceLabel(source) ? (
+                  <p className="mt-1 text-[12px] font-medium text-slate-500">
+                    {sourceLabel(source)}
+                  </p>
+                ) : null}
+                {source.fileName ? (
+                  <p className="mt-2 break-all text-[12px] text-slate-500">
+                    {source.fileName}
+                  </p>
+                ) : null}
+                {source.snippet ? (
+                  <p className="mt-3 line-clamp-5 text-[12px] leading-5 text-slate-600">
+                    {source.snippet}
+                  </p>
+                ) : null}
+                {source.lastCheckedDate ? (
+                  <p className="mt-3 text-[11px] font-medium text-slate-500">
+                    Last checked {source.lastCheckedDate}
+                  </p>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function MessageBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+
+  return (
+    <article className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+      <div
+        className={
+          isUser
+            ? "max-w-[min(82%,42rem)] rounded-md bg-[#03244d] px-3.5 py-3 text-[14px] leading-6 text-white shadow-sm sm:px-4"
+            : "max-w-[min(92%,46rem)] rounded-md border border-slate-200 bg-white px-3.5 py-3 text-[14px] leading-6 text-slate-800 shadow-sm sm:px-4"
+        }
+      >
+        {!isUser ? (
+          <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#03244d]">
+            <BookOpen aria-hidden="true" size={15} />
+            Auburn Academic Planner
+          </div>
+        ) : null}
+        <p className="whitespace-pre-wrap">{message.content}</p>
+
+        {!isUser ? (
+          <div className="mt-4 space-y-3 border-t border-slate-200 pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-sm border px-2.5 py-1 text-[12px] font-semibold ${confidenceClass(
+                  message.confidence,
+                )}`}
+              >
+                Confidence: {message.confidence ?? "Low"}
+              </span>
+              <span className="rounded-sm border border-slate-200 bg-slate-50 px-2.5 py-1 text-[12px] font-semibold text-slate-600">
+                Sources used: {message.sources?.length ?? 0}
+              </span>
+            </div>
+            <div className="rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
+              <div className="flex gap-2">
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-[#b84300]"
+                  size={16}
+                />
+                <p className="text-[12px] leading-5 text-slate-700">
+                  {message.advisorVerificationNote ?? advisorNote}
+                </p>
+              </div>
+            </div>
+            {message.sources && message.sources.length > 0 ? (
+              <div className="space-y-1">
+                {message.sources.map((source, index) => (
+                  <p
+                    className="text-[12px] leading-5 text-slate-600"
+                    key={`${source.fileName ?? source.title}-${index}`}
+                  >
+                    {index + 1}. {source.title}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12px] font-medium text-orange-800">
+                No retrieved Auburn source found.
+              </p>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function MobileDrawer({
+  children,
+  side = "left",
+  title,
+  onClose,
+}: {
+  children: React.ReactNode;
+  side?: "left" | "right";
+  title: string;
+  onClose: () => void;
+}) {
+  const visibilityClass = side === "right" ? "xl:hidden" : "lg:hidden";
+
+  return (
+    <div className={`fixed inset-0 z-50 bg-slate-950/35 ${visibilityClass}`}>
+      <div
+        className={`absolute inset-y-0 flex w-[min(88vw,360px)] flex-col bg-white shadow-xl ${
+          side === "right" ? "right-0" : "left-0"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <p className="text-[14px] font-semibold text-slate-950">{title}</p>
+          <button
+            aria-label="Close drawer"
+            className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 text-slate-600"
+            onClick={onClose}
+            type="button"
+          >
+            <X aria-hidden="true" size={18} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+export function ChatWorkspace() {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [draft, setDraft] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [leftOpen, setLeftOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+
+  const latestAssistantMessage = useMemo(
+    () => messages.findLast((message) => message.role === "assistant"),
+    [messages],
+  );
+
+  async function submitQuestion(question: string) {
+    const trimmed = question.trim();
+    if (!trimmed || isLoading) {
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: trimmed,
+    };
+
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    setDraft("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: nextMessages.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+        }),
+      });
+
+      const payload = (await response.json()) as Partial<ChatResponse> & {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "The assistant could not respond.");
+      }
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content:
+            payload.answer ??
+            "The retrieved Auburn sources did not provide enough information to answer confidently.",
+          sources: payload.sources ?? [],
+          confidence: payload.confidence ?? "Low",
+          advisorVerificationNote:
+            payload.advisorVerificationNote ?? advisorNote,
+        },
+      ]);
+    } catch (error) {
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content:
+            error instanceof Error
+              ? error.message
+              : "The assistant could not respond.",
+          sources: [],
+          confidence: "Low",
+          advisorVerificationNote: advisorNote,
+          error: true,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void submitQuestion(draft);
+  }
+
+  return (
+    <main className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden bg-slate-100 text-slate-950">
+      <header className="flex h-14 shrink-0 items-center justify-between bg-[#03244d] px-3 text-white shadow-sm sm:px-4 lg:h-16 lg:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            aria-label="Open program menu"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-white/20 text-white lg:hidden"
+            onClick={() => setLeftOpen(true)}
+            type="button"
+          >
+            <Menu aria-hidden="true" size={19} />
+          </button>
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white text-[#03244d]">
+            <GraduationCap aria-hidden="true" size={20} strokeWidth={2.2} />
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-[15px] font-semibold leading-5 sm:text-[16px]">
+              Auburn Academic Planner
+            </h1>
+            <p className="truncate text-[12px] text-white/70 lg:hidden">
+              Ask about CSSE requirements
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="hidden items-center gap-2 text-[13px] font-medium text-white/90 xl:flex">
+            <MessageSquareText aria-hidden="true" size={18} />
+            CSSE Academic Planning Assistant
+          </div>
+          <button
+            aria-label="Open sources"
+            className="grid h-9 w-9 place-items-center rounded-md border border-white/20 text-white xl:hidden"
+            onClick={() => setSourcesOpen(true)}
+            type="button"
+          >
+            <PanelRightOpen aria-hidden="true" size={19} />
+          </button>
+        </div>
+      </header>
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[256px_minmax(0,1fr)_320px]">
+        <div className="hidden min-h-0 lg:block">
+          <ProgramPanel onSelect={(question) => void submitQuestion(question)} />
+        </div>
+
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+          <div className="hidden h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 lg:flex">
+            <p className="text-[13px] font-medium text-slate-500">
+              Ask about CSSE requirements
+            </p>
+            <button
+              className="inline-flex h-8 items-center gap-2 rounded-md border border-slate-200 px-3 text-[13px] font-semibold text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] xl:hidden"
+              onClick={() => setSourcesOpen(true)}
+              type="button"
+            >
+              <PanelRightOpen aria-hidden="true" size={16} />
+              Sources
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5">
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+              {messages.length === 0 ? (
+                <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-[#03244d] text-white">
+                      <MessageSquareText aria-hidden="true" size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-[17px] font-semibold leading-6 text-slate-950 sm:text-[18px]">
+                        Plan advisor conversations with retrieved Auburn
+                        sources.
+                      </h2>
+                      <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
+                        Ask about Auburn Software Engineering, Computer Science,
+                        or the Artificial Intelligence Engineering certificate.
+                        Answers include sources, confidence, and advisor
+                        verification guidance.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                messages.map((message) => (
+                  <MessageBubble key={message.id} message={message} />
+                ))
+              )}
+
+              {isLoading ? (
+                <div className="flex justify-start">
+                  <div className="flex max-w-[92%] items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-600 shadow-sm">
+                    <Loader2
+                      aria-hidden="true"
+                      className="animate-spin text-[#dd550c]"
+                      size={18}
+                    />
+                    Searching uploaded Auburn sources...
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="shrink-0 border-t border-slate-200 bg-white px-3 py-3 sm:px-4 lg:px-5">
+            <form className="mx-auto flex w-full max-w-3xl gap-2 sm:gap-3" onSubmit={handleSubmit}>
+              <label className="sr-only" htmlFor="chat-input">
+                Ask about CSSE requirements
+              </label>
+              <input
+                className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-[14px] text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15 sm:h-12 sm:px-4"
+                disabled={isLoading}
+                id="chat-input"
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder="Ask about CSSE requirements..."
+                type="text"
+                value={draft}
+              />
+              <button
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-[#dd550c] text-white transition hover:bg-[#c54908] disabled:cursor-not-allowed disabled:bg-slate-300 sm:h-12 sm:w-12"
+                disabled={isLoading || !draft.trim()}
+                type="submit"
+              >
+                <span className="sr-only">Send question</span>
+                <Send aria-hidden="true" size={18} />
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <div className="hidden min-h-0 xl:block">
+          <SourcesPanel message={latestAssistantMessage} />
+        </div>
+      </div>
+
+      {leftOpen ? (
+        <MobileDrawer title="Programs" onClose={() => setLeftOpen(false)}>
+          <ProgramPanel
+            onSelect={(question) => {
+              setLeftOpen(false);
+              void submitQuestion(question);
+            }}
+          />
+        </MobileDrawer>
+      ) : null}
+
+      {sourcesOpen ? (
+        <MobileDrawer
+          side="right"
+          title="Sources"
+          onClose={() => setSourcesOpen(false)}
+        >
+          <SourcesPanel message={latestAssistantMessage} />
+        </MobileDrawer>
+      ) : null}
+    </main>
+  );
+}

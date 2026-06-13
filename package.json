@@ -6,9 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "sources:upload": "node --no-warnings --experimental-strip-types scripts/create-gemini-file-search-store.ts",
+    "eval:rag": "node --no-warnings --experimental-strip-types scripts/eval-rag.ts",
+    "eval:rag:list": "node --no-warnings --experimental-strip-types scripts/eval-rag.ts --list",
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/genai": "^2.8.0",
+    "lucide-react": "^1.18.0",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4"

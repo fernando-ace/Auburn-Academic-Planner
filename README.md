@@ -1,36 +1,162 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Auburn Academic Planner
 
-## Getting Started
+Auburn Academic Planner is a first prototype of a source-grounded academic planning assistant for Auburn CSSE students. It focuses on Software Engineering, Computer Science, and the Artificial Intelligence Engineering certificate.
 
-First, run the development server:
+The app is intentionally limited: it does not implement login, payments, automatic registration, official degree audits, or multi-school support. It helps students prepare for advising conversations and does not replace Auburn academic advisors.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Run Locally
+
+1. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Copy the environment example:
+
+   ```bash
+   copy .env.example .env.local
+   ```
+
+3. Fill in `.env.local`:
+
+   ```env
+   GEMINI_API_KEY=
+   GEMINI_MODEL=gemini-2.5-flash
+   GEMINI_FILE_SEARCH_STORE_NAME=
+   ```
+
+4. Upload the Auburn sources if you have not already created a Gemini File Search store:
+
+   ```bash
+   npm run sources:upload
+   ```
+
+   Copy the printed `GEMINI_FILE_SEARCH_STORE_NAME=...` value into `.env.local`.
+
+5. Start the app:
+
+   ```bash
+   npm run dev
+   ```
+
+6. Open `http://localhost:3000/chat`.
+
+## Create the Gemini File Search Store
+
+1. Collect current official Auburn source material for the supported programs:
+   - Auburn Bulletin pages for Software Engineering
+   - Auburn Bulletin pages for Computer Science
+   - Auburn Bulletin pages or PDFs for the Artificial Intelligence Engineering certificate
+   - Any official Auburn CSSE advising PDFs you want the assistant to use
+
+2. Save each source file under `sources/`. Nested folders are supported, such as:
+   - `sources/auburn/software-engineering-bulletin.html`
+   - `sources/auburn/computer-science-bulletin.html`
+   - `sources/auburn/cs-flowchart-spring-2025.pdf`
+
+3. Update `sources/manifest.json`. The current format is a top-level array, and each `fileName` must point to a file under `sources/`:
+
+   ```json
+   [
+     {
+       "id": "auburn-software-engineering-bulletin",
+       "title": "Software Engineering B.S. Bulletin",
+       "type": "bulletin",
+       "program": "software_engineering",
+       "catalogYear": "2025-2026",
+       "fileName": "auburn/software-engineering-bulletin.html",
+       "url": "https://bulletin.auburn.edu/",
+       "lastChecked": "2026-06-13"
+     }
+   ]
+   ```
+
+4. Make sure `GEMINI_API_KEY` is available. The upload script reads it from the shell environment first, then from `.env.local` or `.env`.
+
+   PowerShell example:
+
+   ```powershell
+   $env:GEMINI_API_KEY="..."
+   ```
+
+   `.env.local` example:
+
+   ```env
+   GEMINI_API_KEY=...
+   ```
+
+5. Upload the sources and create the Gemini File Search store:
+
+   ```bash
+   npm run sources:upload
+   ```
+
+   The script creates one store named `Auburn Academic Planner Sources`, uploads every manifest source, waits for each upload operation, and prints:
+
+   ```bash
+   GEMINI_FILE_SEARCH_STORE_NAME=fileSearchStores/...
+   ```
+
+6. Copy that store name into `.env.local`:
+
+   ```env
+   GEMINI_FILE_SEARCH_STORE_NAME=fileSearchStores/...
+   ```
+
+## Source Manifest
+
+`sources/manifest.json` uses a top-level array. Each source entry should include:
+
+```json
+{
+  "id": "auburn-computer-science-bulletin",
+  "title": "Computer Science B.S. Bulletin",
+  "type": "bulletin",
+  "program": "computer_science",
+  "catalogYear": "2025-2026",
+  "fileName": "auburn/computer-science-bulletin.html",
+  "url": "https://bulletin.auburn.edu/",
+  "lastChecked": "2026-06-13"
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Do not add unofficial or stale material unless you clearly label it. The assistant is designed to answer degree-requirement questions only from retrieved Auburn sources.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Model Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`GEMINI_MODEL` is optional. If it is missing, the app uses `gemini-2.5-flash` through `getGeminiModel()`.
 
-## Learn More
+You can change `GEMINI_MODEL` for cost, speed, or quality experiments. For production academic planning questions, evaluate answer quality and source-grounding behavior before changing the default.
 
-To learn more about Next.js, take a look at the following resources:
+## RAG Behavior
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The `/api/chat` route uses Gemini `generateContent` with the File Search tool enabled against `GEMINI_FILE_SEARCH_STORE_NAME`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Every assistant answer is normalized to include:
 
-## Deploy on Vercel
+- `answer`
+- `sources`
+- `confidence`
+- `advisorVerificationNote`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Displayed sources come from Gemini grounding metadata, not model-written citation text. If no real Auburn source is retrieved, the UI shows "No retrieved Auburn source found," and the answer is treated as low confidence.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Verification
+
+Run:
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+Manual checks:
+
+- `/chat` shows the empty state before any messages.
+- The app shows loading and error states during chat requests.
+- Assistant answers include sources used, confidence, and advisor verification note.
+- Desktop shows the left program rail and right Sources panel.
+- Mobile collapses both panels into drawers.
+- The UI never claims to replace advisors and does not offer registration automation.
