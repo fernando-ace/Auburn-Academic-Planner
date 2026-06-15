@@ -10,7 +10,7 @@ The MVP supports two complementary paths:
 
 - Gemini RAG chat for Auburn source-grounded advising questions.
 - Deterministic requirement checkers for quota-free progress review.
-- `/plan-check` supports manual AI Engineering certificate checks, AI Engineering sample and PDF checks, Software Engineering degree manual/sample/PDF checks, and a copyable Advisor Meeting Summary.
+- `/plan-check` supports a combined Degree Works PDF upload that runs both the AI Engineering certificate check and Software Engineering degree progress check from one upload, plus manual AI Engineering certificate checks, AI Engineering sample and PDF checks, Software Engineering degree manual/sample/PDF checks, and a copyable Advisor Meeting Summary.
 
 ## Demo flow
 
@@ -22,21 +22,23 @@ The MVP supports two complementary paths:
 
 2. Open `http://localhost:3000/chat`.
 3. Ask: `What courses are required for the Artificial Intelligence Engineering certificate?`
-4. Use Plan Check with the sample plan.
-5. Paste custom courses: `COMP 5600, COMP 5630, COMP 5130, COMP 5610`.
-6. Open `http://localhost:3000/plan-check`.
-7. Upload `sources/auburn/degreeworks-plan-sample.pdf`.
-8. Confirm the upload result shows 45 parsed courses.
-9. Confirm the AI certificate check is likely complete and advisor verification is required.
-10. In Software Engineering Degree Progress, run `Check sample Degree Works plan`.
-11. Upload `sources/auburn/degreeworks-plan-sample.pdf` to the Software Engineering Degree Works PDF checker.
-12. Confirm the Software Engineering PDF result shows:
-   - 45 parsed courses
-   - 122 planned credits
-   - 122 required credits
+4. Open `http://localhost:3000/plan-check`.
+5. In `Analyze Degree Works PDF`, upload `sources/auburn/degreeworks-plan-sample.pdf`.
+6. Confirm the shared parsed details show:
+   - source file name: `degreeworks-plan-sample.pdf`
+   - parsed course count: `45`
+   - total planned credits: `122`
+   - parsed courses in the collapsible summary
+7. Confirm the AI Engineering certificate result shows likely complete: `Yes`.
+8. Confirm the Software Engineering degree progress result shows:
+   - likely complete: `No`
    - missing exact courses: `ENGL 1100`, `ENGL 1120`, `ENGR 1100`, `ELEC 2200`
    - advisor verification required
-13. Confirm the Advisor Meeting Summary appears, includes missing exact courses and advisor questions, and can be copied for an advising meeting.
+9. Confirm the Advisor Meeting Summary appears, includes both AI Engineering certificate and Software Engineering degree progress checks, and can be copied for an advising meeting.
+10. Optional separate checks remain available:
+   - Paste custom AI certificate courses, such as `COMP 5600, COMP 5630, COMP 5130, COMP 5610`.
+   - Run the AI certificate sample or AI certificate PDF upload.
+   - Run the Software Engineering manual, sample, or separate Degree Works PDF checker.
 
 ## Trust and safety
 
@@ -57,7 +59,8 @@ The MVP supports two complementary paths:
 - `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
-- The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, or an uploaded Degree Works PDF against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, and advisor verification status.
+- The combined Degree Works PDF upload can analyze one uploaded PDF once, show shared parsed details, and run both the AI Engineering certificate checker and Software Engineering degree checker without calling Gemini.
+- The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, and advisor verification status.
 - The Advisor Meeting Summary turns the latest check results into copyable preparation notes with missing requirements, advisor-verified items, and questions to ask.
 - Desktop and mobile chat layouts include program and source panels.
 
@@ -216,7 +219,12 @@ npx tsc --noEmit
 npm run build
 ```
 
-Current deterministic test coverage: 32 tests.
+Current validation coverage:
+
+- 34 deterministic tests through `npm test`
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npm run build`
 
 Manual checks:
 
