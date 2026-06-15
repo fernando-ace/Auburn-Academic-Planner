@@ -544,6 +544,14 @@ function ParsedCourseCodes({
 
 export default function PlanCheckPage() {
   const [enteredCourses, setEnteredCourses] = useState("");
+  const [
+    enteredSoftwareEngineeringCourses,
+    setEnteredSoftwareEngineeringCourses,
+  ] = useState("");
+  const [
+    enteredSoftwareEngineeringTotalCredits,
+    setEnteredSoftwareEngineeringTotalCredits,
+  ] = useState("");
   const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
   const [
     selectedSoftwareEngineeringPdfFile,
@@ -563,6 +571,10 @@ export default function PlanCheckPage() {
     softwareEngineeringUploadValidationError,
     setSoftwareEngineeringUploadValidationError,
   ] = useState<string | null>(null);
+  const [
+    softwareEngineeringManualValidationError,
+    setSoftwareEngineeringManualValidationError,
+  ] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSoftwareEngineeringLoading, setIsSoftwareEngineeringLoading] =
     useState(false);
@@ -575,6 +587,10 @@ export default function PlanCheckPage() {
   const parsedCourseCodes = useMemo(
     () => parseCourseCodes(enteredCourses),
     [enteredCourses],
+  );
+  const parsedSoftwareEngineeringCourseCodes = useMemo(
+    () => parseCourseCodes(enteredSoftwareEngineeringCourses),
+    [enteredSoftwareEngineeringCourses],
   );
 
   async function runPlanCheck({
@@ -649,6 +665,59 @@ export default function PlanCheckPage() {
         fetchError instanceof Error
           ? fetchError.message
           : "The Software Engineering degree check could not run.",
+      );
+    } finally {
+      setIsSoftwareEngineeringLoading(false);
+    }
+  }
+
+  async function runSoftwareEngineeringManualPlanCheck({
+    courseCodes,
+    totalPlannedCredits,
+  }: {
+    courseCodes: string[];
+    totalPlannedCredits: number | null;
+  }) {
+    if (isSoftwareEngineeringLoading) {
+      return;
+    }
+
+    setIsSoftwareEngineeringLoading(true);
+    setSoftwareEngineeringError(null);
+    setSoftwareEngineeringLoadingMessage(
+      "Checking pasted plan against Software Engineering degree rules...",
+    );
+
+    try {
+      const response = await fetch(softwareEngineeringPlanCheckEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseCodes,
+          planDescription: "Pasted Software Engineering plan",
+          major: "Software Engineering",
+          totalPlannedCredits,
+        }),
+      });
+      const payload = (await response.json()) as
+        | SoftwareEngineeringPlanCheckResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The Software Engineering pasted plan check could not run.",
+        );
+      }
+
+      setSoftwareEngineeringResult(payload as SoftwareEngineeringPlanCheckResult);
+    } catch (fetchError) {
+      setSoftwareEngineeringResult(null);
+      setSoftwareEngineeringError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The Software Engineering pasted plan check could not run.",
       );
     } finally {
       setIsSoftwareEngineeringLoading(false);
@@ -735,6 +804,46 @@ export default function PlanCheckPage() {
   ) {
     event.preventDefault();
     void runSoftwareEngineeringPlanCheck();
+  }
+
+  function checkSoftwareEngineeringEnteredCourses(
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    event.preventDefault();
+    setSoftwareEngineeringManualValidationError(null);
+
+    if (parsedSoftwareEngineeringCourseCodes.length === 0) {
+      setSoftwareEngineeringResult(null);
+      setSoftwareEngineeringManualValidationError(
+        "Paste at least one Software Engineering course code before checking.",
+      );
+      return;
+    }
+
+    const totalCredits = enteredSoftwareEngineeringTotalCredits.trim();
+    let totalPlannedCredits: number | null = null;
+
+    if (totalCredits.length > 0) {
+      const parsedTotalPlannedCredits = Number(totalCredits);
+
+      if (
+        !Number.isFinite(parsedTotalPlannedCredits) ||
+        parsedTotalPlannedCredits < 0
+      ) {
+        setSoftwareEngineeringResult(null);
+        setSoftwareEngineeringManualValidationError(
+          "Enter total planned credits as a non-negative number, or leave it blank.",
+        );
+        return;
+      }
+
+      totalPlannedCredits = parsedTotalPlannedCredits;
+    }
+
+    void runSoftwareEngineeringManualPlanCheck({
+      courseCodes: parsedSoftwareEngineeringCourseCodes,
+      totalPlannedCredits,
+    });
   }
 
   function handlePdfFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -999,8 +1108,86 @@ export default function PlanCheckPage() {
               advisor-approved electives may not be captured by the simple
               parser yet.
             </p>
+
+            <div className="mt-5">
+              <label
+                className="text-[13px] font-semibold leading-5 text-slate-700"
+                htmlFor="software-engineering-planned-courses"
+              >
+                Paste Software Engineering plan courses
+              </label>
+              <textarea
+                className="mt-2 min-h-56 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-[14px] leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15"
+                disabled={isSoftwareEngineeringLoading}
+                id="software-engineering-planned-courses"
+                onChange={(event) =>
+                  setEnteredSoftwareEngineeringCourses(event.target.value)
+                }
+                placeholder={`COMP 1210\nCOMP 2210\nCOMP 2710\nPHIL 1020`}
+                value={enteredSoftwareEngineeringCourses}
+              />
+              <p className="mt-2 text-[13px] leading-5 text-slate-500">
+                Paste comma-separated courses, newline courses, or messy Degree
+                Works-style text. This check is deterministic and still needs
+                advisor review.
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-500">
+                Parsed courses:{" "}
+                {parsedSoftwareEngineeringCourseCodes.length > 0
+                  ? parsedSoftwareEngineeringCourseCodes.join(", ")
+                  : "none yet"}
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <label
+                className="text-[13px] font-semibold leading-5 text-slate-700"
+                htmlFor="software-engineering-total-planned-credits"
+              >
+                Total planned credits
+              </label>
+              <input
+                className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[14px] leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15"
+                disabled={isSoftwareEngineeringLoading}
+                id="software-engineering-total-planned-credits"
+                inputMode="decimal"
+                min="0"
+                onChange={(event) =>
+                  setEnteredSoftwareEngineeringTotalCredits(event.target.value)
+                }
+                placeholder="Optional, e.g. 122"
+                type="number"
+                value={enteredSoftwareEngineeringTotalCredits}
+              />
+              <p className="mt-2 text-[13px] leading-5 text-slate-500">
+                Leave blank when Degree Works, AP, transfer, substitution, or
+                elective credits still need advisor confirmation.
+              </p>
+              {softwareEngineeringManualValidationError ? (
+                <p className="mt-2 text-[13px] leading-5 text-orange-700">
+                  {softwareEngineeringManualValidationError}
+                </p>
+              ) : null}
+            </div>
+
             <button
               className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#03244d] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white transition hover:bg-[#021b3a] disabled:cursor-not-allowed disabled:bg-slate-300"
+              disabled={isSoftwareEngineeringLoading}
+              onClick={checkSoftwareEngineeringEnteredCourses}
+              type="button"
+            >
+              {isSoftwareEngineeringLoading ? (
+                <Loader2
+                  aria-hidden="true"
+                  className="animate-spin"
+                  size={17}
+                />
+              ) : null}
+              Check pasted Software Engineering plan
+            </button>
+
+            <button
+              className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-center text-[14px] font-semibold leading-5 text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               disabled={isSoftwareEngineeringLoading}
               onClick={checkSoftwareEngineeringSamplePlan}
               type="button"
