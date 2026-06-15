@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { FormEvent, MouseEvent, useMemo, useState } from "react";
 
+import { parseCourseCodes } from "@/lib/courses/course-code-parser";
+
 type Role = "user" | "assistant";
 
 type Source = {
@@ -84,7 +86,6 @@ const programs = [
 const advisorNote =
   "Advisor verification required: use this as preparation and verify your plan with an Auburn academic advisor.";
 const planCheckEndpoint = "/api/plan/check-ai-certificate";
-const courseCodePattern = /[A-Za-z]{2,5}\s*[0-9][A-Za-z0-9]{3}/g;
 
 function confidenceClass(confidence?: ChatMessage["confidence"]) {
   if (confidence === "High") {
@@ -142,18 +143,6 @@ function CourseList({
   );
 }
 
-function parseEnteredCourseCodes(value: string) {
-  const matches = value.match(courseCodePattern) ?? [];
-
-  return matches.map((courseCode) =>
-    courseCode
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, "")
-      .replace(/^([A-Z]+)([0-9][A-Z0-9]{3})$/, "$1 $2"),
-  );
-}
-
 function PlanCheckCard() {
   const [enteredCourses, setEnteredCourses] = useState("");
   const [result, setResult] = useState<PlanCheckResult | null>(null);
@@ -200,7 +189,7 @@ function PlanCheckCard() {
     event.preventDefault();
     event.stopPropagation();
 
-    const courseCodes = parseEnteredCourseCodes(enteredCourses);
+    const courseCodes = parseCourseCodes(enteredCourses);
 
     if (courseCodes.length === 0) {
       setResult(null);
