@@ -35,8 +35,40 @@ type PlanCheckResult = {
   notes: string[];
 };
 
+type SoftwareEngineeringAlternativeCourseGroup = {
+  name: string;
+  minimumCoursesRequired: number;
+  courses: PlanCheckCourse[];
+  satisfiedCourses: PlanCheckCourse[];
+  missingCourseOptions: PlanCheckCourse[];
+  isSatisfied: boolean;
+};
+
+type AdvisorVerifiedRequirement = {
+  name: string;
+  creditHoursRequired: number;
+};
+
+type SoftwareEngineeringPlanCheckResult = {
+  planDescription: string;
+  major: string;
+  program: string;
+  totalPlannedCredits: number | null;
+  exactRequiredCoursesSatisfied: PlanCheckCourse[];
+  exactRequiredCoursesMissing: PlanCheckCourse[];
+  alternativeCourseGroups: SoftwareEngineeringAlternativeCourseGroup[];
+  advisorVerifiedRequirements: AdvisorVerifiedRequirement[];
+  totalHoursRequired: number;
+  hasEnoughTotalCredits: boolean | null;
+  isLikelyComplete: boolean;
+  advisorVerificationRequired: boolean;
+  notes: string[];
+};
+
 const planCheckEndpoint = "/api/plan/check-ai-certificate";
 const planCheckUploadEndpoint = "/api/plan/check-ai-certificate/upload";
+const softwareEngineeringPlanCheckEndpoint =
+  "/api/plan/check-software-engineering";
 const samplePasteText = `COMP 5130
 COMP 5600
 COMP 5630
@@ -54,6 +86,18 @@ function BooleanPill({ value }: { value: boolean }) {
       {value ? "Yes" : "No"}
     </span>
   );
+}
+
+function NullableBooleanPill({ value }: { value: boolean | null }) {
+  if (value === null) {
+    return (
+      <span className="rounded-sm border border-slate-200 bg-slate-50 px-2.5 py-1 text-[13px] font-semibold text-slate-600">
+        Not provided
+      </span>
+    );
+  }
+
+  return <BooleanPill value={value} />;
 }
 
 function CourseList({
@@ -90,6 +134,36 @@ function CourseList({
               Advisor verification candidate
             </p>
           ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function AdvisorRequirementList({
+  requirements,
+}: {
+  requirements: AdvisorVerifiedRequirement[];
+}) {
+  return (
+    <ul className="grid gap-2 md:grid-cols-2">
+      {requirements.map((requirement) => (
+        <li
+          className="rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700"
+          key={requirement.name}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-semibold text-slate-950">
+              {requirement.name}
+            </span>
+            <span className="rounded-sm bg-slate-100 px-2 py-1 text-[12px] font-semibold text-slate-600">
+              {requirement.creditHoursRequired} credits
+            </span>
+          </div>
+          <p className="mt-1 text-slate-600">
+            Requires advisor, Degree Works, transfer, substitution, or elective
+            verification.
+          </p>
         </li>
       ))}
     </ul>
@@ -223,6 +297,184 @@ function ResultCard({ result }: { result: PlanCheckResult }) {
   );
 }
 
+function SoftwareEngineeringResultCard({
+  result,
+}: {
+  result: SoftwareEngineeringPlanCheckResult;
+}) {
+  return (
+    <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+            Plan source description
+          </p>
+          <h2 className="mt-2 text-[21px] font-semibold leading-7 text-slate-950">
+            {result.planDescription}
+          </h2>
+          <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
+            This extracted plan does not prove completion of every Software
+            Engineering requirement. AP, transfer, substitutions, Degree Works
+            hidden sections, and advisor-approved electives may not be captured
+            by the simple parser yet.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:w-[28rem]">
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Major
+            </p>
+            <p className="mt-1 text-[14px] font-semibold leading-5 text-slate-800">
+              {result.major}
+            </p>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Program
+            </p>
+            <p className="mt-1 text-[14px] font-semibold leading-5 text-slate-800">
+              {result.program}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-5">
+        <ResultSection title="Credit totals">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                Planned credits
+              </p>
+              <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">
+                {result.totalPlannedCredits ?? "Not provided"}
+              </p>
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                Required credits
+              </p>
+              <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">
+                {result.totalHoursRequired}
+              </p>
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-[14px] font-semibold text-slate-700">
+                Total credits pass
+              </p>
+              <NullableBooleanPill value={result.hasEnoughTotalCredits} />
+            </div>
+          </div>
+        </ResultSection>
+
+        <ResultSection title="Exact required courses satisfied">
+          <CourseList
+            courses={result.exactRequiredCoursesSatisfied}
+            emptyText="No exact required Software Engineering courses were found in this plan."
+          />
+        </ResultSection>
+
+        <ResultSection title="Exact required courses missing">
+          <CourseList
+            courses={result.exactRequiredCoursesMissing}
+            emptyText="No exact required Software Engineering courses are missing from the extracted plan."
+          />
+        </ResultSection>
+
+        <ResultSection title="Alternative course groups">
+          <div className="grid gap-3">
+            {result.alternativeCourseGroups.map((group) => (
+              <section
+                className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                key={group.name}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-[14px] font-semibold text-slate-950">
+                      {group.name}
+                    </h3>
+                    <p className="mt-1 text-[13px] leading-5 text-slate-600">
+                      Requires {group.minimumCoursesRequired} course
+                      {group.minimumCoursesRequired === 1 ? "" : "s"} from this
+                      group.
+                    </p>
+                  </div>
+                  <BooleanPill value={group.isSatisfied} />
+                </div>
+
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                  <div>
+                    <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      Satisfied options
+                    </p>
+                    <CourseList
+                      courses={group.satisfiedCourses}
+                      emptyText="No options from this group were found."
+                    />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      Other options
+                    </p>
+                    <CourseList
+                      courses={group.missingCourseOptions}
+                      emptyText="No additional options remain."
+                    />
+                  </div>
+                </div>
+              </section>
+            ))}
+          </div>
+        </ResultSection>
+
+        <ResultSection title="Advisor-verified requirement blocks">
+          <AdvisorRequirementList
+            requirements={result.advisorVerifiedRequirements}
+          />
+        </ResultSection>
+
+        <ResultSection title="Completion review">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-[14px] font-semibold text-slate-700">
+                Extracted plan likely proves completion
+              </p>
+              <BooleanPill value={result.isLikelyComplete} />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-[14px] font-semibold text-slate-700">
+                Advisor verification required
+              </p>
+              <BooleanPill value={result.advisorVerificationRequired} />
+            </div>
+          </div>
+        </ResultSection>
+
+        <ResultSection title="Notes">
+          <ul className="space-y-2 rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
+            {[
+              "This extracted plan does not prove completion of every Software Engineering requirement.",
+              ...result.notes,
+            ].map((note) => (
+              <li
+                className="flex gap-2 text-[13px] leading-5 text-slate-700"
+                key={note}
+              >
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-[#b84300]"
+                  size={16}
+                />
+                <span>{note}</span>
+              </li>
+            ))}
+          </ul>
+        </ResultSection>
+      </div>
+    </article>
+  );
+}
+
 function ParsedCourseCodes({
   courseCodes,
   parsedCourseCount,
@@ -265,11 +517,18 @@ export default function PlanCheckPage() {
   const [enteredCourses, setEnteredCourses] = useState("");
   const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
   const [result, setResult] = useState<PlanCheckResult | null>(null);
+  const [softwareEngineeringResult, setSoftwareEngineeringResult] =
+    useState<SoftwareEngineeringPlanCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [softwareEngineeringError, setSoftwareEngineeringError] = useState<
+    string | null
+  >(null);
   const [uploadValidationError, setUploadValidationError] = useState<
     string | null
   >(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSoftwareEngineeringLoading, setIsSoftwareEngineeringLoading] =
+    useState(false);
   const [loadingMessage, setLoadingMessage] = useState(
     "Checking entered courses against Auburn certificate rules...",
   );
@@ -319,6 +578,41 @@ export default function PlanCheckPage() {
     }
   }
 
+  async function runSoftwareEngineeringPlanCheck() {
+    if (isSoftwareEngineeringLoading) {
+      return;
+    }
+
+    setIsSoftwareEngineeringLoading(true);
+    setSoftwareEngineeringError(null);
+
+    try {
+      const response = await fetch(softwareEngineeringPlanCheckEndpoint);
+      const payload = (await response.json()) as
+        | SoftwareEngineeringPlanCheckResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The Software Engineering degree check could not run.",
+        );
+      }
+
+      setSoftwareEngineeringResult(payload as SoftwareEngineeringPlanCheckResult);
+    } catch (fetchError) {
+      setSoftwareEngineeringResult(null);
+      setSoftwareEngineeringError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The Software Engineering degree check could not run.",
+      );
+    } finally {
+      setIsSoftwareEngineeringLoading(false);
+    }
+  }
+
   function checkEnteredCourses(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
 
@@ -348,6 +642,13 @@ export default function PlanCheckPage() {
     void runPlanCheck({
       message: "Checking the sample Degree Works plan...",
     });
+  }
+
+  function checkSoftwareEngineeringSamplePlan(
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    event.preventDefault();
+    void runSoftwareEngineeringPlanCheck();
   }
 
   function handlePdfFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -429,7 +730,8 @@ export default function PlanCheckPage() {
       </header>
 
       <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:py-7">
-        <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="grid gap-5">
+          <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <h2 className="text-[22px] font-semibold leading-8 text-slate-950">
             AI Certificate Plan Check
           </h2>
@@ -548,7 +850,39 @@ export default function PlanCheckPage() {
               Check uploaded PDF
             </button>
           </section>
-        </section>
+          </section>
+
+          <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <h2 className="text-[22px] font-semibold leading-8 text-slate-950">
+              Software Engineering Degree Progress
+            </h2>
+            <p className="mt-2 text-[14px] leading-6 text-slate-600">
+              Checks the sample Degree Works plan against local Software
+              Engineering degree rules. This extracted plan does not prove
+              completion of every Software Engineering requirement.
+            </p>
+            <p className="mt-2 text-[13px] leading-5 text-slate-500">
+              AP, transfer, substitutions, Degree Works hidden sections, and
+              advisor-approved electives may not be captured by the simple
+              parser yet.
+            </p>
+            <button
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#03244d] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white transition hover:bg-[#021b3a] disabled:cursor-not-allowed disabled:bg-slate-300"
+              disabled={isSoftwareEngineeringLoading}
+              onClick={checkSoftwareEngineeringSamplePlan}
+              type="button"
+            >
+              {isSoftwareEngineeringLoading ? (
+                <Loader2
+                  aria-hidden="true"
+                  className="animate-spin"
+                  size={17}
+                />
+              ) : null}
+              Check sample Degree Works plan
+            </button>
+          </section>
+        </div>
 
         <section className="min-w-0">
           {error ? (
@@ -586,6 +920,48 @@ export default function PlanCheckPage() {
               candidates, completion status, advisor verification, and notes.
             </div>
           )}
+
+          <div className="mt-5">
+            {softwareEngineeringError ? (
+              <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-4">
+                <div className="flex gap-3">
+                  <AlertCircle
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0 text-orange-700"
+                    size={18}
+                  />
+                  <p className="text-[14px] leading-6 text-orange-800">
+                    {softwareEngineeringError}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {isSoftwareEngineeringLoading ? (
+              <div className="mb-4 flex items-center gap-3 rounded-md border border-slate-200 bg-white p-4 text-[14px] text-slate-600 shadow-sm">
+                <Loader2
+                  aria-hidden="true"
+                  className="animate-spin text-[#dd550c]"
+                  size={19}
+                />
+                Checking the sample Degree Works plan against Software
+                Engineering degree rules...
+              </div>
+            ) : null}
+
+            {softwareEngineeringResult ? (
+              <SoftwareEngineeringResultCard
+                result={softwareEngineeringResult}
+              />
+            ) : (
+              <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-[14px] leading-6 text-slate-500 shadow-sm">
+                Run the Software Engineering sample check to review credit
+                totals, exact required courses, alternative course groups,
+                advisor-verified blocks, notes, and whether the extracted plan
+                proves likely completion.
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </main>
