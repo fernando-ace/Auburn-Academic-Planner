@@ -10,6 +10,7 @@ The MVP supports two complementary paths:
 
 - Gemini RAG chat for Auburn source-grounded advising questions.
 - Deterministic AI certificate plan checker for quota-free requirement checks.
+- `/plan-check` supports manual course entry, the sample Degree Works plan check, and uploaded Degree Works PDF checks.
 
 ## Demo flow
 
@@ -23,12 +24,19 @@ The MVP supports two complementary paths:
 3. Ask: `What courses are required for the Artificial Intelligence Engineering certificate?`
 4. Use Plan Check with the sample plan.
 5. Paste custom courses: `COMP 5600, COMP 5630, COMP 5130, COMP 5610`.
+6. Open `http://localhost:3000/plan-check`.
+7. Upload `sources/auburn/degreeworks-plan-sample.pdf`.
+8. Confirm the upload result shows 45 parsed courses.
+9. Confirm the AI certificate check is likely complete and advisor verification is required.
 
 ## Trust and safety
 
 - The assistant is designed around official Auburn sources.
 - Sources are shown when RAG retrieves material.
 - Certificate requirement logic is checked by a deterministic local checker.
+- Uploaded PDFs are processed server-side for course extraction.
+- Uploaded PDFs are not permanently stored.
+- Uploaded PDF checks are deterministic and do not call Gemini.
 - Advisor verification is required for academic decisions.
 - The app helps prepare for advising conversations; it does not replace academic advisors.
 
@@ -41,10 +49,10 @@ The MVP supports two complementary paths:
 
 ## Next planned work
 
-- Degree Works PDF parsing.
+- Generalize upload flow for real student Degree Works PDFs.
+- Add a full Software Engineering degree rule checker.
+- Add prerequisite and semester validation.
 - More deterministic rule checkers.
-- Semester-by-semester plan validation.
-- Student upload flow.
 
 ## Run Locally
 
