@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   AlertCircle,
   BookOpen,
@@ -243,6 +244,12 @@ function PlanCheckCard() {
       </div>
 
       <div className="mt-3 grid gap-2">
+        <Link
+          className="inline-flex min-h-10 w-full items-center justify-center rounded-md border border-[#dd550c]/30 bg-[#fff7f1] px-3 py-2 text-center text-[13px] font-semibold leading-5 text-[#9b3900] transition hover:border-[#dd550c] hover:text-[#03244d]"
+          href="/plan-check"
+        >
+          Open full plan checker
+        </Link>
         <button
           className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-center text-[13px] font-semibold leading-5 text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
           disabled={isLoading}
