@@ -4,6 +4,48 @@ Auburn Academic Planner is a first prototype of a source-grounded academic plann
 
 The app is intentionally limited: it does not implement login, payments, automatic registration, official degree audits, or multi-school support. It helps students prepare for advising conversations and does not replace Auburn academic advisors.
 
+## Current MVP
+
+The MVP supports two complementary paths:
+
+- Gemini RAG chat for Auburn source-grounded advising questions.
+- Deterministic AI certificate plan checker for quota-free requirement checks.
+
+## Demo flow
+
+1. Start the dev server:
+
+   ```bash
+   npm run dev
+   ```
+
+2. Open `http://localhost:3000/chat`.
+3. Ask: `What courses are required for the Artificial Intelligence Engineering certificate?`
+4. Use Plan Check with the sample plan.
+5. Paste custom courses: `COMP 5600, COMP 5630, COMP 5130, COMP 5610`.
+
+## Trust and safety
+
+- The assistant is designed around official Auburn sources.
+- Sources are shown when RAG retrieves material.
+- Certificate requirement logic is checked by a deterministic local checker.
+- Advisor verification is required for academic decisions.
+- The app helps prepare for advising conversations; it does not replace academic advisors.
+
+## What works now
+
+- `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
+- Assistant answers show retrieved sources, confidence, and an advisor verification note.
+- The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
+- Desktop and mobile chat layouts include program and source panels.
+
+## Next planned work
+
+- Degree Works PDF parsing.
+- More deterministic rule checkers.
+- Semester-by-semester plan validation.
+- Student upload flow.
+
 ## Run Locally
 
 1. Install dependencies:
