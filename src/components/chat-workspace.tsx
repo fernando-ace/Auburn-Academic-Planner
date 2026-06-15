@@ -784,6 +784,12 @@ export function ChatWorkspace() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <Link
+            className="inline-flex h-9 items-center rounded-md border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10"
+            href="/plan-check"
+          >
+            Plan Check
+          </Link>
           <div className="hidden items-center gap-2 text-[13px] font-medium text-white/90 xl:flex">
             <MessageSquareText aria-hidden="true" size={18} />
             CSSE Academic Planning Assistant

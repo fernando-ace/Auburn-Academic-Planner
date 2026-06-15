@@ -291,7 +291,7 @@ export default function PlanCheckPage() {
             href="/chat"
           >
             <ArrowLeft aria-hidden="true" size={16} />
-            Back to chat
+            Back to Chat
           </Link>
         </div>
       </header>
