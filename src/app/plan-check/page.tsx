@@ -5,10 +5,11 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardCheck,
+  FileUp,
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { MouseEvent, useMemo, useState } from "react";
+import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
 
 import { parseCourseCodes } from "@/lib/courses/course-code-parser";
 
@@ -20,9 +21,12 @@ type PlanCheckCourse = {
 };
 
 type PlanCheckResult = {
-  planDescription: string;
-  major: string;
-  totalPlannedCredits: number | null;
+  planDescription?: string;
+  major?: string;
+  totalPlannedCredits?: number | null;
+  sourceFileName?: string;
+  parsedCourseCodes?: string[];
+  parsedCourseCount?: number;
   requiredCoursesSatisfied: PlanCheckCourse[];
   requiredCoursesMissing: PlanCheckCourse[];
   electiveCandidatesFound: PlanCheckCourse[];
@@ -32,6 +36,7 @@ type PlanCheckResult = {
 };
 
 const planCheckEndpoint = "/api/plan/check-ai-certificate";
+const planCheckUploadEndpoint = "/api/plan/check-ai-certificate/upload";
 const samplePasteText = `COMP 5130
 COMP 5600
 COMP 5630
@@ -109,38 +114,55 @@ function ResultSection({
 }
 
 function ResultCard({ result }: { result: PlanCheckResult }) {
+  const hasUploadedPdfResult =
+    typeof result.sourceFileName === "string" ||
+    typeof result.parsedCourseCount === "number";
+
   return (
     <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
-            Plan description
+            {hasUploadedPdfResult ? "Plan source" : "Plan description"}
           </p>
           <h2 className="mt-2 text-[21px] font-semibold leading-7 text-slate-950">
-            {result.planDescription}
+            {result.planDescription ?? "Uploaded Degree Works PDF"}
           </h2>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[24rem]">
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
             <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-              Major
+              {hasUploadedPdfResult ? "Source file" : "Major"}
             </p>
             <p className="mt-1 text-[14px] font-semibold leading-5 text-slate-800">
-              {result.major}
+              {result.sourceFileName ?? result.major ?? "Not provided"}
             </p>
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
             <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-              Total planned credits
+              {hasUploadedPdfResult
+                ? "Parsed course count"
+                : "Total planned credits"}
             </p>
             <p className="mt-1 text-[14px] font-semibold leading-5 text-slate-800">
-              {result.totalPlannedCredits ?? "Not provided"}
+              {hasUploadedPdfResult
+                ? (result.parsedCourseCount ?? 0)
+                : (result.totalPlannedCredits ?? "Not provided")}
             </p>
           </div>
         </div>
       </div>
 
       <div className="mt-5 grid gap-5">
+        {hasUploadedPdfResult ? (
+          <ResultSection title="Parsed course codes">
+            <ParsedCourseCodes
+              courseCodes={result.parsedCourseCodes ?? []}
+              parsedCourseCount={result.parsedCourseCount ?? 0}
+            />
+          </ResultSection>
+        ) : null}
+
         <ResultSection title="Required courses satisfied">
           <CourseList
             courses={result.requiredCoursesSatisfied}
@@ -201,27 +223,81 @@ function ResultCard({ result }: { result: PlanCheckResult }) {
   );
 }
 
+function ParsedCourseCodes({
+  courseCodes,
+  parsedCourseCount,
+}: {
+  courseCodes: string[];
+  parsedCourseCount: number;
+}) {
+  if (courseCodes.length === 0) {
+    return (
+      <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+        No course codes were parsed from this PDF.
+      </p>
+    );
+  }
+
+  const previewCodes = courseCodes.slice(0, 12);
+  const hiddenCount = Math.max(0, parsedCourseCount - previewCodes.length);
+
+  return (
+    <details className="rounded-md border border-slate-200 bg-slate-50 p-3 text-[13px] leading-5 text-slate-700">
+      <summary className="cursor-pointer font-semibold text-slate-800">
+        {parsedCourseCount} parsed courses
+        {hiddenCount > 0 ? `, showing first ${previewCodes.length}` : ""}
+      </summary>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {courseCodes.map((courseCode) => (
+          <span
+            className="rounded-sm border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700"
+            key={courseCode}
+          >
+            {courseCode}
+          </span>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export default function PlanCheckPage() {
   const [enteredCourses, setEnteredCourses] = useState("");
+  const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
   const [result, setResult] = useState<PlanCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadValidationError, setUploadValidationError] = useState<
+    string | null
+  >(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState(
+    "Checking entered courses against Auburn certificate rules...",
+  );
 
   const parsedCourseCodes = useMemo(
     () => parseCourseCodes(enteredCourses),
     [enteredCourses],
   );
 
-  async function runPlanCheck(request: RequestInit = {}) {
+  async function runPlanCheck({
+    endpoint = planCheckEndpoint,
+    request = {},
+    message = "Checking entered courses against Auburn certificate rules...",
+  }: {
+    endpoint?: string;
+    request?: RequestInit;
+    message?: string;
+  } = {}) {
     if (isLoading) {
       return;
     }
 
     setIsLoading(true);
     setError(null);
+    setLoadingMessage(message);
 
     try {
-      const response = await fetch(planCheckEndpoint, request);
+      const response = await fetch(endpoint, request);
       const payload = (await response.json()) as Partial<PlanCheckResult> & {
         error?: string;
       };
@@ -253,20 +329,76 @@ export default function PlanCheckPage() {
     }
 
     void runPlanCheck({
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        courseCodes: parsedCourseCodes,
-        planDescription: "Custom entered plan",
-        major: "Software Engineering",
-        totalPlannedCredits: null,
-      }),
+      request: {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseCodes: parsedCourseCodes,
+          planDescription: "Custom entered plan",
+          major: "Software Engineering",
+          totalPlannedCredits: null,
+        }),
+      },
+      message: "Checking entered courses against Auburn certificate rules...",
     });
   }
 
   function checkSamplePlan(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
-    void runPlanCheck();
+    void runPlanCheck({
+      message: "Checking the sample Degree Works plan...",
+    });
+  }
+
+  function handlePdfFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedPdfFile(file);
+    setUploadValidationError(null);
+
+    if (!file) {
+      return;
+    }
+
+    if (!isPdfFile(file)) {
+      setSelectedPdfFile(null);
+      setUploadValidationError("Choose a PDF file before running the check.");
+      event.target.value = "";
+    }
+  }
+
+  function checkUploadedPdf(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    setUploadValidationError(null);
+
+    if (!selectedPdfFile) {
+      setResult(null);
+      setUploadValidationError("Choose a Degree Works PDF before checking.");
+      return;
+    }
+
+    if (!isPdfFile(selectedPdfFile)) {
+      setResult(null);
+      setUploadValidationError("Choose a PDF file before running the check.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", selectedPdfFile);
+
+    void runPlanCheck({
+      endpoint: planCheckUploadEndpoint,
+      request: {
+        method: "POST",
+        body: formData,
+      },
+      message: "Checking uploaded Degree Works PDF...",
+    });
+  }
+
+  function isPdfFile(file: File) {
+    return (
+      file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+    );
   }
 
   return (
@@ -366,6 +498,56 @@ export default function PlanCheckPage() {
               Check sample Degree Works plan
             </button>
           </div>
+
+          <section className="mt-6 border-t border-slate-200 pt-5">
+            <div className="flex items-center gap-2">
+              <FileUp aria-hidden="true" className="text-[#dd550c]" size={18} />
+              <h2 className="text-[16px] font-semibold leading-6 text-slate-950">
+                Upload Degree Works PDF
+              </h2>
+            </div>
+            <div className="mt-3">
+              <label
+                className="text-[13px] font-semibold leading-5 text-slate-700"
+                htmlFor="degreeworks-pdf"
+              >
+                Degree Works PDF
+              </label>
+              <input
+                accept="application/pdf"
+                className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15"
+                disabled={isLoading}
+                id="degreeworks-pdf"
+                onChange={handlePdfFileChange}
+                type="file"
+              />
+              {selectedPdfFile ? (
+                <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                  Selected: {selectedPdfFile.name}
+                </p>
+              ) : null}
+              {uploadValidationError ? (
+                <p className="mt-2 text-[13px] leading-5 text-orange-700">
+                  {uploadValidationError}
+                </p>
+              ) : null}
+            </div>
+            <button
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#dd550c] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white transition hover:bg-[#b84300] disabled:cursor-not-allowed disabled:bg-slate-300"
+              disabled={isLoading}
+              onClick={checkUploadedPdf}
+              type="button"
+            >
+              {isLoading ? (
+                <Loader2
+                  aria-hidden="true"
+                  className="animate-spin"
+                  size={17}
+                />
+              ) : null}
+              Check uploaded PDF
+            </button>
+          </section>
         </section>
 
         <section className="min-w-0">
@@ -391,7 +573,7 @@ export default function PlanCheckPage() {
                 className="animate-spin text-[#dd550c]"
                 size={19}
               />
-              Checking entered courses against Auburn certificate rules...
+              {loadingMessage}
             </div>
           ) : null}
 
