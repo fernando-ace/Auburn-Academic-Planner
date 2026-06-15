@@ -1,0 +1,36 @@
+{
+  "certificateName": "Artificial Intelligence Engineering Certificate",
+  "catalogYear": "2025-2026",
+  "totalHoursRequired": 12,
+  "sourceId": "auburn-ai-engineering-certificate",
+  "requiredCourses": [
+    {
+      "code": "COMP 5600",
+      "title": "Artificial Intelligence",
+      "creditHours": 3
+    },
+    {
+      "code": "COMP 5630",
+      "title": "Machine Learning",
+      "creditHours": 3
+    },
+    {
+      "code": "COMP 5130",
+      "title": "Data Mining",
+      "creditHours": 3
+    }
+  ],
+  "electiveRequirement": {
+    "description": "Department-approved AI elective",
+    "creditHoursRequired": 3,
+    "approvalRequired": true,
+    "candidateCourses": [
+      {
+        "code": "COMP 5610",
+        "title": "Artificial Intelligence Programming",
+        "creditHours": 3,
+        "approvalStatus": "candidate_requires_advisor_verification"
+      }
+    ]
+  }
+}

@@ -9,6 +9,7 @@
     "sources:upload": "node --no-warnings --experimental-strip-types scripts/create-gemini-file-search-store.ts",
     "eval:rag": "node --no-warnings --experimental-strip-types scripts/eval-rag.ts",
     "eval:rag:list": "node --no-warnings --experimental-strip-types scripts/eval-rag.ts --list",
+    "test": "node --test --no-warnings --experimental-strip-types tests/*.test.ts",
     "lint": "eslint"
   },
   "dependencies": {
