@@ -1,5 +1,6 @@
 import { parseCourseCodes } from "../../../../../lib/courses/course-code-parser.ts";
 import { extractPdfText, hasPdfHeader } from "../../../../../lib/pdf/pdf-text.ts";
+import { extractTotalPlannedCredits } from "../../../../../lib/plan/total-planned-credits.ts";
 import { checkSoftwareEngineeringDegree } from "../../../../../lib/rules/software-engineering-degree.ts";
 
 export const runtime = "nodejs";
@@ -41,8 +42,10 @@ export async function POST(request: Request) {
 
   const pdfText = await extractPdfText(pdfData);
   const parsedCourseCodes = parseCourseCodes(pdfText);
+  const totalPlannedCredits = extractTotalPlannedCredits(pdfText);
   const degreeCheck = checkSoftwareEngineeringDegree({
     courseCodes: parsedCourseCodes,
+    totalPlannedCredits,
   });
 
   return Response.json({
