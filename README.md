@@ -29,6 +29,8 @@ The MVP supports two complementary paths:
    - parsed course count: `45`
    - total planned credits: `122`
    - parsed courses in the collapsible summary
+   - parser confidence
+   - PDF parsing notes when parser warnings or signals are present
 7. Confirm the AI Engineering certificate result shows likely complete: `Yes`.
 8. Confirm the Software Engineering degree progress result shows:
    - likely complete: `No`
@@ -48,10 +50,11 @@ The MVP supports two complementary paths:
 - Uploaded PDFs are processed server-side for course extraction.
 - Uploaded PDFs are not permanently stored.
 - Uploaded PDF checks are deterministic and do not call Gemini.
+- Degree Works PDF results include parser confidence, parser warnings, and detected AP, transfer, substitution, exception, in-progress, or insufficient-text signals when the extracted text suggests extra advisor review is needed.
 - The Advisor Meeting Summary is local, deterministic, and does not call Gemini.
 - Advisor verification is required for academic decisions.
-- The Software Engineering checker is a progress check, not a final academic judgment. AP, transfer credit, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering still require advisor review.
-- The Advisor Meeting Summary is preparation material, not an official degree audit.
+- The Software Engineering checker is a progress check, not a final academic judgment. Real Degree Works PDFs can include AP, transfer credit, substitutions, exceptions, hidden sections, in-progress coursework, electives, prerequisites, and semester ordering that still require advisor review.
+- The Advisor Meeting Summary is a preparation summary, not an official degree audit.
 - The app helps prepare for advising conversations; it does not replace academic advisors.
 
 ## What works now
@@ -59,14 +62,13 @@ The MVP supports two complementary paths:
 - `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
-- The combined Degree Works PDF upload can analyze one uploaded PDF once, show shared parsed details, and run both the AI Engineering certificate checker and Software Engineering degree checker without calling Gemini.
-- The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, and advisor verification status.
-- The Advisor Meeting Summary turns the latest check results into copyable preparation notes with missing requirements, advisor-verified items, and questions to ask.
+- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show shared parsed details, parser confidence, parser warnings, detected PDF signals, and run both the AI Engineering certificate checker and Software Engineering degree checker without calling Gemini.
+- The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, parser diagnostics, and advisor verification status.
+- The Advisor Meeting Summary turns the latest check results into copyable preparation notes with missing requirements, parser warnings, advisor-verified items, and questions to ask.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Next planned work
 
-- Generalize upload flow for real student Degree Works PDFs.
 - Add prerequisite and semester validation.
 - More deterministic rule checkers.
 
@@ -221,7 +223,7 @@ npm run build
 
 Current validation coverage:
 
-- 34 deterministic tests through `npm test`
+- 40 deterministic tests through `npm test`
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`

@@ -23,7 +23,10 @@ test("builds advisor summary for AI certificate result only", () => {
   assert.match(summary, /Required courses satisfied: COMP 5600, COMP 5630/);
   assert.match(summary, /Required courses missing: COMP 5130/);
   assert.match(summary, /AI elective candidates found: COMP 5610/);
-  assert.match(summary, /This is not an official degree audit\./);
+  assert.match(
+    summary,
+    /This is a preparation summary, not an official degree audit\./,
+  );
 });
 
 test("builds advisor summary for Software Engineering result only", () => {
@@ -54,6 +57,18 @@ test("builds advisor summary for Software Engineering result only", () => {
 
 test("builds advisor summary for combined Degree Works result", () => {
   const courseCodes = getDegreeWorksPlanSampleCourseCodes();
+  const detectedSignals = {
+    hasTransferCreditSignal: true,
+    hasApCreditSignal: true,
+    hasInProgressSignal: true,
+    hasSubstitutionSignal: true,
+    hasExceptionSignal: true,
+    hasInsufficientTextSignal: false,
+  };
+  const parserWarnings = [
+    "Possible AP, AICE, IB, or Advanced Placement credit was detected and needs advisor verification.",
+    "Possible transfer credit was detected and needs advisor verification.",
+  ];
   const aiResult = {
     ...buildCustomAiCertificatePlanCheck({
       courseCodes,
@@ -64,6 +79,9 @@ test("builds advisor summary for combined Degree Works result", () => {
     sourceFileName: "degreeworks-plan-sample.pdf",
     parsedCourseCodes: courseCodes,
     parsedCourseCount: courseCodes.length,
+    detectedSignals,
+    parserWarnings,
+    parserConfidence: "medium" as const,
   };
   const softwareEngineeringResult = {
     ...checkSoftwareEngineeringDegree({
@@ -75,6 +93,9 @@ test("builds advisor summary for combined Degree Works result", () => {
     sourceFileName: "degreeworks-plan-sample.pdf",
     parsedCourseCodes: courseCodes,
     parsedCourseCount: courseCodes.length,
+    detectedSignals,
+    parserWarnings,
+    parserConfidence: "medium" as const,
   };
 
   const summary = buildAdvisorMeetingSummary({
@@ -85,12 +106,19 @@ test("builds advisor summary for combined Degree Works result", () => {
   assert.match(summary, /AI Engineering Certificate/);
   assert.match(summary, /Software Engineering Degree Progress/);
   assert.match(summary, new RegExp(`Parsed course count: ${courseCodes.length}`));
+  assert.match(summary, /Parser confidence: medium/);
+  assert.match(summary, /Parser warnings:/);
+  assert.match(summary, /Possible AP, AICE, IB, or Advanced Placement credit/);
   assert.match(summary, /Questions to ask an advisor:/);
   assert.match(summary, /AP, transfer, substitutions/);
   assert.match(summary, /electives, prerequisites, and semester ordering/);
   assert.match(
     summary,
     /Do AP, transfer, substitutions, or repeated courses change this progress check\?/,
+  );
+  assert.match(
+    summary,
+    /Can you verify whether AP, transfer, substitution, exception, or in-progress coursework changes this requirement check\?/,
   );
   assert.match(
     summary,

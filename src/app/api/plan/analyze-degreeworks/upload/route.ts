@@ -1,6 +1,5 @@
-import { parseCourseCodes } from "../../../../../lib/courses/course-code-parser.ts";
 import { extractPdfText, hasPdfHeader } from "../../../../../lib/pdf/pdf-text.ts";
-import { extractTotalPlannedCredits } from "../../../../../lib/plan/total-planned-credits.ts";
+import { analyzeDegreeWorksText } from "../../../../../lib/plan/degreeworks-analysis.ts";
 import { checkAiEngineeringCertificate } from "../../../../../lib/rules/ai-certificate.ts";
 import { checkSoftwareEngineeringDegree } from "../../../../../lib/rules/software-engineering-degree.ts";
 
@@ -42,20 +41,22 @@ export async function POST(request: Request) {
   }
 
   const pdfText = await extractPdfText(pdfData);
-  const parsedCourseCodes = parseCourseCodes(pdfText);
-  const totalPlannedCredits = extractTotalPlannedCredits(pdfText);
+  const degreeWorksAnalysis = analyzeDegreeWorksText(pdfText);
   const aiCertificateCheck =
-    checkAiEngineeringCertificate(parsedCourseCodes);
+    checkAiEngineeringCertificate(degreeWorksAnalysis.parsedCourseCodes);
   const softwareEngineeringCheck = checkSoftwareEngineeringDegree({
-    courseCodes: parsedCourseCodes,
-    totalPlannedCredits,
+    courseCodes: degreeWorksAnalysis.parsedCourseCodes,
+    totalPlannedCredits: degreeWorksAnalysis.totalPlannedCredits,
   });
 
   return Response.json({
     sourceFileName: uploadedFile.name,
-    parsedCourseCount: parsedCourseCodes.length,
-    parsedCourseCodes,
-    totalPlannedCredits,
+    parsedCourseCount: degreeWorksAnalysis.parsedCourseCount,
+    parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
+    totalPlannedCredits: degreeWorksAnalysis.totalPlannedCredits,
+    detectedSignals: degreeWorksAnalysis.detectedSignals,
+    parserWarnings: degreeWorksAnalysis.parserWarnings,
+    parserConfidence: degreeWorksAnalysis.confidence,
     aiCertificateCheck,
     softwareEngineeringCheck,
     notes: [

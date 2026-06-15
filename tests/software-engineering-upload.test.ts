@@ -23,6 +23,9 @@ test("POST extracts Software Engineering total planned credits from uploaded Deg
   assert.equal(result.sourceFileName, "degreeworks-plan-sample.pdf");
   assert.equal(result.parsedCourseCount, 45);
   assert.equal(result.totalPlannedCredits, 122);
+  assert.match(result.parserConfidence, /^(high|medium|low)$/);
+  assert.ok(Array.isArray(result.parserWarnings));
+  assert.equal(typeof result.detectedSignals.hasInProgressSignal, "boolean");
   assert.equal(result.hasEnoughTotalCredits, true);
   assert.deepEqual(
     result.exactRequiredCoursesMissing.map(

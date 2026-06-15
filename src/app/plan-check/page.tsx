@@ -13,6 +13,10 @@ import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
 
 import { parseCourseCodes } from "@/lib/courses/course-code-parser";
 import { buildAdvisorMeetingSummary } from "@/lib/plan/advisor-meeting-summary";
+import type {
+  DegreeWorksDetectedSignals,
+  DegreeWorksParserConfidence,
+} from "@/lib/plan/degreeworks-analysis";
 
 type PlanCheckCourse = {
   code: string;
@@ -28,6 +32,9 @@ type PlanCheckResult = {
   sourceFileName?: string;
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
+  detectedSignals?: DegreeWorksDetectedSignals;
+  parserWarnings?: string[];
+  parserConfidence?: DegreeWorksParserConfidence;
   requiredCoursesSatisfied: PlanCheckCourse[];
   requiredCoursesMissing: PlanCheckCourse[];
   electiveCandidatesFound: PlanCheckCourse[];
@@ -57,6 +64,9 @@ type SoftwareEngineeringPlanCheckResult = {
   sourceFileName?: string;
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
+  detectedSignals?: DegreeWorksDetectedSignals;
+  parserWarnings?: string[];
+  parserConfidence?: DegreeWorksParserConfidence;
   totalPlannedCredits: number | null;
   exactRequiredCoursesSatisfied: PlanCheckCourse[];
   exactRequiredCoursesMissing: PlanCheckCourse[];
@@ -74,6 +84,9 @@ type CombinedDegreeWorksUploadResult = {
   parsedCourseCount: number;
   parsedCourseCodes: string[];
   totalPlannedCredits: number | null;
+  detectedSignals: DegreeWorksDetectedSignals;
+  parserWarnings: string[];
+  parserConfidence: DegreeWorksParserConfidence;
   aiCertificateCheck: Omit<
     PlanCheckResult,
     | "planDescription"
@@ -132,6 +145,106 @@ function NullableBooleanPill({ value }: { value: boolean | null }) {
   }
 
   return <BooleanPill value={value} />;
+}
+
+function hasAdvisorWarningSignals(detectedSignals?: DegreeWorksDetectedSignals) {
+  if (!detectedSignals) {
+    return false;
+  }
+
+  return (
+    detectedSignals.hasApCreditSignal ||
+    detectedSignals.hasTransferCreditSignal ||
+    detectedSignals.hasSubstitutionSignal ||
+    detectedSignals.hasExceptionSignal ||
+    detectedSignals.hasInProgressSignal
+  );
+}
+
+function getDetectedSignalLabels(detectedSignals?: DegreeWorksDetectedSignals) {
+  if (!detectedSignals) {
+    return [];
+  }
+
+  return [
+    detectedSignals.hasApCreditSignal ? "AP/AICE/IB" : null,
+    detectedSignals.hasTransferCreditSignal ? "Transfer credit" : null,
+    detectedSignals.hasInProgressSignal ? "In progress" : null,
+    detectedSignals.hasSubstitutionSignal ? "Substitution" : null,
+    detectedSignals.hasExceptionSignal ? "Exception/waiver" : null,
+    detectedSignals.hasInsufficientTextSignal ? "Insufficient text" : null,
+  ].filter((label): label is string => Boolean(label));
+}
+
+function ParserNotes({
+  detectedSignals,
+  parserConfidence,
+  parserWarnings = [],
+}: {
+  detectedSignals?: DegreeWorksDetectedSignals;
+  parserConfidence?: DegreeWorksParserConfidence;
+  parserWarnings?: string[];
+}) {
+  if (!parserConfidence && parserWarnings.length === 0 && !detectedSignals) {
+    return null;
+  }
+
+  const signalLabels = getDetectedSignalLabels(detectedSignals);
+  const shouldShowAdvisorCaveat = hasAdvisorWarningSignals(detectedSignals);
+
+  return (
+    <div className="rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[14px] font-semibold text-slate-800">
+          PDF parsing notes
+        </p>
+        {parserConfidence ? (
+          <span className="rounded-sm border border-[#dd550c]/25 bg-white px-2 py-1 text-[12px] font-semibold uppercase text-[#9b3900]">
+            Confidence: {parserConfidence}
+          </span>
+        ) : null}
+      </div>
+
+      {signalLabels.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {signalLabels.map((signalLabel) => (
+            <span
+              className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-700"
+              key={signalLabel}
+            >
+              {signalLabel}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {parserWarnings.length > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {parserWarnings.map((warning) => (
+            <li
+              className="flex gap-2 text-[13px] leading-5 text-slate-700"
+              key={warning}
+            >
+              <AlertCircle
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-[#b84300]"
+                size={15}
+              />
+              <span>{warning}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {shouldShowAdvisorCaveat ? (
+        <p className="mt-3 text-[13px] leading-5 text-slate-700">
+          The parser found possible AP, transfer, substitution, exception, or
+          in-progress signals. Advisor verification is required before relying
+          on this result.
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function CourseList({
@@ -280,6 +393,16 @@ function ResultCard({
           </ResultSection>
         ) : null}
 
+        {hasUploadedPdfResult && result.parserConfidence ? (
+          <ResultSection title="PDF parsing notes">
+            <ParserNotes
+              detectedSignals={result.detectedSignals}
+              parserConfidence={result.parserConfidence}
+              parserWarnings={result.parserWarnings}
+            />
+          </ResultSection>
+        ) : null}
+
         <ResultSection title="Required courses satisfied">
           <CourseList
             courses={result.requiredCoursesSatisfied}
@@ -408,6 +531,16 @@ function SoftwareEngineeringResultCard({
             <ParsedCourseCodes
               courseCodes={result.parsedCourseCodes ?? []}
               parsedCourseCount={result.parsedCourseCount ?? 0}
+            />
+          </ResultSection>
+        ) : null}
+
+        {hasUploadedPdfResult && result.parserConfidence ? (
+          <ResultSection title="PDF parsing notes">
+            <ParserNotes
+              detectedSignals={result.detectedSignals}
+              parserConfidence={result.parserConfidence}
+              parserWarnings={result.parserWarnings}
             />
           </ResultSection>
         ) : null}
@@ -641,6 +774,14 @@ function CombinedDegreeWorksParsedDetails({
           />
         </ResultSection>
 
+        <ResultSection title="PDF parsing notes">
+          <ParserNotes
+            detectedSignals={result.detectedSignals}
+            parserConfidence={result.parserConfidence}
+            parserWarnings={result.parserWarnings}
+          />
+        </ResultSection>
+
         <ResultSection title="Advisor-safe notes">
           <ul className="space-y-2 rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
             {[
@@ -685,8 +826,8 @@ function AdvisorMeetingSummary({
             Advisor Meeting Summary
           </h2>
           <p className="mt-1 text-[13px] leading-5 text-slate-600">
-            This is not an official degree audit. Advisor verification is
-            required.
+            This is a preparation summary, not an official degree audit.
+            Advisor verification is required.
           </p>
         </div>
         <button
@@ -866,6 +1007,9 @@ export default function PlanCheckPage() {
         sourceFileName: combinedPayload.sourceFileName,
         parsedCourseCodes: combinedPayload.parsedCourseCodes,
         parsedCourseCount: combinedPayload.parsedCourseCount,
+        detectedSignals: combinedPayload.detectedSignals,
+        parserWarnings: combinedPayload.parserWarnings,
+        parserConfidence: combinedPayload.parserConfidence,
       };
 
       setCombinedDegreeWorksResult(combinedPayload);

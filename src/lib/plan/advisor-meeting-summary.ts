@@ -1,3 +1,8 @@
+import type {
+  DegreeWorksDetectedSignals,
+  DegreeWorksParserConfidence,
+} from "./degreeworks-analysis.ts";
+
 type AdvisorSummaryCourse = {
   code: string;
   title: string;
@@ -12,6 +17,9 @@ export type AdvisorSummaryAiCertificateResult = {
   sourceFileName?: string;
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
+  detectedSignals?: DegreeWorksDetectedSignals;
+  parserWarnings?: string[];
+  parserConfidence?: DegreeWorksParserConfidence;
   requiredCoursesSatisfied: AdvisorSummaryCourse[];
   requiredCoursesMissing: AdvisorSummaryCourse[];
   electiveCandidatesFound: AdvisorSummaryCourse[];
@@ -32,6 +40,9 @@ export type AdvisorSummarySoftwareEngineeringResult = {
   sourceFileName?: string;
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
+  detectedSignals?: DegreeWorksDetectedSignals;
+  parserWarnings?: string[];
+  parserConfidence?: DegreeWorksParserConfidence;
   totalPlannedCredits: number | null;
   exactRequiredCoursesMissing: AdvisorSummaryCourse[];
   advisorVerifiedRequirements: AdvisorSummaryVerifiedRequirement[];
@@ -67,6 +78,38 @@ function getPlanSourceDescription(
   );
 }
 
+function hasAdvisorQuestionSignals(detectedSignals?: DegreeWorksDetectedSignals) {
+  if (!detectedSignals) {
+    return false;
+  }
+
+  return (
+    detectedSignals.hasApCreditSignal ||
+    detectedSignals.hasTransferCreditSignal ||
+    detectedSignals.hasSubstitutionSignal ||
+    detectedSignals.hasExceptionSignal ||
+    detectedSignals.hasInProgressSignal
+  );
+}
+
+function addParserDiagnostics(
+  lines: string[],
+  result:
+    | AdvisorSummaryAiCertificateResult
+    | AdvisorSummarySoftwareEngineeringResult,
+) {
+  if (result.parserConfidence) {
+    lines.push(`Parser confidence: ${result.parserConfidence}`);
+  }
+
+  if (result.parserWarnings && result.parserWarnings.length > 0) {
+    lines.push(
+      "Parser warnings:",
+      ...result.parserWarnings.map((warning) => `- ${warning}`),
+    );
+  }
+}
+
 export function buildAdvisorMeetingSummary({
   aiResult,
   softwareEngineeringResult,
@@ -81,7 +124,7 @@ export function buildAdvisorMeetingSummary({
   const lines = [
     "Advisor Meeting Summary",
     "",
-    "This is not an official degree audit.",
+    "This is a preparation summary, not an official degree audit.",
     "Advisor verification is required.",
     "AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may require advisor review.",
     "",
@@ -96,6 +139,8 @@ export function buildAdvisorMeetingSummary({
     if (typeof aiResult.parsedCourseCount === "number") {
       lines.push(`Parsed course count: ${aiResult.parsedCourseCount}`);
     }
+
+    addParserDiagnostics(lines, aiResult);
 
     lines.push(
       `Total planned credits: ${formatNullableCredits(
@@ -136,6 +181,8 @@ export function buildAdvisorMeetingSummary({
       );
     }
 
+    addParserDiagnostics(lines, softwareEngineeringResult);
+
     lines.push(
       `Total planned credits: ${formatNullableCredits(
         softwareEngineeringResult.totalPlannedCredits,
@@ -165,12 +212,27 @@ export function buildAdvisorMeetingSummary({
     );
   }
 
-  lines.push(
-    "Questions to ask an advisor:",
+  const shouldAskParserSignalQuestion =
+    hasAdvisorQuestionSignals(aiResult?.detectedSignals) ||
+    hasAdvisorQuestionSignals(softwareEngineeringResult?.detectedSignals);
+  const questions = [
     "- Which missing or unmatched requirements still need official Degree Works review?",
     "- Do AP, transfer, substitutions, or repeated courses change this progress check?",
     "- Which electives count toward the remaining Software Engineering or certificate requirements?",
     "- Are prerequisites and semester ordering appropriate for the next registration plan?",
+  ];
+
+  if (shouldAskParserSignalQuestion) {
+    questions.splice(
+      1,
+      0,
+      "- Can you verify whether AP, transfer, substitution, exception, or in-progress coursework changes this requirement check?",
+    );
+  }
+
+  lines.push(
+    "Questions to ask an advisor:",
+    ...questions,
   );
 
   return lines.join("\n");
