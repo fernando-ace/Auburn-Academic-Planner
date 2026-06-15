@@ -2,9 +2,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { PDFParse } from "pdf-parse";
-
 import { parseCourseCodes } from "../src/lib/courses/course-code-parser.ts";
+import { extractPdfText } from "../src/lib/pdf/pdf-text.ts";
 import {
   checkAiEngineeringCertificate,
   type CourseRule,
@@ -16,20 +15,8 @@ const projectRoot = path.resolve(scriptDir, "..");
 const sourceRelativePath = "sources/auburn/degreeworks-plan-sample.pdf";
 const sourcePath = path.join(projectRoot, sourceRelativePath);
 
-async function extractPdfText(pdfPath: string) {
-  const pdfData = await readFile(pdfPath);
-  const parser = new PDFParse({ data: pdfData });
-
-  try {
-    const result = await parser.getText();
-    return result.text;
-  } finally {
-    await parser.destroy();
-  }
-}
-
 async function main() {
-  const pdfText = await extractPdfText(sourcePath);
+  const pdfText = await extractPdfText(await readFile(sourcePath));
   const courseCodes = parseCourseCodes(pdfText);
   const certificateCheck = checkAiEngineeringCertificate(courseCodes);
 
