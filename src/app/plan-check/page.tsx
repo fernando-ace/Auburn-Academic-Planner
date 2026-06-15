@@ -50,9 +50,12 @@ type AdvisorVerifiedRequirement = {
 };
 
 type SoftwareEngineeringPlanCheckResult = {
-  planDescription: string;
-  major: string;
-  program: string;
+  planDescription?: string;
+  major?: string;
+  program?: string;
+  sourceFileName?: string;
+  parsedCourseCodes?: string[];
+  parsedCourseCount?: number;
   totalPlannedCredits: number | null;
   exactRequiredCoursesSatisfied: PlanCheckCourse[];
   exactRequiredCoursesMissing: PlanCheckCourse[];
@@ -69,6 +72,8 @@ const planCheckEndpoint = "/api/plan/check-ai-certificate";
 const planCheckUploadEndpoint = "/api/plan/check-ai-certificate/upload";
 const softwareEngineeringPlanCheckEndpoint =
   "/api/plan/check-software-engineering";
+const softwareEngineeringPlanCheckUploadEndpoint =
+  "/api/plan/check-software-engineering/upload";
 const samplePasteText = `COMP 5130
 COMP 5600
 COMP 5630
@@ -302,44 +307,68 @@ function SoftwareEngineeringResultCard({
 }: {
   result: SoftwareEngineeringPlanCheckResult;
 }) {
+  const hasUploadedPdfResult =
+    typeof result.sourceFileName === "string" ||
+    typeof result.parsedCourseCount === "number";
+  const notes = Array.from(
+    new Set([
+      hasUploadedPdfResult
+        ? "This extracted PDF does not prove final degree completion."
+        : "This extracted plan does not prove completion of every Software Engineering requirement.",
+      ...result.notes,
+    ]),
+  );
+
   return (
     <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
-            Plan source description
+            {hasUploadedPdfResult ? "Plan source" : "Plan source description"}
           </p>
           <h2 className="mt-2 text-[21px] font-semibold leading-7 text-slate-950">
-            {result.planDescription}
+            {result.planDescription ??
+              result.sourceFileName ??
+              "Uploaded Degree Works PDF"}
           </h2>
           <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
-            This extracted plan does not prove completion of every Software
-            Engineering requirement. AP, transfer, substitutions, Degree Works
-            hidden sections, and advisor-approved electives may not be captured
-            by the simple parser yet.
+            {hasUploadedPdfResult
+              ? "This extracted PDF does not prove final degree completion. Some credits, AP/transfer work, substitutions, hidden Degree Works sections, and advisor-approved electives may not be captured by the parser yet."
+              : "This extracted plan does not prove completion of every Software Engineering requirement. Some credits, AP/transfer work, substitutions, hidden Degree Works sections, and advisor-approved electives may not be captured by the parser yet."}
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[28rem]">
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
             <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-              Major
+              {hasUploadedPdfResult ? "Source file" : "Major"}
             </p>
             <p className="mt-1 text-[14px] font-semibold leading-5 text-slate-800">
-              {result.major}
+              {result.sourceFileName ?? result.major ?? "Not provided"}
             </p>
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
             <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-              Program
+              {hasUploadedPdfResult ? "Parsed course count" : "Program"}
             </p>
             <p className="mt-1 text-[14px] font-semibold leading-5 text-slate-800">
-              {result.program}
+              {hasUploadedPdfResult
+                ? (result.parsedCourseCount ?? 0)
+                : (result.program ?? "Not provided")}
             </p>
           </div>
         </div>
       </div>
 
       <div className="mt-5 grid gap-5">
+        {hasUploadedPdfResult ? (
+          <ResultSection title="Parsed course codes">
+            <ParsedCourseCodes
+              courseCodes={result.parsedCourseCodes ?? []}
+              parsedCourseCount={result.parsedCourseCount ?? 0}
+            />
+          </ResultSection>
+        ) : null}
+
         <ResultSection title="Credit totals">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -347,7 +376,10 @@ function SoftwareEngineeringResultCard({
                 Planned credits
               </p>
               <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">
-                {result.totalPlannedCredits ?? "Not provided"}
+                {result.totalPlannedCredits ??
+                  (hasUploadedPdfResult
+                    ? "Not available from PDF extraction"
+                    : "Not provided")}
               </p>
             </div>
             <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -452,10 +484,7 @@ function SoftwareEngineeringResultCard({
 
         <ResultSection title="Notes">
           <ul className="space-y-2 rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
-            {[
-              "This extracted plan does not prove completion of every Software Engineering requirement.",
-              ...result.notes,
-            ].map((note) => (
+            {notes.map((note) => (
               <li
                 className="flex gap-2 text-[13px] leading-5 text-slate-700"
                 key={note}
@@ -516,6 +545,10 @@ function ParsedCourseCodes({
 export default function PlanCheckPage() {
   const [enteredCourses, setEnteredCourses] = useState("");
   const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
+  const [
+    selectedSoftwareEngineeringPdfFile,
+    setSelectedSoftwareEngineeringPdfFile,
+  ] = useState<File | null>(null);
   const [result, setResult] = useState<PlanCheckResult | null>(null);
   const [softwareEngineeringResult, setSoftwareEngineeringResult] =
     useState<SoftwareEngineeringPlanCheckResult | null>(null);
@@ -526,12 +559,18 @@ export default function PlanCheckPage() {
   const [uploadValidationError, setUploadValidationError] = useState<
     string | null
   >(null);
+  const [
+    softwareEngineeringUploadValidationError,
+    setSoftwareEngineeringUploadValidationError,
+  ] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSoftwareEngineeringLoading, setIsSoftwareEngineeringLoading] =
     useState(false);
   const [loadingMessage, setLoadingMessage] = useState(
     "Checking entered courses against Auburn certificate rules...",
   );
+  const [softwareEngineeringLoadingMessage, setSoftwareEngineeringLoadingMessage] =
+    useState("Checking the sample Degree Works plan against Software Engineering degree rules...");
 
   const parsedCourseCodes = useMemo(
     () => parseCourseCodes(enteredCourses),
@@ -585,6 +624,9 @@ export default function PlanCheckPage() {
 
     setIsSoftwareEngineeringLoading(true);
     setSoftwareEngineeringError(null);
+    setSoftwareEngineeringLoadingMessage(
+      "Checking the sample Degree Works plan against Software Engineering degree rules...",
+    );
 
     try {
       const response = await fetch(softwareEngineeringPlanCheckEndpoint);
@@ -607,6 +649,50 @@ export default function PlanCheckPage() {
         fetchError instanceof Error
           ? fetchError.message
           : "The Software Engineering degree check could not run.",
+      );
+    } finally {
+      setIsSoftwareEngineeringLoading(false);
+    }
+  }
+
+  async function runSoftwareEngineeringUploadPlanCheck(file: File) {
+    if (isSoftwareEngineeringLoading) {
+      return;
+    }
+
+    setIsSoftwareEngineeringLoading(true);
+    setSoftwareEngineeringError(null);
+    setSoftwareEngineeringLoadingMessage(
+      "Checking uploaded Degree Works PDF against Software Engineering degree rules...",
+    );
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(softwareEngineeringPlanCheckUploadEndpoint, {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as
+        | SoftwareEngineeringPlanCheckResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The Software Engineering PDF check could not run.",
+        );
+      }
+
+      setSoftwareEngineeringResult(payload as SoftwareEngineeringPlanCheckResult);
+    } catch (fetchError) {
+      setSoftwareEngineeringResult(null);
+      setSoftwareEngineeringError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The Software Engineering PDF check could not run.",
       );
     } finally {
       setIsSoftwareEngineeringLoading(false);
@@ -667,6 +753,26 @@ export default function PlanCheckPage() {
     }
   }
 
+  function handleSoftwareEngineeringPdfFileChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedSoftwareEngineeringPdfFile(file);
+    setSoftwareEngineeringUploadValidationError(null);
+
+    if (!file) {
+      return;
+    }
+
+    if (!isPdfFile(file)) {
+      setSelectedSoftwareEngineeringPdfFile(null);
+      setSoftwareEngineeringUploadValidationError(
+        "Choose a PDF file before running the Software Engineering check.",
+      );
+      event.target.value = "";
+    }
+  }
+
   function checkUploadedPdf(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     setUploadValidationError(null);
@@ -694,6 +800,33 @@ export default function PlanCheckPage() {
       },
       message: "Checking uploaded Degree Works PDF...",
     });
+  }
+
+  function checkSoftwareEngineeringUploadedPdf(
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    event.preventDefault();
+    setSoftwareEngineeringUploadValidationError(null);
+
+    if (!selectedSoftwareEngineeringPdfFile) {
+      setSoftwareEngineeringResult(null);
+      setSoftwareEngineeringUploadValidationError(
+        "Choose a Degree Works PDF before checking Software Engineering progress.",
+      );
+      return;
+    }
+
+    if (!isPdfFile(selectedSoftwareEngineeringPdfFile)) {
+      setSoftwareEngineeringResult(null);
+      setSoftwareEngineeringUploadValidationError(
+        "Choose a PDF file before running the Software Engineering check.",
+      );
+      return;
+    }
+
+    void runSoftwareEngineeringUploadPlanCheck(
+      selectedSoftwareEngineeringPdfFile,
+    );
   }
 
   function isPdfFile(file: File) {
@@ -881,6 +1014,60 @@ export default function PlanCheckPage() {
               ) : null}
               Check sample Degree Works plan
             </button>
+
+            <section className="mt-6 border-t border-slate-200 pt-5">
+              <div className="flex items-center gap-2">
+                <FileUp
+                  aria-hidden="true"
+                  className="text-[#dd550c]"
+                  size={18}
+                />
+                <h2 className="text-[16px] font-semibold leading-6 text-slate-950">
+                  Upload Degree Works PDF
+                </h2>
+              </div>
+              <div className="mt-3">
+                <label
+                  className="text-[13px] font-semibold leading-5 text-slate-700"
+                  htmlFor="software-engineering-degreeworks-pdf"
+                >
+                  Software Engineering Degree Works PDF
+                </label>
+                <input
+                  accept="application/pdf"
+                  className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15"
+                  disabled={isSoftwareEngineeringLoading}
+                  id="software-engineering-degreeworks-pdf"
+                  onChange={handleSoftwareEngineeringPdfFileChange}
+                  type="file"
+                />
+                {selectedSoftwareEngineeringPdfFile ? (
+                  <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                    Selected: {selectedSoftwareEngineeringPdfFile.name}
+                  </p>
+                ) : null}
+                {softwareEngineeringUploadValidationError ? (
+                  <p className="mt-2 text-[13px] leading-5 text-orange-700">
+                    {softwareEngineeringUploadValidationError}
+                  </p>
+                ) : null}
+              </div>
+              <button
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#dd550c] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white transition hover:bg-[#b84300] disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={isSoftwareEngineeringLoading}
+                onClick={checkSoftwareEngineeringUploadedPdf}
+                type="button"
+              >
+                {isSoftwareEngineeringLoading ? (
+                  <Loader2
+                    aria-hidden="true"
+                    className="animate-spin"
+                    size={17}
+                  />
+                ) : null}
+                Check uploaded PDF
+              </button>
+            </section>
           </section>
         </div>
 
@@ -944,8 +1131,7 @@ export default function PlanCheckPage() {
                   className="animate-spin text-[#dd550c]"
                   size={19}
                 />
-                Checking the sample Degree Works plan against Software
-                Engineering degree rules...
+                {softwareEngineeringLoadingMessage}
               </div>
             ) : null}
 
