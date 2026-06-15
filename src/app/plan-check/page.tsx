@@ -542,6 +542,181 @@ function ParsedCourseCodes({
   );
 }
 
+function formatCourseCodes(courses: PlanCheckCourse[]) {
+  return courses.length > 0
+    ? courses.map((course) => course.code).join(", ")
+    : "None found.";
+}
+
+function formatNullableCredits(totalPlannedCredits: number | null | undefined) {
+  return typeof totalPlannedCredits === "number"
+    ? `${totalPlannedCredits}`
+    : "Not provided.";
+}
+
+function getPlanSourceDescription(
+  result: PlanCheckResult | SoftwareEngineeringPlanCheckResult,
+) {
+  return (
+    result.planDescription ??
+    result.sourceFileName ??
+    result.major ??
+    "Plan source not provided."
+  );
+}
+
+function buildAdvisorMeetingSummary({
+  aiResult,
+  softwareEngineeringResult,
+}: {
+  aiResult: PlanCheckResult | null;
+  softwareEngineeringResult: SoftwareEngineeringPlanCheckResult | null;
+}) {
+  if (!aiResult && !softwareEngineeringResult) {
+    return "";
+  }
+
+  const lines = [
+    "Advisor Meeting Summary",
+    "",
+    "This is a preparation summary, not an official degree audit.",
+    "Please verify AP, transfer, substitutions, electives, prerequisites, and semester ordering with an academic advisor.",
+    "",
+  ];
+
+  if (aiResult) {
+    lines.push(
+      "AI Engineering Certificate",
+      `Plan/source: ${getPlanSourceDescription(aiResult)}`,
+    );
+
+    if (typeof aiResult.parsedCourseCount === "number") {
+      lines.push(`Parsed course count: ${aiResult.parsedCourseCount}`);
+    }
+
+    lines.push(
+      `Total planned credits: ${formatNullableCredits(
+        aiResult.totalPlannedCredits,
+      )}`,
+      `Required courses satisfied: ${formatCourseCodes(
+        aiResult.requiredCoursesSatisfied,
+      )}`,
+      `Required courses missing: ${formatCourseCodes(
+        aiResult.requiredCoursesMissing,
+      )}`,
+      `AI elective candidates found: ${formatCourseCodes(
+        aiResult.electiveCandidatesFound,
+      )}`,
+      `Advisor verification required: ${
+        aiResult.advisorVerificationRequired ? "Yes" : "No"
+      }`,
+      "",
+    );
+  }
+
+  if (softwareEngineeringResult) {
+    const creditStatus =
+      softwareEngineeringResult.hasEnoughTotalCredits === null
+        ? "Total planned credits were not provided."
+        : softwareEngineeringResult.hasEnoughTotalCredits
+          ? "Total planned credits meet or exceed the degree requirement."
+          : "Total planned credits are below the degree requirement.";
+
+    lines.push(
+      "Software Engineering Degree Progress",
+      `Plan/source: ${getPlanSourceDescription(softwareEngineeringResult)}`,
+    );
+
+    if (typeof softwareEngineeringResult.parsedCourseCount === "number") {
+      lines.push(
+        `Parsed course count: ${softwareEngineeringResult.parsedCourseCount}`,
+      );
+    }
+
+    lines.push(
+      `Total planned credits: ${formatNullableCredits(
+        softwareEngineeringResult.totalPlannedCredits,
+      )}`,
+      `Required credits: ${softwareEngineeringResult.totalHoursRequired}`,
+      `Software Engineering total credits status: ${creditStatus}`,
+      `Exact required courses missing: ${formatCourseCodes(
+        softwareEngineeringResult.exactRequiredCoursesMissing,
+      )}`,
+    );
+
+    if (softwareEngineeringResult.advisorVerifiedRequirements.length > 0) {
+      lines.push(
+        "Advisor-verified items that need review:",
+        ...softwareEngineeringResult.advisorVerifiedRequirements.map(
+          (requirement) =>
+            `- ${requirement.name} (${requirement.creditHoursRequired} credits)`,
+        ),
+      );
+    }
+
+    lines.push(
+      `Advisor verification required: ${
+        softwareEngineeringResult.advisorVerificationRequired ? "Yes" : "No"
+      }`,
+      "",
+    );
+  }
+
+  lines.push(
+    "Questions to ask an advisor:",
+    "- Which missing or unmatched requirements still need official Degree Works review?",
+    "- Do AP, transfer, substitutions, or repeated courses change this progress check?",
+    "- Which electives count toward the remaining Software Engineering or certificate requirements?",
+    "- Are prerequisites and semester ordering appropriate for the next registration plan?",
+  );
+
+  return lines.join("\n");
+}
+
+function AdvisorMeetingSummary({
+  summary,
+  copyStatus,
+  onCopySummary,
+}: {
+  summary: string;
+  copyStatus: string | null;
+  onCopySummary: () => void;
+}) {
+  return (
+    <section className="mb-5 rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-[18px] font-semibold leading-7 text-slate-950">
+            Advisor Meeting Summary
+          </h2>
+          <p className="mt-1 text-[13px] leading-5 text-slate-600">
+            This is a preparation summary, not an official degree audit.
+          </p>
+        </div>
+        <button
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-[#03244d] px-3 py-2 text-[13px] font-semibold leading-5 text-white transition hover:bg-[#021b3a]"
+          onClick={onCopySummary}
+          type="button"
+        >
+          <ClipboardCheck aria-hidden="true" size={16} />
+          Copy summary
+        </button>
+      </div>
+      <textarea
+        id="advisor-meeting-summary-text"
+        className="mt-4 min-h-80 w-full resize-y rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-[12px] leading-5 text-slate-800 outline-none focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15"
+        readOnly
+        value={summary}
+      />
+      {copyStatus ? (
+        <p className="mt-2 text-[13px] leading-5 text-slate-600">
+          {copyStatus}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export default function PlanCheckPage() {
   const [enteredCourses, setEnteredCourses] = useState("");
   const [
@@ -575,6 +750,9 @@ export default function PlanCheckPage() {
     softwareEngineeringManualValidationError,
     setSoftwareEngineeringManualValidationError,
   ] = useState<string | null>(null);
+  const [advisorSummaryCopyStatus, setAdvisorSummaryCopyStatus] = useState<
+    string | null
+  >(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSoftwareEngineeringLoading, setIsSoftwareEngineeringLoading] =
     useState(false);
@@ -591,6 +769,14 @@ export default function PlanCheckPage() {
   const parsedSoftwareEngineeringCourseCodes = useMemo(
     () => parseCourseCodes(enteredSoftwareEngineeringCourses),
     [enteredSoftwareEngineeringCourses],
+  );
+  const advisorMeetingSummary = useMemo(
+    () =>
+      buildAdvisorMeetingSummary({
+        aiResult: result,
+        softwareEngineeringResult,
+      }),
+    [result, softwareEngineeringResult],
   );
 
   async function runPlanCheck({
@@ -938,6 +1124,65 @@ export default function PlanCheckPage() {
     );
   }
 
+  function copyAdvisorMeetingSummary() {
+    if (!advisorMeetingSummary) {
+      return;
+    }
+
+    const selectVisibleSummary = () => {
+      const textarea = document.getElementById(
+        "advisor-meeting-summary-text",
+      );
+
+      if (textarea instanceof HTMLTextAreaElement) {
+        textarea.focus();
+        textarea.select();
+      }
+    };
+
+    const copyWithFallback = () => {
+      const textarea = document.createElement("textarea");
+      textarea.value = advisorMeetingSummary;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        return document.execCommand("copy");
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    };
+
+    if (!navigator.clipboard?.writeText) {
+      if (copyWithFallback()) {
+        setAdvisorSummaryCopyStatus("Summary copied.");
+      } else {
+        selectVisibleSummary();
+        setAdvisorSummaryCopyStatus(
+          "Summary selected. Press Ctrl+C to copy it.",
+        );
+      }
+      return;
+    }
+
+    void navigator.clipboard
+      .writeText(advisorMeetingSummary)
+      .then(() => setAdvisorSummaryCopyStatus("Summary copied."))
+      .catch(() => {
+        if (copyWithFallback()) {
+          setAdvisorSummaryCopyStatus("Summary copied.");
+        } else {
+          selectVisibleSummary();
+          setAdvisorSummaryCopyStatus(
+            "Summary selected. Press Ctrl+C to copy it.",
+          );
+        }
+      });
+  }
+
   function isPdfFile(file: File) {
     return (
       file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
@@ -1259,6 +1504,14 @@ export default function PlanCheckPage() {
         </div>
 
         <section className="min-w-0">
+          {advisorMeetingSummary ? (
+            <AdvisorMeetingSummary
+              copyStatus={advisorSummaryCopyStatus}
+              onCopySummary={copyAdvisorMeetingSummary}
+              summary={advisorMeetingSummary}
+            />
+          ) : null}
+
           {error ? (
             <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-4">
               <div className="flex gap-3">
