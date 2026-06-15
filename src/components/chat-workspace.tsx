@@ -59,7 +59,7 @@ type PlanCheckCourse = {
 type PlanCheckResult = {
   planDescription: string;
   major: string;
-  totalPlannedCredits: number;
+  totalPlannedCredits: number | null;
   requiredCoursesSatisfied: PlanCheckCourse[];
   requiredCoursesMissing: PlanCheckCourse[];
   electiveCandidatesFound: PlanCheckCourse[];
@@ -84,6 +84,7 @@ const programs = [
 const advisorNote =
   "Advisor verification required: use this as preparation and verify your plan with an Auburn academic advisor.";
 const planCheckEndpoint = "/api/plan/check-ai-certificate";
+const courseCodePattern = /[A-Za-z]{2,5}\s*[0-9][A-Za-z0-9]{3}/g;
 
 function confidenceClass(confidence?: ChatMessage["confidence"]) {
   if (confidence === "High") {
@@ -141,15 +142,25 @@ function CourseList({
   );
 }
 
+function parseEnteredCourseCodes(value: string) {
+  const matches = value.match(courseCodePattern) ?? [];
+
+  return matches.map((courseCode) =>
+    courseCode
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, "")
+      .replace(/^([A-Z]+)([0-9][A-Z0-9]{3})$/, "$1 $2"),
+  );
+}
+
 function PlanCheckCard() {
+  const [enteredCourses, setEnteredCourses] = useState("");
   const [result, setResult] = useState<PlanCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  async function checkSamplePlan(event: MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-
+  async function runPlanCheck(request: RequestInit = {}) {
     if (isLoading) {
       return;
     }
@@ -158,7 +169,7 @@ function PlanCheckCard() {
     setError(null);
 
     try {
-      const response = await fetch(planCheckEndpoint);
+      const response = await fetch(planCheckEndpoint, request);
       const payload = (await response.json()) as Partial<PlanCheckResult> & {
         error?: string;
       };
@@ -179,6 +190,36 @@ function PlanCheckCard() {
     }
   }
 
+  function checkSamplePlan(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    void runPlanCheck();
+  }
+
+  function checkEnteredCourses(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const courseCodes = parseEnteredCourseCodes(enteredCourses);
+
+    if (courseCodes.length === 0) {
+      setResult(null);
+      setError("Enter at least one planned course code before checking.");
+      return;
+    }
+
+    void runPlanCheck({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        courseCodes,
+        planDescription: "Custom entered plan",
+        major: "Software Engineering",
+        totalPlannedCredits: null,
+      }),
+    });
+  }
+
   return (
     <section className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex items-start gap-3">
@@ -195,17 +236,47 @@ function PlanCheckCard() {
         </div>
       </div>
 
-      <button
-        className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[#03244d] px-3 py-2 text-center text-[13px] font-semibold leading-5 text-white transition hover:bg-[#021b3a] disabled:cursor-not-allowed disabled:bg-slate-300"
-        disabled={isLoading}
-        onClick={checkSamplePlan}
-        type="button"
-      >
-        {isLoading ? (
-          <Loader2 aria-hidden="true" className="animate-spin" size={16} />
-        ) : null}
-        Check sample plan against AI certificate
-      </button>
+      <div className="mt-3">
+        <label
+          className="text-[12px] font-semibold leading-5 text-slate-700"
+          htmlFor="plan-check-courses"
+        >
+          Enter planned courses
+        </label>
+        <textarea
+          className="mt-1 min-h-24 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15"
+          disabled={isLoading}
+          id="plan-check-courses"
+          onChange={(event) => setEnteredCourses(event.target.value)}
+          placeholder="COMP 5600, COMP 5630, COMP 5130, COMP 5610"
+          value={enteredCourses}
+        />
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        <button
+          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-center text-[13px] font-semibold leading-5 text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          disabled={isLoading}
+          onClick={checkSamplePlan}
+          type="button"
+        >
+          {isLoading ? (
+            <Loader2 aria-hidden="true" className="animate-spin" size={16} />
+          ) : null}
+          Check sample plan
+        </button>
+        <button
+          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[#03244d] px-3 py-2 text-center text-[13px] font-semibold leading-5 text-white transition hover:bg-[#021b3a] disabled:cursor-not-allowed disabled:bg-slate-300"
+          disabled={isLoading}
+          onClick={checkEnteredCourses}
+          type="button"
+        >
+          {isLoading ? (
+            <Loader2 aria-hidden="true" className="animate-spin" size={16} />
+          ) : null}
+          Check entered courses
+        </button>
+      </div>
 
       {error ? (
         <div className="mt-3 rounded-md border border-orange-200 bg-orange-50 p-3">
@@ -245,7 +316,7 @@ function PlanCheckCard() {
                 Credits
               </p>
               <p className="mt-1 text-[12px] font-semibold leading-5 text-slate-800">
-                {result.totalPlannedCredits}
+                {result.totalPlannedCredits ?? "Not provided"}
               </p>
             </div>
           </div>
