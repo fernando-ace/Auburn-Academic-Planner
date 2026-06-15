@@ -12,6 +12,7 @@ import Link from "next/link";
 import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
 
 import { parseCourseCodes } from "@/lib/courses/course-code-parser";
+import { buildAdvisorMeetingSummary } from "@/lib/plan/advisor-meeting-summary";
 
 type PlanCheckCourse = {
   code: string;
@@ -665,138 +666,6 @@ function CombinedDegreeWorksParsedDetails({
       </div>
     </section>
   );
-}
-
-function formatCourseCodes(courses: PlanCheckCourse[]) {
-  return courses.length > 0
-    ? courses.map((course) => course.code).join(", ")
-    : "None found.";
-}
-
-function formatNullableCredits(totalPlannedCredits: number | null | undefined) {
-  return typeof totalPlannedCredits === "number"
-    ? `${totalPlannedCredits}`
-    : "Not provided.";
-}
-
-function getPlanSourceDescription(
-  result: PlanCheckResult | SoftwareEngineeringPlanCheckResult,
-) {
-  return (
-    result.planDescription ??
-    result.sourceFileName ??
-    result.major ??
-    "Plan source not provided."
-  );
-}
-
-function buildAdvisorMeetingSummary({
-  aiResult,
-  softwareEngineeringResult,
-}: {
-  aiResult: PlanCheckResult | null;
-  softwareEngineeringResult: SoftwareEngineeringPlanCheckResult | null;
-}) {
-  if (!aiResult && !softwareEngineeringResult) {
-    return "";
-  }
-
-  const lines = [
-    "Advisor Meeting Summary",
-    "",
-    "This is not an official degree audit.",
-    "Advisor verification is required.",
-    "AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may require advisor review.",
-    "",
-  ];
-
-  if (aiResult) {
-    lines.push(
-      "AI Engineering Certificate",
-      `Plan/source: ${getPlanSourceDescription(aiResult)}`,
-    );
-
-    if (typeof aiResult.parsedCourseCount === "number") {
-      lines.push(`Parsed course count: ${aiResult.parsedCourseCount}`);
-    }
-
-    lines.push(
-      `Total planned credits: ${formatNullableCredits(
-        aiResult.totalPlannedCredits,
-      )}`,
-      `Required courses satisfied: ${formatCourseCodes(
-        aiResult.requiredCoursesSatisfied,
-      )}`,
-      `Required courses missing: ${formatCourseCodes(
-        aiResult.requiredCoursesMissing,
-      )}`,
-      `AI elective candidates found: ${formatCourseCodes(
-        aiResult.electiveCandidatesFound,
-      )}`,
-      `Advisor verification required: ${
-        aiResult.advisorVerificationRequired ? "Yes" : "No"
-      }`,
-      "",
-    );
-  }
-
-  if (softwareEngineeringResult) {
-    const creditStatus =
-      softwareEngineeringResult.hasEnoughTotalCredits === null
-        ? "Total planned credits were not provided."
-        : softwareEngineeringResult.hasEnoughTotalCredits
-          ? "Total planned credits meet or exceed the degree requirement."
-          : "Total planned credits are below the degree requirement.";
-
-    lines.push(
-      "Software Engineering Degree Progress",
-      `Plan/source: ${getPlanSourceDescription(softwareEngineeringResult)}`,
-    );
-
-    if (typeof softwareEngineeringResult.parsedCourseCount === "number") {
-      lines.push(
-        `Parsed course count: ${softwareEngineeringResult.parsedCourseCount}`,
-      );
-    }
-
-    lines.push(
-      `Total planned credits: ${formatNullableCredits(
-        softwareEngineeringResult.totalPlannedCredits,
-      )}`,
-      `Required credits: ${softwareEngineeringResult.totalHoursRequired}`,
-      `Software Engineering total credits status: ${creditStatus}`,
-      `Exact required courses missing: ${formatCourseCodes(
-        softwareEngineeringResult.exactRequiredCoursesMissing,
-      )}`,
-    );
-
-    if (softwareEngineeringResult.advisorVerifiedRequirements.length > 0) {
-      lines.push(
-        "Advisor-verified items that need review:",
-        ...softwareEngineeringResult.advisorVerifiedRequirements.map(
-          (requirement) =>
-            `- ${requirement.name} (${requirement.creditHoursRequired} credits)`,
-        ),
-      );
-    }
-
-    lines.push(
-      `Advisor verification required: ${
-        softwareEngineeringResult.advisorVerificationRequired ? "Yes" : "No"
-      }`,
-      "",
-    );
-  }
-
-  lines.push(
-    "Questions to ask an advisor:",
-    "- Which missing or unmatched requirements still need official Degree Works review?",
-    "- Do AP, transfer, substitutions, or repeated courses change this progress check?",
-    "- Which electives count toward the remaining Software Engineering or certificate requirements?",
-    "- Are prerequisites and semester ordering appropriate for the next registration plan?",
-  );
-
-  return lines.join("\n");
 }
 
 function AdvisorMeetingSummary({
