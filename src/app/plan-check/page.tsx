@@ -68,8 +68,36 @@ type SoftwareEngineeringPlanCheckResult = {
   notes: string[];
 };
 
+type CombinedDegreeWorksUploadResult = {
+  sourceFileName: string;
+  parsedCourseCount: number;
+  parsedCourseCodes: string[];
+  totalPlannedCredits: number | null;
+  aiCertificateCheck: Omit<
+    PlanCheckResult,
+    | "planDescription"
+    | "major"
+    | "totalPlannedCredits"
+    | "sourceFileName"
+    | "parsedCourseCodes"
+    | "parsedCourseCount"
+  >;
+  softwareEngineeringCheck: Omit<
+    SoftwareEngineeringPlanCheckResult,
+    | "planDescription"
+    | "major"
+    | "program"
+    | "sourceFileName"
+    | "parsedCourseCodes"
+    | "parsedCourseCount"
+  >;
+  notes: string[];
+};
+
 const planCheckEndpoint = "/api/plan/check-ai-certificate";
 const planCheckUploadEndpoint = "/api/plan/check-ai-certificate/upload";
+const combinedDegreeWorksUploadEndpoint =
+  "/api/plan/analyze-degreeworks/upload";
 const softwareEngineeringPlanCheckEndpoint =
   "/api/plan/check-software-engineering";
 const softwareEngineeringPlanCheckUploadEndpoint =
@@ -192,10 +220,17 @@ function ResultSection({
   );
 }
 
-function ResultCard({ result }: { result: PlanCheckResult }) {
+function ResultCard({
+  result,
+  showUploadedPdfDetails = true,
+}: {
+  result: PlanCheckResult;
+  showUploadedPdfDetails?: boolean;
+}) {
   const hasUploadedPdfResult =
-    typeof result.sourceFileName === "string" ||
-    typeof result.parsedCourseCount === "number";
+    showUploadedPdfDetails &&
+    (typeof result.sourceFileName === "string" ||
+      typeof result.parsedCourseCount === "number");
 
   return (
     <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
@@ -214,7 +249,9 @@ function ResultCard({ result }: { result: PlanCheckResult }) {
               {hasUploadedPdfResult ? "Source file" : "Major"}
             </p>
             <p className="mt-1 text-[14px] font-semibold leading-5 text-slate-800">
-              {result.sourceFileName ?? result.major ?? "Not provided"}
+              {hasUploadedPdfResult
+                ? (result.sourceFileName ?? "Not provided")
+                : (result.major ?? "Not provided")}
             </p>
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -304,12 +341,15 @@ function ResultCard({ result }: { result: PlanCheckResult }) {
 
 function SoftwareEngineeringResultCard({
   result,
+  showUploadedPdfDetails = true,
 }: {
   result: SoftwareEngineeringPlanCheckResult;
+  showUploadedPdfDetails?: boolean;
 }) {
   const hasUploadedPdfResult =
-    typeof result.sourceFileName === "string" ||
-    typeof result.parsedCourseCount === "number";
+    showUploadedPdfDetails &&
+    (typeof result.sourceFileName === "string" ||
+      typeof result.parsedCourseCount === "number");
   const notes = Array.from(
     new Set([
       hasUploadedPdfResult
@@ -343,7 +383,9 @@ function SoftwareEngineeringResultCard({
               {hasUploadedPdfResult ? "Source file" : "Major"}
             </p>
             <p className="mt-1 text-[14px] font-semibold leading-5 text-slate-800">
-              {result.sourceFileName ?? result.major ?? "Not provided"}
+              {hasUploadedPdfResult
+                ? (result.sourceFileName ?? "Not provided")
+                : (result.major ?? "Not provided")}
             </p>
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -542,6 +584,89 @@ function ParsedCourseCodes({
   );
 }
 
+function CombinedDegreeWorksParsedDetails({
+  result,
+}: {
+  result: CombinedDegreeWorksUploadResult;
+}) {
+  return (
+    <section className="mb-5 rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+            Combined Degree Works PDF
+          </p>
+          <h2 className="mt-2 text-[20px] font-semibold leading-7 text-slate-950">
+            Shared parsed details
+          </h2>
+          <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
+            This is not an official degree audit. Advisor verification is
+            required.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3 lg:w-[34rem]">
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Source file name
+            </p>
+            <p className="mt-1 break-words text-[14px] font-semibold leading-5 text-slate-800">
+              {result.sourceFileName}
+            </p>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Parsed course count
+            </p>
+            <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">
+              {result.parsedCourseCount}
+            </p>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Total planned credits
+            </p>
+            <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">
+              {result.totalPlannedCredits ?? "Not provided"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4">
+        <ResultSection title="Parsed courses summary">
+          <ParsedCourseCodes
+            courseCodes={result.parsedCourseCodes}
+            parsedCourseCount={result.parsedCourseCount}
+          />
+        </ResultSection>
+
+        <ResultSection title="Advisor-safe notes">
+          <ul className="space-y-2 rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
+            {[
+              "This is not an official degree audit.",
+              "Advisor verification is required.",
+              "AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may require advisor review.",
+              ...result.notes,
+            ].map((note) => (
+              <li
+                className="flex gap-2 text-[13px] leading-5 text-slate-700"
+                key={note}
+              >
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-[#b84300]"
+                  size={16}
+                />
+                <span>{note}</span>
+              </li>
+            ))}
+          </ul>
+        </ResultSection>
+      </div>
+    </section>
+  );
+}
+
 function formatCourseCodes(courses: PlanCheckCourse[]) {
   return courses.length > 0
     ? courses.map((course) => course.code).join(", ")
@@ -579,8 +704,9 @@ function buildAdvisorMeetingSummary({
   const lines = [
     "Advisor Meeting Summary",
     "",
-    "This is a preparation summary, not an official degree audit.",
-    "Please verify AP, transfer, substitutions, electives, prerequisites, and semester ordering with an academic advisor.",
+    "This is not an official degree audit.",
+    "Advisor verification is required.",
+    "AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may require advisor review.",
     "",
   ];
 
@@ -690,7 +816,8 @@ function AdvisorMeetingSummary({
             Advisor Meeting Summary
           </h2>
           <p className="mt-1 text-[13px] leading-5 text-slate-600">
-            This is a preparation summary, not an official degree audit.
+            This is not an official degree audit. Advisor verification is
+            required.
           </p>
         </div>
         <button
@@ -728,6 +855,8 @@ export default function PlanCheckPage() {
     setEnteredSoftwareEngineeringTotalCredits,
   ] = useState("");
   const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
+  const [selectedCombinedDegreeWorksPdfFile, setSelectedCombinedDegreeWorksPdfFile] =
+    useState<File | null>(null);
   const [
     selectedSoftwareEngineeringPdfFile,
     setSelectedSoftwareEngineeringPdfFile,
@@ -735,13 +864,22 @@ export default function PlanCheckPage() {
   const [result, setResult] = useState<PlanCheckResult | null>(null);
   const [softwareEngineeringResult, setSoftwareEngineeringResult] =
     useState<SoftwareEngineeringPlanCheckResult | null>(null);
+  const [combinedDegreeWorksResult, setCombinedDegreeWorksResult] =
+    useState<CombinedDegreeWorksUploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [combinedDegreeWorksError, setCombinedDegreeWorksError] = useState<
+    string | null
+  >(null);
   const [softwareEngineeringError, setSoftwareEngineeringError] = useState<
     string | null
   >(null);
   const [uploadValidationError, setUploadValidationError] = useState<
     string | null
   >(null);
+  const [
+    combinedDegreeWorksUploadValidationError,
+    setCombinedDegreeWorksUploadValidationError,
+  ] = useState<string | null>(null);
   const [
     softwareEngineeringUploadValidationError,
     setSoftwareEngineeringUploadValidationError,
@@ -754,6 +892,8 @@ export default function PlanCheckPage() {
     string | null
   >(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCombinedDegreeWorksLoading, setIsCombinedDegreeWorksLoading] =
+    useState(false);
   const [isSoftwareEngineeringLoading, setIsSoftwareEngineeringLoading] =
     useState(false);
   const [loadingMessage, setLoadingMessage] = useState(
@@ -794,6 +934,8 @@ export default function PlanCheckPage() {
 
     setIsLoading(true);
     setError(null);
+    setCombinedDegreeWorksResult(null);
+    setCombinedDegreeWorksError(null);
     setLoadingMessage(message);
 
     try {
@@ -819,6 +961,69 @@ export default function PlanCheckPage() {
     }
   }
 
+  async function runCombinedDegreeWorksUploadPlanCheck(file: File) {
+    if (isCombinedDegreeWorksLoading) {
+      return;
+    }
+
+    setIsCombinedDegreeWorksLoading(true);
+    setCombinedDegreeWorksError(null);
+    setError(null);
+    setSoftwareEngineeringError(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(combinedDegreeWorksUploadEndpoint, {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as
+        | CombinedDegreeWorksUploadResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The combined Degree Works PDF analysis could not run.",
+        );
+      }
+
+      const combinedPayload = payload as CombinedDegreeWorksUploadResult;
+      const sharedPlanFields = {
+        planDescription: "Combined Degree Works PDF analysis",
+        sourceFileName: combinedPayload.sourceFileName,
+        parsedCourseCodes: combinedPayload.parsedCourseCodes,
+        parsedCourseCount: combinedPayload.parsedCourseCount,
+      };
+
+      setCombinedDegreeWorksResult(combinedPayload);
+      setResult({
+        ...combinedPayload.aiCertificateCheck,
+        ...sharedPlanFields,
+        totalPlannedCredits: combinedPayload.totalPlannedCredits,
+      });
+      setSoftwareEngineeringResult({
+        ...combinedPayload.softwareEngineeringCheck,
+        ...sharedPlanFields,
+        totalPlannedCredits: combinedPayload.totalPlannedCredits,
+      });
+    } catch (fetchError) {
+      setCombinedDegreeWorksResult(null);
+      setResult(null);
+      setSoftwareEngineeringResult(null);
+      setCombinedDegreeWorksError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The combined Degree Works PDF analysis could not run.",
+      );
+    } finally {
+      setIsCombinedDegreeWorksLoading(false);
+    }
+  }
+
   async function runSoftwareEngineeringPlanCheck() {
     if (isSoftwareEngineeringLoading) {
       return;
@@ -826,6 +1031,8 @@ export default function PlanCheckPage() {
 
     setIsSoftwareEngineeringLoading(true);
     setSoftwareEngineeringError(null);
+    setCombinedDegreeWorksResult(null);
+    setCombinedDegreeWorksError(null);
     setSoftwareEngineeringLoadingMessage(
       "Checking the sample Degree Works plan against Software Engineering degree rules...",
     );
@@ -870,6 +1077,8 @@ export default function PlanCheckPage() {
 
     setIsSoftwareEngineeringLoading(true);
     setSoftwareEngineeringError(null);
+    setCombinedDegreeWorksResult(null);
+    setCombinedDegreeWorksError(null);
     setSoftwareEngineeringLoadingMessage(
       "Checking pasted plan against Software Engineering degree rules...",
     );
@@ -917,6 +1126,8 @@ export default function PlanCheckPage() {
 
     setIsSoftwareEngineeringLoading(true);
     setSoftwareEngineeringError(null);
+    setCombinedDegreeWorksResult(null);
+    setCombinedDegreeWorksError(null);
     setSoftwareEngineeringLoadingMessage(
       "Checking uploaded Degree Works PDF against Software Engineering degree rules...",
     );
@@ -1032,6 +1243,26 @@ export default function PlanCheckPage() {
     });
   }
 
+  function handleCombinedDegreeWorksPdfFileChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedCombinedDegreeWorksPdfFile(file);
+    setCombinedDegreeWorksUploadValidationError(null);
+
+    if (!file) {
+      return;
+    }
+
+    if (!isPdfFile(file)) {
+      setSelectedCombinedDegreeWorksPdfFile(null);
+      setCombinedDegreeWorksUploadValidationError(
+        "Choose a PDF file before running the combined Degree Works analysis.",
+      );
+      event.target.value = "";
+    }
+  }
+
   function handlePdfFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
     setSelectedPdfFile(file);
@@ -1095,6 +1326,33 @@ export default function PlanCheckPage() {
       },
       message: "Checking uploaded Degree Works PDF...",
     });
+  }
+
+  function checkCombinedDegreeWorksUploadedPdf(
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    event.preventDefault();
+    setCombinedDegreeWorksUploadValidationError(null);
+
+    if (!selectedCombinedDegreeWorksPdfFile) {
+      setCombinedDegreeWorksResult(null);
+      setCombinedDegreeWorksUploadValidationError(
+        "Choose a Degree Works PDF before running the combined analysis.",
+      );
+      return;
+    }
+
+    if (!isPdfFile(selectedCombinedDegreeWorksPdfFile)) {
+      setCombinedDegreeWorksResult(null);
+      setCombinedDegreeWorksUploadValidationError(
+        "Choose a PDF file before running the combined Degree Works analysis.",
+      );
+      return;
+    }
+
+    void runCombinedDegreeWorksUploadPlanCheck(
+      selectedCombinedDegreeWorksPdfFile,
+    );
   }
 
   function checkSoftwareEngineeringUploadedPdf(
@@ -1215,6 +1473,81 @@ export default function PlanCheckPage() {
           </Link>
         </div>
       </header>
+
+      <section className="mx-auto w-full max-w-6xl px-4 pt-5 sm:px-6 lg:pt-7">
+        <div className="rounded-md border border-[#dd550c]/30 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-2">
+                <FileUp
+                  aria-hidden="true"
+                  className="text-[#dd550c]"
+                  size={20}
+                />
+                <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+                  Combined PDF analysis
+                </p>
+              </div>
+              <h2 className="mt-2 text-[24px] font-semibold leading-8 text-slate-950">
+                Analyze Degree Works PDF
+              </h2>
+              <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                Upload one Degree Works PDF to run both the AI Engineering
+                certificate check and Software Engineering degree progress
+                check from the same parsed courses and credit total.
+              </p>
+              <p className="mt-2 text-[13px] leading-5 text-slate-500">
+                This is not an official degree audit. Advisor verification is
+                required. AP, transfer, substitutions, hidden Degree Works
+                sections, electives, prerequisites, and semester ordering may
+                require advisor review.
+              </p>
+            </div>
+
+            <div className="w-full rounded-md border border-slate-200 bg-slate-50 p-3 lg:w-[24rem]">
+              <label
+                className="text-[13px] font-semibold leading-5 text-slate-700"
+                htmlFor="combined-degreeworks-pdf"
+              >
+                Degree Works PDF
+              </label>
+              <input
+                accept="application/pdf"
+                className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15"
+                disabled={isCombinedDegreeWorksLoading}
+                id="combined-degreeworks-pdf"
+                onChange={handleCombinedDegreeWorksPdfFileChange}
+                type="file"
+              />
+              {selectedCombinedDegreeWorksPdfFile ? (
+                <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                  Selected: {selectedCombinedDegreeWorksPdfFile.name}
+                </p>
+              ) : null}
+              {combinedDegreeWorksUploadValidationError ? (
+                <p className="mt-2 text-[13px] leading-5 text-orange-700">
+                  {combinedDegreeWorksUploadValidationError}
+                </p>
+              ) : null}
+              <button
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#dd550c] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white transition hover:bg-[#b84300] disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={isCombinedDegreeWorksLoading}
+                onClick={checkCombinedDegreeWorksUploadedPdf}
+                type="button"
+              >
+                {isCombinedDegreeWorksLoading ? (
+                  <Loader2
+                    aria-hidden="true"
+                    className="animate-spin"
+                    size={17}
+                  />
+                ) : null}
+                Analyze Degree Works PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:py-7">
         <div className="grid gap-5">
@@ -1512,6 +1845,38 @@ export default function PlanCheckPage() {
             />
           ) : null}
 
+          {combinedDegreeWorksError ? (
+            <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-4">
+              <div className="flex gap-3">
+                <AlertCircle
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-orange-700"
+                  size={18}
+                />
+                <p className="text-[14px] leading-6 text-orange-800">
+                  {combinedDegreeWorksError}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {isCombinedDegreeWorksLoading ? (
+            <div className="mb-4 flex items-center gap-3 rounded-md border border-slate-200 bg-white p-4 text-[14px] text-slate-600 shadow-sm">
+              <Loader2
+                aria-hidden="true"
+                className="animate-spin text-[#dd550c]"
+                size={19}
+              />
+              Analyzing Degree Works PDF against both deterministic checks...
+            </div>
+          ) : null}
+
+          {combinedDegreeWorksResult ? (
+            <CombinedDegreeWorksParsedDetails
+              result={combinedDegreeWorksResult}
+            />
+          ) : null}
+
           {error ? (
             <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-4">
               <div className="flex gap-3">
@@ -1538,13 +1903,23 @@ export default function PlanCheckPage() {
             </div>
           ) : null}
 
+          {combinedDegreeWorksResult && result ? (
+            <h2 className="mb-3 text-[18px] font-semibold leading-7 text-slate-950">
+              AI Engineering certificate result
+            </h2>
+          ) : null}
+
           {result ? (
-            <ResultCard result={result} />
+            <ResultCard
+              result={result}
+              showUploadedPdfDetails={!combinedDegreeWorksResult}
+            />
           ) : (
             <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-[14px] leading-6 text-slate-500 shadow-sm">
-              Paste planned courses or run the sample Degree Works plan to see
-              required courses satisfied, missing requirements, elective
-              candidates, completion status, advisor verification, and notes.
+              Upload one Degree Works PDF, paste planned courses, or run the
+              sample Degree Works plan to see required courses satisfied,
+              missing requirements, elective candidates, completion status,
+              advisor verification, and notes.
             </div>
           )}
 
@@ -1575,9 +1950,16 @@ export default function PlanCheckPage() {
               </div>
             ) : null}
 
+            {combinedDegreeWorksResult && softwareEngineeringResult ? (
+              <h2 className="mb-3 text-[18px] font-semibold leading-7 text-slate-950">
+                Software Engineering degree progress result
+              </h2>
+            ) : null}
+
             {softwareEngineeringResult ? (
               <SoftwareEngineeringResultCard
                 result={softwareEngineeringResult}
+                showUploadedPdfDetails={!combinedDegreeWorksResult}
               />
             ) : (
               <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-[14px] leading-6 text-slate-500 shadow-sm">
