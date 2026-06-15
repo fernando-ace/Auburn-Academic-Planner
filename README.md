@@ -9,8 +9,8 @@ The app is intentionally limited: it does not implement login, payments, automat
 The MVP supports two complementary paths:
 
 - Gemini RAG chat for Auburn source-grounded advising questions.
-- Deterministic AI certificate plan checker for quota-free requirement checks.
-- `/plan-check` supports manual course entry, the sample Degree Works plan check, and uploaded Degree Works PDF checks.
+- Deterministic requirement checkers for quota-free progress review.
+- `/plan-check` supports manual AI Engineering certificate checks, AI Engineering sample and PDF checks, and Software Engineering degree sample and PDF checks.
 
 ## Demo flow
 
@@ -28,16 +28,25 @@ The MVP supports two complementary paths:
 7. Upload `sources/auburn/degreeworks-plan-sample.pdf`.
 8. Confirm the upload result shows 45 parsed courses.
 9. Confirm the AI certificate check is likely complete and advisor verification is required.
+10. In Software Engineering Degree Progress, run `Check sample Degree Works plan`.
+11. Upload `sources/auburn/degreeworks-plan-sample.pdf` to the Software Engineering Degree Works PDF checker.
+12. Confirm the Software Engineering PDF result shows:
+   - 45 parsed courses
+   - 122 planned credits
+   - 122 required credits
+   - missing exact courses: `ENGL 1100`, `ENGL 1120`, `ENGR 1100`, `ELEC 2200`
+   - advisor verification required
 
 ## Trust and safety
 
 - The assistant is designed around official Auburn sources.
 - Sources are shown when RAG retrieves material.
-- Certificate requirement logic is checked by a deterministic local checker.
+- Certificate and Software Engineering degree progress logic are checked by deterministic local rules.
 - Uploaded PDFs are processed server-side for course extraction.
 - Uploaded PDFs are not permanently stored.
 - Uploaded PDF checks are deterministic and do not call Gemini.
 - Advisor verification is required for academic decisions.
+- The Software Engineering checker is a progress check, not a final academic judgment. AP, transfer credit, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering still require advisor review.
 - The app helps prepare for advising conversations; it does not replace academic advisors.
 
 ## What works now
@@ -45,12 +54,12 @@ The MVP supports two complementary paths:
 - `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
+- The Software Engineering degree checker can evaluate the sample Degree Works plan or an uploaded Degree Works PDF against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, and advisor verification status.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Next planned work
 
 - Generalize upload flow for real student Degree Works PDFs.
-- Add a full Software Engineering degree rule checker.
 - Add prerequisite and semester validation.
 - More deterministic rule checkers.
 
@@ -197,10 +206,13 @@ Displayed sources come from Gemini grounding metadata, not model-written citatio
 Run:
 
 ```bash
+npm test
 npm run lint
 npx tsc --noEmit
 npm run build
 ```
+
+Current deterministic test coverage: 32 tests.
 
 Manual checks:
 
