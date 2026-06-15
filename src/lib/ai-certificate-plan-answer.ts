@@ -5,13 +5,7 @@ import {
   type CourseRule,
   type ElectiveCandidateRule,
 } from "./rules/ai-certificate.ts";
-
-export const DEGREE_WORKS_PLAN_SAMPLE_AI_COURSES = [
-  "COMP 5600",
-  "COMP 5630",
-  "COMP 5130",
-  "COMP 5610",
-];
+import { getDegreeWorksPlanSampleCourseCodes } from "./samples/degreeworks-plan-sample.ts";
 
 const ADVISOR_VERIFICATION_NOTE =
   "Advisor verification required: use this as preparation and verify your plan with an Auburn academic advisor.";
@@ -73,17 +67,16 @@ function formatElectiveCandidates(courses: ElectiveCandidateRule[]) {
 
 export function buildDegreeWorksPlanAiCertificateAnswer(
   sources: AuburnSource[] = [],
+  courseCodes = getDegreeWorksPlanSampleCourseCodes(),
 ): ModelAnswer {
-  const result = checkAiEngineeringCertificate(
-    DEGREE_WORKS_PLAN_SAMPLE_AI_COURSES,
-  );
+  const result = checkAiEngineeringCertificate(courseCodes);
   const status = result.isLikelyComplete
     ? "Likely complete for planning purposes, because the sample plan includes all three required courses and one local elective candidate."
     : "Not likely complete yet for planning purposes.";
 
   return {
     answer: [
-      `Using the local deterministic checker for the Degree Works Plan Sample courses (${DEGREE_WORKS_PLAN_SAMPLE_AI_COURSES.join(", ")}):`,
+      `Using the local deterministic checker for the Degree Works Plan Sample courses (${courseCodes.join(", ")}):`,
       `Required courses satisfied: ${formatCourses(result.requiredCoursesSatisfied)}.`,
       `Required courses missing: ${formatCourses(result.requiredCoursesMissing)}.`,
       `Elective candidates found: ${formatElectiveCandidates(result.electiveCandidatesFound)}.`,

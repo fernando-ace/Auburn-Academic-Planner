@@ -7,6 +7,7 @@ import {
   buildDegreeWorksPlanAiCertificateAnswer,
   isDegreeWorksPlanAiCertificateQuestion,
 } from "@/lib/ai-certificate-plan-answer";
+import { getDegreeWorksPlanSampleCourseCodes } from "@/lib/samples/degreeworks-plan-sample";
 
 export const runtime = "nodejs";
 
@@ -32,12 +33,21 @@ export async function POST(request: Request) {
 
   const usesDeterministicAiCertificateAnswer =
     isDegreeWorksPlanAiCertificateQuestion(messages);
+  const degreeWorksPlanSampleCourseCodes =
+    usesDeterministicAiCertificateAnswer
+      ? getDegreeWorksPlanSampleCourseCodes()
+      : [];
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   const fileSearchStoreName = process.env.GEMINI_FILE_SEARCH_STORE_NAME?.trim();
 
   if (!apiKey) {
     if (usesDeterministicAiCertificateAnswer) {
-      return Response.json(buildDegreeWorksPlanAiCertificateAnswer());
+      return Response.json(
+        buildDegreeWorksPlanAiCertificateAnswer(
+          [],
+          degreeWorksPlanSampleCourseCodes,
+        ),
+      );
     }
 
     return Response.json(
@@ -48,7 +58,12 @@ export async function POST(request: Request) {
 
   if (!fileSearchStoreName) {
     if (usesDeterministicAiCertificateAnswer) {
-      return Response.json(buildDegreeWorksPlanAiCertificateAnswer());
+      return Response.json(
+        buildDegreeWorksPlanAiCertificateAnswer(
+          [],
+          degreeWorksPlanSampleCourseCodes,
+        ),
+      );
     }
 
     return Response.json(
@@ -68,7 +83,10 @@ export async function POST(request: Request) {
 
     if (usesDeterministicAiCertificateAnswer) {
       return Response.json(
-        buildDegreeWorksPlanAiCertificateAnswer(responseBody.sources),
+        buildDegreeWorksPlanAiCertificateAnswer(
+          responseBody.sources,
+          degreeWorksPlanSampleCourseCodes,
+        ),
       );
     }
 
@@ -79,7 +97,12 @@ export async function POST(request: Request) {
         "Gemini quota unavailable; returning deterministic AI certificate answer.",
         error,
       );
-      return Response.json(buildDegreeWorksPlanAiCertificateAnswer());
+      return Response.json(
+        buildDegreeWorksPlanAiCertificateAnswer(
+          [],
+          degreeWorksPlanSampleCourseCodes,
+        ),
+      );
     }
 
     console.error("Gemini API error", error);
