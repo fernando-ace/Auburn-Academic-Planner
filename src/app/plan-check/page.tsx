@@ -79,6 +79,8 @@ type SoftwareEngineeringPlanCheckResult = {
   notes: string[];
 };
 
+type ComputerSciencePlanCheckResult = SoftwareEngineeringPlanCheckResult;
+
 type DegreeWorksSemesterTerm = {
   label: string;
   index: number;
@@ -137,6 +139,15 @@ type CombinedDegreeWorksUploadResult = {
     | "parsedCourseCodes"
     | "parsedCourseCount"
   >;
+  computerScienceCheck: Omit<
+    ComputerSciencePlanCheckResult,
+    | "planDescription"
+    | "major"
+    | "program"
+    | "sourceFileName"
+    | "parsedCourseCodes"
+    | "parsedCourseCount"
+  >;
   notes: string[];
 };
 
@@ -148,6 +159,10 @@ const softwareEngineeringPlanCheckEndpoint =
   "/api/plan/check-software-engineering";
 const softwareEngineeringPlanCheckUploadEndpoint =
   "/api/plan/check-software-engineering/upload";
+const computerSciencePlanCheckEndpoint =
+  "/api/plan/check-computer-science";
+const computerSciencePlanCheckUploadEndpoint =
+  "/api/plan/check-computer-science/upload";
 const samplePasteText = `COMP 5130
 COMP 5600
 COMP 5630
@@ -495,11 +510,13 @@ function ResultCard({
   );
 }
 
-function SoftwareEngineeringResultCard({
+function DegreeProgressResultCard({
+  degreeName,
   result,
   showUploadedPdfDetails = true,
 }: {
-  result: SoftwareEngineeringPlanCheckResult;
+  degreeName: string;
+  result: SoftwareEngineeringPlanCheckResult | ComputerSciencePlanCheckResult;
   showUploadedPdfDetails?: boolean;
 }) {
   const hasUploadedPdfResult =
@@ -510,7 +527,9 @@ function SoftwareEngineeringResultCard({
     new Set([
       hasUploadedPdfResult
         ? "This extracted PDF does not prove final degree completion."
-        : "This extracted plan does not prove completion of every Software Engineering requirement.",
+        : "This extracted plan does not prove final degree completion.",
+      "Advisor verification is required.",
+      "AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may affect this result.",
       ...result.notes,
     ]),
   );
@@ -529,8 +548,8 @@ function SoftwareEngineeringResultCard({
           </h2>
           <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
             {hasUploadedPdfResult
-              ? "This extracted PDF does not prove final degree completion. Some credits, AP/transfer work, substitutions, hidden Degree Works sections, and advisor-approved electives may not be captured by the parser yet."
-              : "This extracted plan does not prove completion of every Software Engineering requirement. Some credits, AP/transfer work, substitutions, hidden Degree Works sections, and advisor-approved electives may not be captured by the parser yet."}
+              ? "This extracted plan does not prove final degree completion. AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may affect this result."
+              : "This extracted plan does not prove final degree completion. AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may affect this result."}
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[28rem]">
@@ -610,14 +629,14 @@ function SoftwareEngineeringResultCard({
         <ResultSection title="Exact required courses satisfied">
           <CourseList
             courses={result.exactRequiredCoursesSatisfied}
-            emptyText="No exact required Software Engineering courses were found in this plan."
+            emptyText={`No exact required ${degreeName} courses were found in this plan.`}
           />
         </ResultSection>
 
         <ResultSection title="Exact required courses missing">
           <CourseList
             courses={result.exactRequiredCoursesMissing}
-            emptyText="No exact required Software Engineering courses are missing from the extracted plan."
+            emptyText={`No exact required ${degreeName} courses are missing from the extracted plan.`}
           />
         </ResultSection>
 
@@ -1081,6 +1100,14 @@ export default function PlanCheckPage() {
     enteredSoftwareEngineeringTotalCredits,
     setEnteredSoftwareEngineeringTotalCredits,
   ] = useState("");
+  const [
+    enteredComputerScienceCourses,
+    setEnteredComputerScienceCourses,
+  ] = useState("");
+  const [
+    enteredComputerScienceTotalCredits,
+    setEnteredComputerScienceTotalCredits,
+  ] = useState("");
   const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
   const [selectedCombinedDegreeWorksPdfFile, setSelectedCombinedDegreeWorksPdfFile] =
     useState<File | null>(null);
@@ -1088,9 +1115,15 @@ export default function PlanCheckPage() {
     selectedSoftwareEngineeringPdfFile,
     setSelectedSoftwareEngineeringPdfFile,
   ] = useState<File | null>(null);
+  const [
+    selectedComputerSciencePdfFile,
+    setSelectedComputerSciencePdfFile,
+  ] = useState<File | null>(null);
   const [result, setResult] = useState<PlanCheckResult | null>(null);
   const [softwareEngineeringResult, setSoftwareEngineeringResult] =
     useState<SoftwareEngineeringPlanCheckResult | null>(null);
+  const [computerScienceResult, setComputerScienceResult] =
+    useState<ComputerSciencePlanCheckResult | null>(null);
   const [combinedDegreeWorksResult, setCombinedDegreeWorksResult] =
     useState<CombinedDegreeWorksUploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -1098,6 +1131,9 @@ export default function PlanCheckPage() {
     string | null
   >(null);
   const [softwareEngineeringError, setSoftwareEngineeringError] = useState<
+    string | null
+  >(null);
+  const [computerScienceError, setComputerScienceError] = useState<
     string | null
   >(null);
   const [uploadValidationError, setUploadValidationError] = useState<
@@ -1112,8 +1148,16 @@ export default function PlanCheckPage() {
     setSoftwareEngineeringUploadValidationError,
   ] = useState<string | null>(null);
   const [
+    computerScienceUploadValidationError,
+    setComputerScienceUploadValidationError,
+  ] = useState<string | null>(null);
+  const [
     softwareEngineeringManualValidationError,
     setSoftwareEngineeringManualValidationError,
+  ] = useState<string | null>(null);
+  const [
+    computerScienceManualValidationError,
+    setComputerScienceManualValidationError,
   ] = useState<string | null>(null);
   const [advisorSummaryCopyStatus, setAdvisorSummaryCopyStatus] = useState<
     string | null
@@ -1123,11 +1167,15 @@ export default function PlanCheckPage() {
     useState(false);
   const [isSoftwareEngineeringLoading, setIsSoftwareEngineeringLoading] =
     useState(false);
+  const [isComputerScienceLoading, setIsComputerScienceLoading] =
+    useState(false);
   const [loadingMessage, setLoadingMessage] = useState(
     "Checking entered courses against Auburn certificate rules...",
   );
   const [softwareEngineeringLoadingMessage, setSoftwareEngineeringLoadingMessage] =
     useState("Checking the sample Degree Works plan against Software Engineering degree rules...");
+  const [computerScienceLoadingMessage, setComputerScienceLoadingMessage] =
+    useState("Checking the sample Degree Works plan against Computer Science degree rules...");
 
   const parsedCourseCodes = useMemo(
     () => parseCourseCodes(enteredCourses),
@@ -1137,14 +1185,24 @@ export default function PlanCheckPage() {
     () => parseCourseCodes(enteredSoftwareEngineeringCourses),
     [enteredSoftwareEngineeringCourses],
   );
+  const parsedComputerScienceCourseCodes = useMemo(
+    () => parseCourseCodes(enteredComputerScienceCourses),
+    [enteredComputerScienceCourses],
+  );
   const advisorMeetingSummary = useMemo(
     () =>
       buildAdvisorMeetingSummary({
         aiResult: result,
         softwareEngineeringResult,
+        computerScienceResult,
         prerequisiteCheck: combinedDegreeWorksResult?.prerequisiteCheck ?? null,
       }),
-    [combinedDegreeWorksResult?.prerequisiteCheck, result, softwareEngineeringResult],
+    [
+      combinedDegreeWorksResult?.prerequisiteCheck,
+      computerScienceResult,
+      result,
+      softwareEngineeringResult,
+    ],
   );
 
   async function runPlanCheck({
@@ -1198,6 +1256,7 @@ export default function PlanCheckPage() {
     setCombinedDegreeWorksError(null);
     setError(null);
     setSoftwareEngineeringError(null);
+    setComputerScienceError(null);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -1239,12 +1298,21 @@ export default function PlanCheckPage() {
       setSoftwareEngineeringResult({
         ...combinedPayload.softwareEngineeringCheck,
         ...sharedPlanFields,
+        program: "BSWE Software Engineering",
+        totalPlannedCredits: combinedPayload.totalPlannedCredits,
+      });
+      setComputerScienceResult({
+        ...combinedPayload.computerScienceCheck,
+        ...sharedPlanFields,
+        major: "Computer Science",
+        program: "CSCI Computer Science",
         totalPlannedCredits: combinedPayload.totalPlannedCredits,
       });
     } catch (fetchError) {
       setCombinedDegreeWorksResult(null);
       setResult(null);
       setSoftwareEngineeringResult(null);
+      setComputerScienceResult(null);
       setCombinedDegreeWorksError(
         fetchError instanceof Error
           ? fetchError.message
@@ -1396,6 +1464,147 @@ export default function PlanCheckPage() {
     }
   }
 
+  async function runComputerSciencePlanCheck() {
+    if (isComputerScienceLoading) {
+      return;
+    }
+
+    setIsComputerScienceLoading(true);
+    setComputerScienceError(null);
+    setCombinedDegreeWorksResult(null);
+    setCombinedDegreeWorksError(null);
+    setComputerScienceLoadingMessage(
+      "Checking the sample Degree Works plan against Computer Science degree rules...",
+    );
+
+    try {
+      const response = await fetch(computerSciencePlanCheckEndpoint);
+      const payload = (await response.json()) as
+        | ComputerSciencePlanCheckResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The Computer Science degree check could not run.",
+        );
+      }
+
+      setComputerScienceResult(payload as ComputerSciencePlanCheckResult);
+    } catch (fetchError) {
+      setComputerScienceResult(null);
+      setComputerScienceError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The Computer Science degree check could not run.",
+      );
+    } finally {
+      setIsComputerScienceLoading(false);
+    }
+  }
+
+  async function runComputerScienceManualPlanCheck({
+    courseCodes,
+    totalPlannedCredits,
+  }: {
+    courseCodes: string[];
+    totalPlannedCredits: number | null;
+  }) {
+    if (isComputerScienceLoading) {
+      return;
+    }
+
+    setIsComputerScienceLoading(true);
+    setComputerScienceError(null);
+    setCombinedDegreeWorksResult(null);
+    setCombinedDegreeWorksError(null);
+    setComputerScienceLoadingMessage(
+      "Checking pasted plan against Computer Science degree rules...",
+    );
+
+    try {
+      const response = await fetch(computerSciencePlanCheckEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseCodes,
+          planDescription: "Pasted Computer Science plan",
+          major: "Computer Science",
+          totalPlannedCredits,
+        }),
+      });
+      const payload = (await response.json()) as
+        | ComputerSciencePlanCheckResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The Computer Science pasted plan check could not run.",
+        );
+      }
+
+      setComputerScienceResult(payload as ComputerSciencePlanCheckResult);
+    } catch (fetchError) {
+      setComputerScienceResult(null);
+      setComputerScienceError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The Computer Science pasted plan check could not run.",
+      );
+    } finally {
+      setIsComputerScienceLoading(false);
+    }
+  }
+
+  async function runComputerScienceUploadPlanCheck(file: File) {
+    if (isComputerScienceLoading) {
+      return;
+    }
+
+    setIsComputerScienceLoading(true);
+    setComputerScienceError(null);
+    setCombinedDegreeWorksResult(null);
+    setCombinedDegreeWorksError(null);
+    setComputerScienceLoadingMessage(
+      "Checking uploaded Degree Works PDF against Computer Science degree rules...",
+    );
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(computerSciencePlanCheckUploadEndpoint, {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as
+        | ComputerSciencePlanCheckResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The Computer Science PDF check could not run.",
+        );
+      }
+
+      setComputerScienceResult(payload as ComputerSciencePlanCheckResult);
+    } catch (fetchError) {
+      setComputerScienceResult(null);
+      setComputerScienceError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The Computer Science PDF check could not run.",
+      );
+    } finally {
+      setIsComputerScienceLoading(false);
+    }
+  }
+
   function checkEnteredCourses(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
 
@@ -1474,6 +1683,53 @@ export default function PlanCheckPage() {
     });
   }
 
+  function checkComputerScienceSamplePlan(
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    event.preventDefault();
+    void runComputerSciencePlanCheck();
+  }
+
+  function checkComputerScienceEnteredCourses(
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    event.preventDefault();
+    setComputerScienceManualValidationError(null);
+
+    if (parsedComputerScienceCourseCodes.length === 0) {
+      setComputerScienceResult(null);
+      setComputerScienceManualValidationError(
+        "Paste at least one Computer Science course code before checking.",
+      );
+      return;
+    }
+
+    const totalCredits = enteredComputerScienceTotalCredits.trim();
+    let totalPlannedCredits: number | null = null;
+
+    if (totalCredits.length > 0) {
+      const parsedTotalPlannedCredits = Number(totalCredits);
+
+      if (
+        !Number.isFinite(parsedTotalPlannedCredits) ||
+        parsedTotalPlannedCredits < 0
+      ) {
+        setComputerScienceResult(null);
+        setComputerScienceManualValidationError(
+          "Enter total planned credits as a non-negative number, or leave it blank.",
+        );
+        return;
+      }
+
+      totalPlannedCredits = parsedTotalPlannedCredits;
+    }
+
+    void runComputerScienceManualPlanCheck({
+      courseCodes: parsedComputerScienceCourseCodes,
+      totalPlannedCredits,
+    });
+  }
+
   function handleCombinedDegreeWorksPdfFileChange(
     event: ChangeEvent<HTMLInputElement>,
   ) {
@@ -1525,6 +1781,26 @@ export default function PlanCheckPage() {
       setSelectedSoftwareEngineeringPdfFile(null);
       setSoftwareEngineeringUploadValidationError(
         "Choose a PDF file before running the Software Engineering check.",
+      );
+      event.target.value = "";
+    }
+  }
+
+  function handleComputerSciencePdfFileChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedComputerSciencePdfFile(file);
+    setComputerScienceUploadValidationError(null);
+
+    if (!file) {
+      return;
+    }
+
+    if (!isPdfFile(file)) {
+      setSelectedComputerSciencePdfFile(null);
+      setComputerScienceUploadValidationError(
+        "Choose a PDF file before running the Computer Science check.",
       );
       event.target.value = "";
     }
@@ -1611,6 +1887,31 @@ export default function PlanCheckPage() {
     void runSoftwareEngineeringUploadPlanCheck(
       selectedSoftwareEngineeringPdfFile,
     );
+  }
+
+  function checkComputerScienceUploadedPdf(
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    event.preventDefault();
+    setComputerScienceUploadValidationError(null);
+
+    if (!selectedComputerSciencePdfFile) {
+      setComputerScienceResult(null);
+      setComputerScienceUploadValidationError(
+        "Choose a Degree Works PDF before checking Computer Science progress.",
+      );
+      return;
+    }
+
+    if (!isPdfFile(selectedComputerSciencePdfFile)) {
+      setComputerScienceResult(null);
+      setComputerScienceUploadValidationError(
+        "Choose a PDF file before running the Computer Science check.",
+      );
+      return;
+    }
+
+    void runComputerScienceUploadPlanCheck(selectedComputerSciencePdfFile);
   }
 
   function copyAdvisorMeetingSummary() {
@@ -1724,8 +2025,9 @@ export default function PlanCheckPage() {
               </h2>
               <p className="mt-2 text-[14px] leading-6 text-slate-600">
                 Upload one Degree Works PDF to run both the AI Engineering
-                certificate check and Software Engineering degree progress
-                check from the same parsed courses and credit total.
+                certificate check, Software Engineering degree progress check,
+                and Computer Science degree progress check from the same parsed
+                courses and credit total.
               </p>
               <p className="mt-2 text-[13px] leading-5 text-slate-500">
                 This is not an official degree audit. Advisor verification is
@@ -2065,6 +2367,169 @@ export default function PlanCheckPage() {
               </button>
             </section>
           </section>
+
+          <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <h2 className="text-[22px] font-semibold leading-8 text-slate-950">
+              Computer Science Degree Progress
+            </h2>
+            <p className="mt-2 text-[14px] leading-6 text-slate-600">
+              Checks the sample Degree Works plan against local Computer
+              Science degree rules. This extracted plan does not prove final
+              degree completion.
+            </p>
+            <p className="mt-2 text-[13px] leading-5 text-slate-500">
+              Advisor verification is required. AP, transfer, substitutions,
+              hidden Degree Works sections, electives, prerequisites, and
+              semester ordering may affect this result.
+            </p>
+
+            <div className="mt-5">
+              <label
+                className="text-[13px] font-semibold leading-5 text-slate-700"
+                htmlFor="computer-science-planned-courses"
+              >
+                Paste Computer Science plan courses
+              </label>
+              <textarea
+                className="mt-2 min-h-56 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-[14px] leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15"
+                disabled={isComputerScienceLoading}
+                id="computer-science-planned-courses"
+                onChange={(event) =>
+                  setEnteredComputerScienceCourses(event.target.value)
+                }
+                placeholder={`COMP 1210\nCOMP 2210\nCOMP 4200\nPHIL 1020`}
+                value={enteredComputerScienceCourses}
+              />
+              <p className="mt-2 text-[13px] leading-5 text-slate-500">
+                Paste comma-separated courses, newline courses, or messy Degree
+                Works-style text. This check is deterministic and still needs
+                advisor review.
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-500">
+                Parsed courses:{" "}
+                {parsedComputerScienceCourseCodes.length > 0
+                  ? parsedComputerScienceCourseCodes.join(", ")
+                  : "none yet"}
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <label
+                className="text-[13px] font-semibold leading-5 text-slate-700"
+                htmlFor="computer-science-total-planned-credits"
+              >
+                Total planned credits
+              </label>
+              <input
+                className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[14px] leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15"
+                disabled={isComputerScienceLoading}
+                id="computer-science-total-planned-credits"
+                inputMode="decimal"
+                min="0"
+                onChange={(event) =>
+                  setEnteredComputerScienceTotalCredits(event.target.value)
+                }
+                placeholder="Optional, e.g. 122"
+                type="number"
+                value={enteredComputerScienceTotalCredits}
+              />
+              <p className="mt-2 text-[13px] leading-5 text-slate-500">
+                Leave blank when Degree Works, AP, transfer, substitution, or
+                elective credits still need advisor confirmation.
+              </p>
+              {computerScienceManualValidationError ? (
+                <p className="mt-2 text-[13px] leading-5 text-orange-700">
+                  {computerScienceManualValidationError}
+                </p>
+              ) : null}
+            </div>
+
+            <button
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#03244d] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white transition hover:bg-[#021b3a] disabled:cursor-not-allowed disabled:bg-slate-300"
+              disabled={isComputerScienceLoading}
+              onClick={checkComputerScienceEnteredCourses}
+              type="button"
+            >
+              {isComputerScienceLoading ? (
+                <Loader2
+                  aria-hidden="true"
+                  className="animate-spin"
+                  size={17}
+                />
+              ) : null}
+              Check pasted Computer Science plan
+            </button>
+
+            <button
+              className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-center text-[14px] font-semibold leading-5 text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+              disabled={isComputerScienceLoading}
+              onClick={checkComputerScienceSamplePlan}
+              type="button"
+            >
+              {isComputerScienceLoading ? (
+                <Loader2
+                  aria-hidden="true"
+                  className="animate-spin"
+                  size={17}
+                />
+              ) : null}
+              Check sample Degree Works plan
+            </button>
+
+            <section className="mt-6 border-t border-slate-200 pt-5">
+              <div className="flex items-center gap-2">
+                <FileUp
+                  aria-hidden="true"
+                  className="text-[#dd550c]"
+                  size={18}
+                />
+                <h2 className="text-[16px] font-semibold leading-6 text-slate-950">
+                  Upload Degree Works PDF
+                </h2>
+              </div>
+              <div className="mt-3">
+                <label
+                  className="text-[13px] font-semibold leading-5 text-slate-700"
+                  htmlFor="computer-science-degreeworks-pdf"
+                >
+                  Computer Science Degree Works PDF
+                </label>
+                <input
+                  accept="application/pdf"
+                  className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15"
+                  disabled={isComputerScienceLoading}
+                  id="computer-science-degreeworks-pdf"
+                  onChange={handleComputerSciencePdfFileChange}
+                  type="file"
+                />
+                {selectedComputerSciencePdfFile ? (
+                  <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                    Selected: {selectedComputerSciencePdfFile.name}
+                  </p>
+                ) : null}
+                {computerScienceUploadValidationError ? (
+                  <p className="mt-2 text-[13px] leading-5 text-orange-700">
+                    {computerScienceUploadValidationError}
+                  </p>
+                ) : null}
+              </div>
+              <button
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#dd550c] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white transition hover:bg-[#b84300] disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={isComputerScienceLoading}
+                onClick={checkComputerScienceUploadedPdf}
+                type="button"
+              >
+                {isComputerScienceLoading ? (
+                  <Loader2
+                    aria-hidden="true"
+                    className="animate-spin"
+                    size={17}
+                  />
+                ) : null}
+                Check uploaded PDF
+              </button>
+            </section>
+          </section>
         </div>
 
         <section className="min-w-0">
@@ -2098,7 +2563,7 @@ export default function PlanCheckPage() {
                 className="animate-spin text-[#dd550c]"
                 size={19}
               />
-              Analyzing Degree Works PDF against both deterministic checks...
+              Analyzing Degree Works PDF against deterministic checks...
             </div>
           ) : null}
 
@@ -2188,7 +2653,8 @@ export default function PlanCheckPage() {
             ) : null}
 
             {softwareEngineeringResult ? (
-              <SoftwareEngineeringResultCard
+              <DegreeProgressResultCard
+                degreeName="Software Engineering"
                 result={softwareEngineeringResult}
                 showUploadedPdfDetails={!combinedDegreeWorksResult}
               />
@@ -2196,6 +2662,55 @@ export default function PlanCheckPage() {
               <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-[14px] leading-6 text-slate-500 shadow-sm">
                 Run the Software Engineering sample check to review credit
                 totals, exact required courses, alternative course groups,
+                advisor-verified blocks, notes, and whether the extracted plan
+                proves likely completion.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5">
+            {computerScienceError ? (
+              <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-4">
+                <div className="flex gap-3">
+                  <AlertCircle
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0 text-orange-700"
+                    size={18}
+                  />
+                  <p className="text-[14px] leading-6 text-orange-800">
+                    {computerScienceError}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {isComputerScienceLoading ? (
+              <div className="mb-4 flex items-center gap-3 rounded-md border border-slate-200 bg-white p-4 text-[14px] text-slate-600 shadow-sm">
+                <Loader2
+                  aria-hidden="true"
+                  className="animate-spin text-[#dd550c]"
+                  size={19}
+                />
+                {computerScienceLoadingMessage}
+              </div>
+            ) : null}
+
+            {combinedDegreeWorksResult && computerScienceResult ? (
+              <h2 className="mb-3 text-[18px] font-semibold leading-7 text-slate-950">
+                Computer Science degree progress result
+              </h2>
+            ) : null}
+
+            {computerScienceResult ? (
+              <DegreeProgressResultCard
+                degreeName="Computer Science"
+                result={computerScienceResult}
+                showUploadedPdfDetails={!combinedDegreeWorksResult}
+              />
+            ) : (
+              <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-[14px] leading-6 text-slate-500 shadow-sm">
+                Run the Computer Science sample check to review credit totals,
+                exact required courses, alternative course groups,
                 advisor-verified blocks, notes, and whether the extracted plan
                 proves likely completion.
               </div>

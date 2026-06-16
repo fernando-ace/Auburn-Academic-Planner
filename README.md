@@ -10,7 +10,7 @@ The MVP supports two complementary paths:
 
 - Gemini RAG chat for Auburn source-grounded advising questions.
 - Deterministic requirement checkers for quota-free progress review.
-- `/plan-check` supports a combined Degree Works PDF upload that runs the AI Engineering certificate check, Software Engineering degree progress check, and deterministic semester/prerequisite sequence check from one upload, plus manual AI Engineering certificate checks, AI Engineering sample and PDF checks, Software Engineering degree manual/sample/PDF checks, and a copyable Advisor Meeting Summary.
+- `/plan-check` supports a combined Degree Works PDF upload that runs the AI Engineering certificate check, Software Engineering degree progress check, Computer Science degree progress check, and deterministic semester/prerequisite sequence check from one upload, plus manual/sample/PDF checks for each deterministic requirement checker and a copyable Advisor Meeting Summary.
 
 ## Demo flow
 
@@ -37,17 +37,22 @@ The MVP supports two complementary paths:
    - likely complete: `No`
    - missing exact courses: `ENGL 1100`, `ENGL 1120`, `ENGR 1100`, `ELEC 2200`
    - advisor verification required
-10. Confirm the Advisor Meeting Summary appears, includes AI Engineering certificate, Software Engineering degree progress, and prerequisite/advisor questions, and can be copied for an advising meeting.
-11. Optional separate checks remain available:
+10. Confirm the Computer Science degree progress result shows:
+   - likely complete: `No`
+   - missing exact courses: `ENGL 1100`, `ENGL 1120`, `ENGR 1100`, `ELEC 2200`, `COMP 4200`
+   - advisor verification required
+11. Confirm the Advisor Meeting Summary appears, includes AI Engineering certificate, Software Engineering degree progress, Computer Science degree progress, and prerequisite/advisor questions, and can be copied for an advising meeting.
+12. Optional separate checks remain available:
    - Paste custom AI certificate courses, such as `COMP 5600, COMP 5630, COMP 5130, COMP 5610`.
    - Run the AI certificate sample or AI certificate PDF upload.
    - Run the Software Engineering manual, sample, or separate Degree Works PDF checker.
+   - Run the Computer Science manual, sample, or separate Degree Works PDF checker.
 
 ## Trust and safety
 
 - The assistant is designed around official Auburn sources.
 - Sources are shown when RAG retrieves material.
-- Certificate and Software Engineering degree progress logic are checked by deterministic local rules.
+- Certificate, Software Engineering degree progress, and Computer Science degree progress logic are checked by deterministic local rules.
 - Uploaded PDFs are processed server-side for course extraction.
 - Uploaded PDFs are not permanently stored.
 - Uploaded PDF checks are deterministic and do not call Gemini.
@@ -56,7 +61,7 @@ The MVP supports two complementary paths:
 - The prerequisite sequence model is preliminary and intentionally limited to a conservative subset of COMP prerequisite chains. It reports warnings and advisor-review items, not official registration decisions.
 - The Advisor Meeting Summary is local, deterministic, and does not call Gemini.
 - Advisor verification is required for academic decisions.
-- The Software Engineering checker and prerequisite sequence checker are progress checks, not final academic judgments. Real Degree Works PDFs can include AP, transfer credit, substitutions, exceptions, hidden sections, in-progress coursework, electives, prerequisites, standing requirements, and semester ordering that still require advisor review.
+- The Software Engineering checker, Computer Science checker, and prerequisite sequence checker are progress checks, not final academic judgments. Real Degree Works PDFs can include AP, transfer credit, substitutions, exceptions, hidden sections, in-progress coursework, electives, prerequisites, standing requirements, and semester ordering that still require advisor review.
 - The Advisor Meeting Summary is a preparation summary, not an official degree audit.
 - The app helps prepare for advising conversations; it does not replace academic advisors.
 
@@ -65,15 +70,12 @@ The MVP supports two complementary paths:
 - `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
-- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show shared parsed details, parser confidence, parser warnings, detected PDF signals, detected semester terms, conservative prerequisite sequence warnings, and run both the AI Engineering certificate checker and Software Engineering degree checker without calling Gemini.
+- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show shared parsed details, parser confidence, parser warnings, detected PDF signals, detected semester terms, conservative prerequisite sequence warnings, and run the AI Engineering certificate checker, Software Engineering degree checker, and Computer Science degree checker without calling Gemini.
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, parser diagnostics, and advisor verification status.
+- The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, parser diagnostics, and advisor verification status.
 - The Advisor Meeting Summary turns the latest check results into copyable preparation notes with missing requirements, parser warnings, prerequisite warnings, advisor-verified items, and questions to ask.
-- Local validation currently passes `46/46` deterministic tests.
+- Local validation currently passes `56/56` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
-
-## Next planned work
-
-- More deterministic rule checkers.
 
 ## Run Locally
 
@@ -226,7 +228,7 @@ npm run build
 
 Current validation coverage:
 
-- 40 deterministic tests through `npm test`
+- 56 deterministic tests through `npm test`
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`

@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { buildAdvisorMeetingSummary } from "../src/lib/plan/advisor-meeting-summary.ts";
 import { buildCustomAiCertificatePlanCheck } from "../src/lib/plan/ai-certificate-plan-check.ts";
+import { checkComputerScienceDegree } from "../src/lib/rules/computer-science-degree.ts";
 import { checkSoftwareEngineeringDegree } from "../src/lib/rules/software-engineering-degree.ts";
 import { getDegreeWorksPlanSampleCourseCodes } from "../src/lib/samples/degreeworks-plan-sample.ts";
 
@@ -55,6 +56,36 @@ test("builds advisor summary for Software Engineering result only", () => {
   assert.match(summary, /- Core Science Sequence \(8 credits\)/);
 });
 
+test("builds advisor summary for Computer Science result only", () => {
+  const computerScienceResult = {
+    ...checkComputerScienceDegree({
+      courseCodes: getDegreeWorksPlanSampleCourseCodes(),
+      totalPlannedCredits: 122,
+    }),
+    planDescription: "Degree Works sample Computer Science plan",
+    major: "Computer Science",
+  };
+
+  const summary = buildAdvisorMeetingSummary({
+    aiResult: null,
+    softwareEngineeringResult: null,
+    computerScienceResult,
+  });
+
+  assert.match(summary, /Computer Science Degree Progress/);
+  assert.match(summary, /Total planned credits: 122/);
+  assert.match(summary, /Required credits: 122/);
+  assert.match(summary, /Computer Science total credits status/);
+  assert.match(
+    summary,
+    /Exact required courses missing: ENGL 1100, ENGL 1120, ENGR 1100, ELEC 2200, COMP 4200/,
+  );
+  assert.match(summary, /Alternative course groups:/);
+  assert.match(summary, /- Ethics requirement: satisfied/);
+  assert.match(summary, /Advisor-verified items that need review:/);
+  assert.match(summary, /- Technical Electives \(18 credits\)/);
+});
+
 test("builds advisor summary for combined Degree Works result", () => {
   const courseCodes = getDegreeWorksPlanSampleCourseCodes();
   const detectedSignals = {
@@ -97,14 +128,30 @@ test("builds advisor summary for combined Degree Works result", () => {
     parserWarnings,
     parserConfidence: "medium" as const,
   };
+  const computerScienceResult = {
+    ...checkComputerScienceDegree({
+      courseCodes,
+      totalPlannedCredits: 122,
+    }),
+    planDescription: "Combined Degree Works PDF analysis",
+    major: "Computer Science",
+    sourceFileName: "degreeworks-plan-sample.pdf",
+    parsedCourseCodes: courseCodes,
+    parsedCourseCount: courseCodes.length,
+    detectedSignals,
+    parserWarnings,
+    parserConfidence: "medium" as const,
+  };
 
   const summary = buildAdvisorMeetingSummary({
     aiResult,
     softwareEngineeringResult,
+    computerScienceResult,
   });
 
   assert.match(summary, /AI Engineering Certificate/);
   assert.match(summary, /Software Engineering Degree Progress/);
+  assert.match(summary, /Computer Science Degree Progress/);
   assert.match(summary, new RegExp(`Parsed course count: ${courseCodes.length}`));
   assert.match(summary, /Parser confidence: medium/);
   assert.match(summary, /Parser warnings:/);
@@ -122,7 +169,7 @@ test("builds advisor summary for combined Degree Works result", () => {
   );
   assert.match(
     summary,
-    /Which electives count toward the remaining Software Engineering or certificate requirements\?/,
+    /Which electives count toward the remaining Software Engineering, Computer Science, or certificate requirements\?/,
   );
   assert.match(
     summary,

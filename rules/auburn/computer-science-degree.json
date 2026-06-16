@@ -1,0 +1,57 @@
+{
+  "degreeName": "Computer Science",
+  "program": "CSCI Computer Science",
+  "catalogYear": "2025-2026",
+  "totalHoursRequired": 122,
+  "sourceId": "auburn-computer-science-bulletin",
+  "exactRequiredCourses": [
+    { "code": "ENGL 1100", "title": "English Composition I", "creditHours": 3 },
+    { "code": "ENGL 1120", "title": "English Composition II", "creditHours": 3 },
+    { "code": "MATH 1610", "title": "Calculus I", "creditHours": 4 },
+    { "code": "MATH 1620", "title": "Calculus II", "creditHours": 4 },
+    { "code": "COMP 1210", "title": "Fundamentals of Computing I", "creditHours": 3 },
+    { "code": "COMP 2210", "title": "Fundamentals of Computing II", "creditHours": 4 },
+    { "code": "ENGR 1110", "title": "Introduction to Engineering", "creditHours": 2 },
+    { "code": "COMP 2240", "title": "Discrete Structures", "creditHours": 3 },
+    { "code": "ENGR 1100", "title": "Engineering Orientation", "creditHours": 0 },
+    { "code": "MATH 2660", "title": "Topics in Linear Algebra", "creditHours": 3 },
+    { "code": "STAT 3010", "title": "Statistics for Engineers and Scientists", "creditHours": 3 },
+    { "code": "ELEC 2200", "title": "Digital Logic Circuits", "creditHours": 3 },
+    { "code": "COMP 2710", "title": "Software Construction", "creditHours": 3 },
+    { "code": "COMP 2800", "title": "Professional Development I", "creditHours": 1 },
+    { "code": "COMP 3270", "title": "Introduction to Algorithms", "creditHours": 3 },
+    { "code": "COMM 1000", "title": "Public Speaking", "creditHours": 3 },
+    { "code": "COMP 3500", "title": "Introduction to Operating Systems", "creditHours": 3 },
+    { "code": "COMP 3220", "title": "Principles of Programming Languages", "creditHours": 3 },
+    { "code": "COMP 3700", "title": "Software Modeling and Design", "creditHours": 3 },
+    { "code": "COMP 3350", "title": "Computer Organization and Assembly Language Programming", "creditHours": 3 },
+    { "code": "COMP 4320", "title": "Introduction to Computer Networks", "creditHours": 3 },
+    { "code": "COMP 4200", "title": "Formal Languages", "creditHours": 3 },
+    { "code": "COMP 5120", "title": "Database Systems I", "creditHours": 3 },
+    { "code": "COMP 4800", "title": "Professional Development II", "creditHours": 1 },
+    { "code": "COMP 4710", "title": "Senior Design Project", "creditHours": 3 },
+    { "code": "COMP 4730", "title": "Computer Ethics", "creditHours": 2 },
+    { "code": "COMP 4810", "title": "Program Assessment", "creditHours": 0 },
+    { "code": "UNIV 4AA0", "title": "University Graduation", "creditHours": 0 }
+  ],
+  "alternativeCourseGroups": [
+    {
+      "name": "Ethics requirement",
+      "minimumCoursesRequired": 1,
+      "courses": [
+        { "code": "PHIL 1020", "title": "Introduction to Ethics", "creditHours": 3 },
+        { "code": "PHIL 1110", "title": "Ethical and Conceptual Foundations of Science", "creditHours": 3 }
+      ]
+    }
+  ],
+  "advisorVerifiedRequirements": [
+    { "name": "Core Science Sequence", "creditHoursRequired": 8 },
+    { "name": "Core History Sequence", "creditHoursRequired": 6 },
+    { "name": "Core Literature", "creditHoursRequired": 3 },
+    { "name": "Core Social Science Elective", "creditHoursRequired": 3 },
+    { "name": "Math Elective", "creditHoursRequired": 3 },
+    { "name": "Core Fine Arts", "creditHoursRequired": 3 },
+    { "name": "Technical Electives", "creditHoursRequired": 18 },
+    { "name": "Free Elective", "creditHoursRequired": 3 }
+  ]
+}

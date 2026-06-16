@@ -38,11 +38,19 @@ test("POST runs both deterministic Degree Works checks from one uploaded PDF", a
     result.softwareEngineeringCheck.advisorVerificationRequired,
     true,
   );
+  assert.equal(result.computerScienceCheck.isLikelyComplete, false);
+  assert.equal(result.computerScienceCheck.advisorVerificationRequired, true);
   assert.deepEqual(
     result.softwareEngineeringCheck.exactRequiredCoursesMissing.map(
       (course: { code: string }) => course.code,
     ),
     ["ENGL 1100", "ENGL 1120", "ENGR 1100", "ELEC 2200"],
+  );
+  assert.deepEqual(
+    result.computerScienceCheck.exactRequiredCoursesMissing.map(
+      (course: { code: string }) => course.code,
+    ),
+    ["ENGL 1100", "ENGL 1120", "ENGR 1100", "ELEC 2200", "COMP 4200"],
   );
   assert.ok(
     result.notes.some((note: string) =>
