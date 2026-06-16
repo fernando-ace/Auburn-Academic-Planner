@@ -1,0 +1,83 @@
+{
+  "modelName": "Software Engineering preliminary prerequisite sequence check",
+  "catalogYear": "2025-2026",
+  "sourceId": "local-preliminary-software-engineering-prerequisites",
+  "rules": [
+    {
+      "courseCode": "COMP 2210",
+      "prerequisites": ["COMP 1210"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 2710",
+      "prerequisites": ["COMP 1210"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 2240",
+      "prerequisites": ["COMP 1210"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 3270",
+      "prerequisites": ["COMP 2210", "COMP 2240"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 3220",
+      "prerequisites": ["COMP 2210"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 3350",
+      "prerequisites": ["COMP 2210"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 3500",
+      "prerequisites": ["COMP 3270"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 3700",
+      "prerequisites": ["COMP 2710"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 4300",
+      "prerequisites": ["COMP 3350"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 4320",
+      "prerequisites": ["COMP 3270"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 5120",
+      "prerequisites": ["COMP 3270"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 5700",
+      "prerequisites": ["COMP 3700"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 5710",
+      "prerequisites": ["COMP 3700"],
+      "verification": "modeled"
+    },
+    {
+      "courseCode": "COMP 4710",
+      "prerequisites": [],
+      "verification": "advisor_review",
+      "advisorReviewNote": "Verify senior standing and any approvals for Senior Design Project."
+    }
+  ],
+  "excludedHardFailureCourses": ["COMP 4810", "UNIV 4AA0"],
+  "notes": [
+    "This is a conservative local preliminary prerequisite model, not the Auburn catalog.",
+    "Advisor and catalog verification are required before changing registration plans."
+  ]
+}

@@ -53,6 +53,23 @@ export type AdvisorSummarySoftwareEngineeringResult = {
   notes: string[];
 };
 
+export type AdvisorSummaryPrerequisiteIssue = {
+  courseCode: string;
+  termLabel?: string;
+  missingPrerequisites: string[];
+  severity: "warning" | "blocking" | "advisor_review";
+  message: string;
+};
+
+export type AdvisorSummaryPrerequisiteCheck = {
+  checkedCourseCount: number;
+  prerequisiteIssues: AdvisorSummaryPrerequisiteIssue[];
+  advisorReviewItems: string[];
+  semesterConfidence: DegreeWorksParserConfidence;
+  isLikelySequenceValid: boolean | null;
+  notes: string[];
+};
+
 function formatCourseCodes(courses: AdvisorSummaryCourse[]) {
   return courses.length > 0
     ? courses.map((course) => course.code).join(", ")
@@ -113,11 +130,13 @@ function addParserDiagnostics(
 export function buildAdvisorMeetingSummary({
   aiResult,
   softwareEngineeringResult,
+  prerequisiteCheck = null,
 }: {
   aiResult: AdvisorSummaryAiCertificateResult | null;
   softwareEngineeringResult: AdvisorSummarySoftwareEngineeringResult | null;
+  prerequisiteCheck?: AdvisorSummaryPrerequisiteCheck | null;
 }) {
-  if (!aiResult && !softwareEngineeringResult) {
+  if (!aiResult && !softwareEngineeringResult && !prerequisiteCheck) {
     return "";
   }
 
@@ -212,9 +231,44 @@ export function buildAdvisorMeetingSummary({
     );
   }
 
+  if (prerequisiteCheck) {
+    const sequenceStatus =
+      prerequisiteCheck.isLikelySequenceValid === null
+        ? "Could not be determined from reliable term structure."
+        : prerequisiteCheck.isLikelySequenceValid
+          ? "No modeled sequence warnings found."
+          : "Modeled prerequisite sequence warnings found.";
+
+    lines.push(
+      "Semester and Prerequisite Check",
+      `Semester extraction confidence: ${prerequisiteCheck.semesterConfidence}`,
+      `Checked course count: ${prerequisiteCheck.checkedCourseCount}`,
+      `Sequence validity: ${sequenceStatus}`,
+    );
+
+    if (prerequisiteCheck.prerequisiteIssues.length > 0) {
+      lines.push(
+        "Prerequisite warnings and advisor-review items:",
+        ...prerequisiteCheck.prerequisiteIssues.map(
+          (issue) => `- ${issue.message}`,
+        ),
+      );
+    }
+
+    if (prerequisiteCheck.advisorReviewItems.length > 0) {
+      lines.push(
+        "Specific advisor-review items:",
+        ...prerequisiteCheck.advisorReviewItems.map((item) => `- ${item}`),
+      );
+    }
+
+    lines.push("");
+  }
+
   const shouldAskParserSignalQuestion =
     hasAdvisorQuestionSignals(aiResult?.detectedSignals) ||
     hasAdvisorQuestionSignals(softwareEngineeringResult?.detectedSignals);
+  const shouldAskPrerequisiteQuestions = Boolean(prerequisiteCheck);
   const questions = [
     "- Which missing or unmatched requirements still need official Degree Works review?",
     "- Do AP, transfer, substitutions, or repeated courses change this progress check?",
@@ -227,6 +281,13 @@ export function buildAdvisorMeetingSummary({
       1,
       0,
       "- Can you verify whether AP, transfer, substitution, exception, or in-progress coursework changes this requirement check?",
+    );
+  }
+
+  if (shouldAskPrerequisiteQuestions) {
+    questions.push(
+      "- Can you verify that my planned course order satisfies prerequisites?",
+      "- Do any senior design, upper-level COMP, or elective courses require additional approvals or standing?",
     );
   }
 

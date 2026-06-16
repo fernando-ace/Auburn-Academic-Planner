@@ -1,7 +1,9 @@
 import { extractPdfText, hasPdfHeader } from "../../../../../lib/pdf/pdf-text.ts";
 import { analyzeDegreeWorksText } from "../../../../../lib/plan/degreeworks-analysis.ts";
+import { extractDegreeWorksSemesters } from "../../../../../lib/plan/degreeworks-semesters.ts";
 import { checkAiEngineeringCertificate } from "../../../../../lib/rules/ai-certificate.ts";
 import { checkSoftwareEngineeringDegree } from "../../../../../lib/rules/software-engineering-degree.ts";
+import { checkSoftwareEngineeringPrerequisites } from "../../../../../lib/rules/software-engineering-prerequisites.ts";
 
 export const runtime = "nodejs";
 
@@ -42,11 +44,16 @@ export async function POST(request: Request) {
 
   const pdfText = await extractPdfText(pdfData);
   const degreeWorksAnalysis = analyzeDegreeWorksText(pdfText);
+  const semesterPlanAnalysis = extractDegreeWorksSemesters(pdfText);
   const aiCertificateCheck =
     checkAiEngineeringCertificate(degreeWorksAnalysis.parsedCourseCodes);
   const softwareEngineeringCheck = checkSoftwareEngineeringDegree({
     courseCodes: degreeWorksAnalysis.parsedCourseCodes,
     totalPlannedCredits: degreeWorksAnalysis.totalPlannedCredits,
+  });
+  const prerequisiteCheck = checkSoftwareEngineeringPrerequisites({
+    semesterPlanAnalysis,
+    courseCodes: degreeWorksAnalysis.parsedCourseCodes,
   });
 
   return Response.json({
@@ -57,6 +64,8 @@ export async function POST(request: Request) {
     detectedSignals: degreeWorksAnalysis.detectedSignals,
     parserWarnings: degreeWorksAnalysis.parserWarnings,
     parserConfidence: degreeWorksAnalysis.confidence,
+    semesterPlanAnalysis,
+    prerequisiteCheck,
     aiCertificateCheck,
     softwareEngineeringCheck,
     notes: [

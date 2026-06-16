@@ -10,7 +10,7 @@ The MVP supports two complementary paths:
 
 - Gemini RAG chat for Auburn source-grounded advising questions.
 - Deterministic requirement checkers for quota-free progress review.
-- `/plan-check` supports a combined Degree Works PDF upload that runs both the AI Engineering certificate check and Software Engineering degree progress check from one upload, plus manual AI Engineering certificate checks, AI Engineering sample and PDF checks, Software Engineering degree manual/sample/PDF checks, and a copyable Advisor Meeting Summary.
+- `/plan-check` supports a combined Degree Works PDF upload that runs the AI Engineering certificate check, Software Engineering degree progress check, and deterministic semester/prerequisite sequence check from one upload, plus manual AI Engineering certificate checks, AI Engineering sample and PDF checks, Software Engineering degree manual/sample/PDF checks, and a copyable Advisor Meeting Summary.
 
 ## Demo flow
 
@@ -31,13 +31,14 @@ The MVP supports two complementary paths:
    - parsed courses in the collapsible summary
    - parser confidence
    - PDF parsing notes when parser warnings or signals are present
-7. Confirm the AI Engineering certificate result shows likely complete: `Yes`.
-8. Confirm the Software Engineering degree progress result shows:
+7. Confirm the Semester and prerequisite check appears with detected terms, confidence, advisor-review items, and sequence validity.
+8. Confirm the AI Engineering certificate result shows likely complete: `Yes`.
+9. Confirm the Software Engineering degree progress result shows:
    - likely complete: `No`
    - missing exact courses: `ENGL 1100`, `ENGL 1120`, `ENGR 1100`, `ELEC 2200`
    - advisor verification required
-9. Confirm the Advisor Meeting Summary appears, includes both AI Engineering certificate and Software Engineering degree progress checks, and can be copied for an advising meeting.
-10. Optional separate checks remain available:
+10. Confirm the Advisor Meeting Summary appears, includes AI Engineering certificate, Software Engineering degree progress, and prerequisite/advisor questions, and can be copied for an advising meeting.
+11. Optional separate checks remain available:
    - Paste custom AI certificate courses, such as `COMP 5600, COMP 5630, COMP 5130, COMP 5610`.
    - Run the AI certificate sample or AI certificate PDF upload.
    - Run the Software Engineering manual, sample, or separate Degree Works PDF checker.
@@ -51,9 +52,11 @@ The MVP supports two complementary paths:
 - Uploaded PDFs are not permanently stored.
 - Uploaded PDF checks are deterministic and do not call Gemini.
 - Degree Works PDF results include parser confidence, parser warnings, and detected AP, transfer, substitution, exception, in-progress, or insufficient-text signals when the extracted text suggests extra advisor review is needed.
+- The combined Degree Works PDF flow includes deterministic semester extraction when term labels are present and a conservative local Software Engineering prerequisite sequence check.
+- The prerequisite sequence model is preliminary and intentionally limited to a conservative subset of COMP prerequisite chains. It reports warnings and advisor-review items, not official registration decisions.
 - The Advisor Meeting Summary is local, deterministic, and does not call Gemini.
 - Advisor verification is required for academic decisions.
-- The Software Engineering checker is a progress check, not a final academic judgment. Real Degree Works PDFs can include AP, transfer credit, substitutions, exceptions, hidden sections, in-progress coursework, electives, prerequisites, and semester ordering that still require advisor review.
+- The Software Engineering checker and prerequisite sequence checker are progress checks, not final academic judgments. Real Degree Works PDFs can include AP, transfer credit, substitutions, exceptions, hidden sections, in-progress coursework, electives, prerequisites, standing requirements, and semester ordering that still require advisor review.
 - The Advisor Meeting Summary is a preparation summary, not an official degree audit.
 - The app helps prepare for advising conversations; it does not replace academic advisors.
 
@@ -62,14 +65,14 @@ The MVP supports two complementary paths:
 - `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
-- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show shared parsed details, parser confidence, parser warnings, detected PDF signals, and run both the AI Engineering certificate checker and Software Engineering degree checker without calling Gemini.
+- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show shared parsed details, parser confidence, parser warnings, detected PDF signals, detected semester terms, conservative prerequisite sequence warnings, and run both the AI Engineering certificate checker and Software Engineering degree checker without calling Gemini.
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, parser diagnostics, and advisor verification status.
-- The Advisor Meeting Summary turns the latest check results into copyable preparation notes with missing requirements, parser warnings, advisor-verified items, and questions to ask.
+- The Advisor Meeting Summary turns the latest check results into copyable preparation notes with missing requirements, parser warnings, prerequisite warnings, advisor-verified items, and questions to ask.
+- Local validation currently passes `46/46` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Next planned work
 
-- Add prerequisite and semester validation.
 - More deterministic rule checkers.
 
 ## Run Locally

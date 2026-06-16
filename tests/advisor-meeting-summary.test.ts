@@ -129,3 +129,46 @@ test("builds advisor summary for combined Degree Works result", () => {
     /Are prerequisites and semester ordering appropriate for the next registration plan\?/,
   );
 });
+
+test("builds advisor summary with prerequisite analysis questions", () => {
+  const summary = buildAdvisorMeetingSummary({
+    aiResult: null,
+    softwareEngineeringResult: null,
+    prerequisiteCheck: {
+      checkedCourseCount: 3,
+      semesterConfidence: "high",
+      isLikelySequenceValid: false,
+      advisorReviewItems: [
+        "Verify senior standing and any approvals for Senior Design Project.",
+      ],
+      prerequisiteIssues: [
+        {
+          courseCode: "COMP 3270",
+          termLabel: "Fall 2025",
+          missingPrerequisites: ["COMP 2210"],
+          severity: "warning",
+          message:
+            "COMP 3270 appears before or in the same term as modeled prerequisite COMP 2210.",
+        },
+      ],
+      notes: [
+        "This local preliminary prerequisite model requires advisor verification.",
+      ],
+    },
+  });
+
+  assert.match(summary, /Semester and Prerequisite Check/);
+  assert.match(summary, /Modeled prerequisite sequence warnings found/);
+  assert.match(
+    summary,
+    /COMP 3270 appears before or in the same term as modeled prerequisite COMP 2210/,
+  );
+  assert.match(
+    summary,
+    /Can you verify that my planned course order satisfies prerequisites\?/,
+  );
+  assert.match(
+    summary,
+    /Do any senior design, upper-level COMP, or elective courses require additional approvals or standing\?/,
+  );
+});

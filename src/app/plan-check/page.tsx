@@ -79,6 +79,36 @@ type SoftwareEngineeringPlanCheckResult = {
   notes: string[];
 };
 
+type DegreeWorksSemesterTerm = {
+  label: string;
+  index: number;
+  courseCodes: string[];
+};
+
+type DegreeWorksSemesterAnalysis = {
+  terms: DegreeWorksSemesterTerm[];
+  unassignedCourseCodes: string[];
+  warnings: string[];
+  confidence: DegreeWorksParserConfidence;
+};
+
+type PrerequisiteIssue = {
+  courseCode: string;
+  termLabel?: string;
+  missingPrerequisites: string[];
+  severity: "warning" | "blocking" | "advisor_review";
+  message: string;
+};
+
+type SoftwareEngineeringPrerequisiteCheck = {
+  checkedCourseCount: number;
+  prerequisiteIssues: PrerequisiteIssue[];
+  advisorReviewItems: string[];
+  semesterConfidence: DegreeWorksParserConfidence;
+  isLikelySequenceValid: boolean | null;
+  notes: string[];
+};
+
 type CombinedDegreeWorksUploadResult = {
   sourceFileName: string;
   parsedCourseCount: number;
@@ -87,6 +117,8 @@ type CombinedDegreeWorksUploadResult = {
   detectedSignals: DegreeWorksDetectedSignals;
   parserWarnings: string[];
   parserConfidence: DegreeWorksParserConfidence;
+  semesterPlanAnalysis: DegreeWorksSemesterAnalysis;
+  prerequisiteCheck: SoftwareEngineeringPrerequisiteCheck;
   aiCertificateCheck: Omit<
     PlanCheckResult,
     | "planDescription"
@@ -718,6 +750,184 @@ function ParsedCourseCodes({
   );
 }
 
+function SequenceValidityPill({ value }: { value: boolean | null }) {
+  if (value === null) {
+    return (
+      <span className="rounded-sm border border-slate-200 bg-slate-50 px-2.5 py-1 text-[13px] font-semibold text-slate-600">
+        Cannot determine
+      </span>
+    );
+  }
+
+  return <BooleanPill value={value} />;
+}
+
+function SemesterPrerequisiteCheck({
+  semesterPlanAnalysis,
+  prerequisiteCheck,
+}: {
+  semesterPlanAnalysis: DegreeWorksSemesterAnalysis;
+  prerequisiteCheck: SoftwareEngineeringPrerequisiteCheck;
+}) {
+  const hasDetectedTerms = semesterPlanAnalysis.terms.length > 0;
+  const sequenceStatus =
+    prerequisiteCheck.isLikelySequenceValid === null
+      ? "Cannot determine"
+      : prerequisiteCheck.isLikelySequenceValid
+        ? "No modeled warnings"
+        : "Warnings found";
+
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            Semester confidence
+          </p>
+          <p className="mt-1 text-[16px] font-semibold leading-6 text-slate-950">
+            {semesterPlanAnalysis.confidence}
+          </p>
+        </div>
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            Checked courses
+          </p>
+          <p className="mt-1 text-[16px] font-semibold leading-6 text-slate-950">
+            {prerequisiteCheck.checkedCourseCount}
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Sequence validity
+            </p>
+            <p className="mt-1 text-[13px] leading-5 text-slate-600">
+              {sequenceStatus}
+            </p>
+          </div>
+          <SequenceValidityPill
+            value={prerequisiteCheck.isLikelySequenceValid}
+          />
+        </div>
+      </div>
+
+      {semesterPlanAnalysis.confidence === "low" ? (
+        <p className="rounded-md border border-orange-200 bg-orange-50 p-3 text-[13px] leading-5 text-orange-800">
+          This PDF did not provide enough reliable term structure to validate
+          course order.
+        </p>
+      ) : null}
+
+      {hasDetectedTerms ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[14px] font-semibold text-slate-800">
+            Detected terms
+          </p>
+          <div className="mt-3 grid gap-2">
+            {semesterPlanAnalysis.terms.map((term) => (
+              <details
+                className="rounded-md border border-slate-200 bg-white p-3 text-[13px] leading-5 text-slate-700"
+                key={`${term.index}-${term.label}`}
+              >
+                <summary className="cursor-pointer font-semibold text-slate-800">
+                  {term.label}: {term.courseCodes.length} courses
+                </summary>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {term.courseCodes.map((courseCode) => (
+                    <span
+                      className="rounded-sm border border-slate-200 bg-slate-50 px-2 py-1 font-medium text-slate-700"
+                      key={`${term.label}-${courseCode}`}
+                    >
+                      {courseCode}
+                    </span>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {prerequisiteCheck.prerequisiteIssues.length > 0 ? (
+        <div className="rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
+          <p className="text-[14px] font-semibold text-slate-800">
+            Prerequisite issues
+          </p>
+          <ul className="mt-3 space-y-2">
+            {prerequisiteCheck.prerequisiteIssues.map((issue) => (
+              <li
+                className="flex gap-2 text-[13px] leading-5 text-slate-700"
+                key={`${issue.courseCode}-${issue.message}`}
+              >
+                <AlertCircle
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-[#b84300]"
+                  size={15}
+                />
+                <span>
+                  <span className="font-semibold text-slate-900">
+                    {issue.courseCode}
+                    {issue.termLabel ? ` (${issue.termLabel})` : ""}
+                  </span>
+                  : {issue.message}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+          No modeled prerequisite warnings were found.
+        </p>
+      )}
+
+      {prerequisiteCheck.advisorReviewItems.length > 0 ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[14px] font-semibold text-slate-800">
+            Advisor review items
+          </p>
+          <ul className="mt-3 space-y-2">
+            {prerequisiteCheck.advisorReviewItems.map((item) => (
+              <li
+                className="flex gap-2 text-[13px] leading-5 text-slate-700"
+                key={item}
+              >
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-[#b84300]"
+                  size={15}
+                />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {semesterPlanAnalysis.warnings.length > 0 ||
+      prerequisiteCheck.notes.length > 0 ? (
+        <ul className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+          {[...semesterPlanAnalysis.warnings, ...prerequisiteCheck.notes].map(
+            (note) => (
+              <li
+                className="flex gap-2 text-[13px] leading-5 text-slate-700"
+                key={note}
+              >
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-[#b84300]"
+                  size={15}
+                />
+                <span>{note}</span>
+              </li>
+            ),
+          )}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function CombinedDegreeWorksParsedDetails({
   result,
 }: {
@@ -779,6 +989,13 @@ function CombinedDegreeWorksParsedDetails({
             detectedSignals={result.detectedSignals}
             parserConfidence={result.parserConfidence}
             parserWarnings={result.parserWarnings}
+          />
+        </ResultSection>
+
+        <ResultSection title="Semester and prerequisite check">
+          <SemesterPrerequisiteCheck
+            prerequisiteCheck={result.prerequisiteCheck}
+            semesterPlanAnalysis={result.semesterPlanAnalysis}
           />
         </ResultSection>
 
@@ -925,8 +1142,9 @@ export default function PlanCheckPage() {
       buildAdvisorMeetingSummary({
         aiResult: result,
         softwareEngineeringResult,
+        prerequisiteCheck: combinedDegreeWorksResult?.prerequisiteCheck ?? null,
       }),
-    [result, softwareEngineeringResult],
+    [combinedDegreeWorksResult?.prerequisiteCheck, result, softwareEngineeringResult],
   );
 
   async function runPlanCheck({

@@ -59,6 +59,32 @@ test("POST rejects a request without a file field", async () => {
   assert.equal(result.error, 'Upload a PDF file using the "file" form field.');
 });
 
+test("POST includes semester and prerequisite analysis fields", async () => {
+  const response = await POST(await pdfUploadRequest(samplePdfPath));
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(result.semesterPlanAnalysis.confidence, "high");
+  assert.ok(Array.isArray(result.semesterPlanAnalysis.terms));
+  assert.ok(result.semesterPlanAnalysis.terms.length >= 2);
+  assert.equal(result.semesterPlanAnalysis.terms[0].label, "Summer 2025");
+  assert.ok(
+    result.semesterPlanAnalysis.terms.some(
+      (term: { label: string; courseCodes: string[] }) =>
+        term.label === "Fall 2025" &&
+        term.courseCodes.includes("COMP 1210"),
+    ),
+  );
+  assert.equal(result.prerequisiteCheck.semesterConfidence, "high");
+  assert.equal(result.prerequisiteCheck.checkedCourseCount, 45);
+  assert.equal(
+    typeof result.prerequisiteCheck.isLikelySequenceValid,
+    "boolean",
+  );
+  assert.ok(Array.isArray(result.prerequisiteCheck.prerequisiteIssues));
+  assert.ok(Array.isArray(result.prerequisiteCheck.advisorReviewItems));
+});
+
 async function pdfUploadRequest(pdfPath: string) {
   const pdfData = await readFile(pdfPath);
   const formData = new FormData();
