@@ -17,6 +17,7 @@ import type {
   DegreeWorksDetectedSignals,
   DegreeWorksParserConfidence,
 } from "@/lib/plan/degreeworks-analysis";
+import type { GapReport, GapReportBestFitPath, GapReportStatus } from "@/lib/plan/gap-report";
 
 type PlanCheckCourse = {
   code: string;
@@ -121,6 +122,7 @@ type CombinedDegreeWorksUploadResult = {
   parserConfidence: DegreeWorksParserConfidence;
   semesterPlanAnalysis: DegreeWorksSemesterAnalysis;
   prerequisiteCheck: SoftwareEngineeringPrerequisiteCheck;
+  gapReport: GapReport;
   aiCertificateCheck: Omit<
     PlanCheckResult,
     | "planDescription"
@@ -947,6 +949,185 @@ function SemesterPrerequisiteCheck({
   );
 }
 
+function GapReportCard({ gapReport }: { gapReport: GapReport }) {
+  return (
+    <section className="mb-5 rounded-md border border-[#dd550c]/35 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+            Unified advising report
+          </p>
+          <h2 className="mt-2 text-[22px] font-semibold leading-8 text-slate-950">
+            Gap Report and Next Actions
+          </h2>
+          <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
+            This is a planning summary, not an official degree audit. Use this
+            to prepare for an academic advisor meeting.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:w-[30rem]">
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Overall status
+            </p>
+            <span
+              className={`mt-2 inline-flex rounded-sm border px-2.5 py-1 text-[13px] font-semibold ${getGapStatusClassName(
+                gapReport.overallStatus,
+              )}`}
+            >
+              {formatGapStatus(gapReport.overallStatus)}
+            </span>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Best fit path
+            </p>
+            <p className="mt-2 text-[14px] font-semibold leading-5 text-slate-800">
+              {formatGapBestFitPath(gapReport.bestFitPath)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4">
+        <GapReportList items={gapReport.summaryBullets} title="Summary" />
+        <GapReportList
+          emptyText="No satisfied highlights were identified."
+          items={gapReport.satisfiedHighlights}
+          title="Satisfied highlights"
+        />
+
+        <ResultSection title="Missing requirements">
+          {gapReport.missingRequirements.length > 0 ? (
+            <div className="grid gap-3">
+              {gapReport.missingRequirements.map((requirement) => (
+                <div
+                  className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                  key={`${requirement.area}-${requirement.severity}`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[14px] font-semibold text-slate-800">
+                      {requirement.area}
+                    </p>
+                    <span className="rounded-sm border border-[#dd550c]/25 bg-white px-2 py-1 text-[12px] font-semibold uppercase text-[#9b3900]">
+                      {requirement.severity.replace("_", " ")}
+                    </span>
+                  </div>
+                  <ul className="mt-3 space-y-2">
+                    {requirement.items.map((item) => (
+                      <li
+                        className="flex gap-2 text-[13px] leading-5 text-slate-700"
+                        key={item}
+                      >
+                        <AlertCircle
+                          aria-hidden="true"
+                          className="mt-0.5 shrink-0 text-[#b84300]"
+                          size={15}
+                        />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+              No modeled missing requirements were found in the unified report.
+            </p>
+          )}
+        </ResultSection>
+
+        <GapReportList
+          emptyText="No additional advisor review items were identified."
+          items={gapReport.advisorReviewItems}
+          title="Advisor review items"
+        />
+        <GapReportList items={gapReport.nextActions} title="Next actions" />
+        <GapReportList
+          items={gapReport.advisorQuestions}
+          title="Advisor questions"
+        />
+      </div>
+    </section>
+  );
+}
+
+function GapReportList({
+  emptyText = "Nothing to show.",
+  items,
+  title,
+}: {
+  emptyText?: string;
+  items: string[];
+  title: string;
+}) {
+  return (
+    <ResultSection title={title}>
+      {items.length > 0 ? (
+        <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+          {items.map((item) => (
+            <li
+              className="flex gap-2 text-[13px] leading-5 text-slate-700"
+              key={item}
+            >
+              <CheckCircle2
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-[#b84300]"
+                size={15}
+              />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+          {emptyText}
+        </p>
+      )}
+    </ResultSection>
+  );
+}
+
+function formatGapStatus(status: GapReportStatus) {
+  switch (status) {
+    case "strong_progress":
+      return "Strong progress";
+    case "needs_review":
+      return "Needs review";
+    case "missing_requirements":
+      return "Missing requirements";
+    case "insufficient_data":
+      return "Insufficient data";
+  }
+}
+
+function getGapStatusClassName(status: GapReportStatus) {
+  switch (status) {
+    case "strong_progress":
+      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+    case "needs_review":
+      return "border-sky-200 bg-sky-50 text-sky-800";
+    case "missing_requirements":
+      return "border-orange-200 bg-orange-50 text-orange-800";
+    case "insufficient_data":
+      return "border-slate-300 bg-slate-100 text-slate-700";
+  }
+}
+
+function formatGapBestFitPath(path: GapReportBestFitPath) {
+  switch (path) {
+    case "ai_certificate":
+      return "AI Engineering certificate";
+    case "software_engineering":
+      return "Software Engineering";
+    case "computer_science":
+      return "Computer Science";
+    case "mixed_or_unclear":
+      return "Mixed or unclear";
+  }
+}
+
 function CombinedDegreeWorksParsedDetails({
   result,
 }: {
@@ -1196,8 +1377,10 @@ export default function PlanCheckPage() {
         softwareEngineeringResult,
         computerScienceResult,
         prerequisiteCheck: combinedDegreeWorksResult?.prerequisiteCheck ?? null,
+        gapReport: combinedDegreeWorksResult?.gapReport ?? null,
       }),
     [
+      combinedDegreeWorksResult?.gapReport,
       combinedDegreeWorksResult?.prerequisiteCheck,
       computerScienceResult,
       result,
@@ -2568,9 +2751,12 @@ export default function PlanCheckPage() {
           ) : null}
 
           {combinedDegreeWorksResult ? (
-            <CombinedDegreeWorksParsedDetails
-              result={combinedDegreeWorksResult}
-            />
+            <>
+              <GapReportCard gapReport={combinedDegreeWorksResult.gapReport} />
+              <CombinedDegreeWorksParsedDetails
+                result={combinedDegreeWorksResult}
+              />
+            </>
           ) : null}
 
           {error ? (

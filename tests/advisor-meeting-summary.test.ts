@@ -219,3 +219,57 @@ test("builds advisor summary with prerequisite analysis questions", () => {
     /Do any senior design, upper-level COMP, or elective courses require additional approvals or standing\?/,
   );
 });
+
+test("builds concise advisor summary gap report section", () => {
+  const summary = buildAdvisorMeetingSummary({
+    aiResult: null,
+    softwareEngineeringResult: null,
+    gapReport: {
+      overallStatus: "missing_requirements",
+      bestFitPath: "ai_certificate",
+      summaryBullets: [
+        "The AI Engineering certificate appears likely complete in the uploaded plan.",
+      ],
+      satisfiedHighlights: [
+        "AI Engineering certificate looks likely complete, pending advisor verification.",
+      ],
+      missingRequirements: [
+        {
+          area: "Software Engineering",
+          items: [
+            "ENGL 1100 - English Composition I",
+            "ENGL 1120 - English Composition II",
+            "ENGR 1100 - Engineering Orientation",
+            "ELEC 2200 - Digital Logic Circuits",
+          ],
+          severity: "warning",
+        },
+        {
+          area: "Computer Science",
+          items: ["COMP 4200 - Formal Languages"],
+          severity: "warning",
+        },
+      ],
+      advisorReviewItems: [
+        "Transfer credit may affect this check.",
+      ],
+      nextActions: [
+        "Bring this report and the official Degree Works audit to an academic advisor.",
+        "Review the top missing requirements before choosing next-term courses.",
+      ],
+      advisorQuestions: [
+        "Which missing or unmatched requirements should I prioritize next?",
+        "Which program or certificate path does this plan most closely support?",
+      ],
+    },
+  });
+
+  assert.match(summary, /Gap Report and Next Actions/);
+  assert.match(summary, /Overall status: missing_requirements/);
+  assert.match(summary, /Best fit path: AI Engineering certificate/);
+  assert.match(summary, /Top missing requirements:/);
+  assert.match(summary, /Software Engineering: ENGL 1100/);
+  assert.match(summary, /Next actions:/);
+  assert.match(summary, /Gap report advisor questions:/);
+  assert.ok(summary.split("\n").length < 30);
+});

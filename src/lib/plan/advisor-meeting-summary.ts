@@ -2,6 +2,8 @@ import type {
   DegreeWorksDetectedSignals,
   DegreeWorksParserConfidence,
 } from "./degreeworks-analysis.ts";
+import type { GapReport } from "./gap-report.ts";
+import { formatBestFitPath } from "./gap-report.ts";
 
 type AdvisorSummaryCourse = {
   code: string;
@@ -82,6 +84,8 @@ export type AdvisorSummaryPrerequisiteCheck = {
   notes: string[];
 };
 
+export type AdvisorSummaryGapReport = GapReport;
+
 function formatCourseCodes(courses: AdvisorSummaryCourse[]) {
   return courses.length > 0
     ? courses.map((course) => course.code).join(", ")
@@ -144,17 +148,20 @@ export function buildAdvisorMeetingSummary({
   softwareEngineeringResult,
   computerScienceResult = null,
   prerequisiteCheck = null,
+  gapReport = null,
 }: {
   aiResult: AdvisorSummaryAiCertificateResult | null;
   softwareEngineeringResult: AdvisorSummarySoftwareEngineeringResult | null;
   computerScienceResult?: AdvisorSummaryDegreeResult | null;
   prerequisiteCheck?: AdvisorSummaryPrerequisiteCheck | null;
+  gapReport?: AdvisorSummaryGapReport | null;
 }) {
   if (
     !aiResult &&
     !softwareEngineeringResult &&
     !computerScienceResult &&
-    !prerequisiteCheck
+    !prerequisiteCheck &&
+    !gapReport
   ) {
     return "";
   }
@@ -167,6 +174,10 @@ export function buildAdvisorMeetingSummary({
     "AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may require advisor review.",
     "",
   ];
+
+  if (gapReport) {
+    addGapReportSummary(lines, gapReport);
+  }
 
   if (aiResult) {
     lines.push(
@@ -283,6 +294,43 @@ export function buildAdvisorMeetingSummary({
   );
 
   return lines.join("\n");
+}
+
+function addGapReportSummary(lines: string[], gapReport: AdvisorSummaryGapReport) {
+  lines.push(
+    "Gap Report and Next Actions",
+    `Overall status: ${gapReport.overallStatus}`,
+    `Best fit path: ${formatBestFitPath(gapReport.bestFitPath)}`,
+  );
+
+  const topMissingRequirements = gapReport.missingRequirements
+    .slice(0, 3)
+    .map(
+      (requirement) =>
+        `- ${requirement.area}: ${requirement.items.slice(0, 3).join(", ")}`,
+    );
+
+  if (topMissingRequirements.length > 0) {
+    lines.push("Top missing requirements:", ...topMissingRequirements);
+  }
+
+  if (gapReport.nextActions.length > 0) {
+    lines.push(
+      "Next actions:",
+      ...gapReport.nextActions.slice(0, 4).map((action) => `- ${action}`),
+    );
+  }
+
+  if (gapReport.advisorQuestions.length > 0) {
+    lines.push(
+      "Gap report advisor questions:",
+      ...gapReport.advisorQuestions
+        .slice(0, 4)
+        .map((question) => `- ${question}`),
+    );
+  }
+
+  lines.push("");
 }
 
 function addDegreeSummary(

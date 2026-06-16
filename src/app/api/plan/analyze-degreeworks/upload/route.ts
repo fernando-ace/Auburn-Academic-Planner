@@ -1,6 +1,7 @@
 import { extractPdfText, hasPdfHeader } from "../../../../../lib/pdf/pdf-text.ts";
 import { analyzeDegreeWorksText } from "../../../../../lib/plan/degreeworks-analysis.ts";
 import { extractDegreeWorksSemesters } from "../../../../../lib/plan/degreeworks-semesters.ts";
+import { buildGapReport } from "../../../../../lib/plan/gap-report.ts";
 import { checkAiEngineeringCertificate } from "../../../../../lib/rules/ai-certificate.ts";
 import { checkComputerScienceDegree } from "../../../../../lib/rules/computer-science-degree.ts";
 import { checkSoftwareEngineeringDegree } from "../../../../../lib/rules/software-engineering-degree.ts";
@@ -60,6 +61,15 @@ export async function POST(request: Request) {
     semesterPlanAnalysis,
     courseCodes: degreeWorksAnalysis.parsedCourseCodes,
   });
+  const gapReport = buildGapReport({
+    aiCertificateCheck,
+    softwareEngineeringCheck,
+    computerScienceCheck,
+    detectedSignals: degreeWorksAnalysis.detectedSignals,
+    parserWarnings: degreeWorksAnalysis.parserWarnings,
+    parserConfidence: degreeWorksAnalysis.confidence,
+    prerequisiteCheck,
+  });
 
   return Response.json({
     sourceFileName: uploadedFile.name,
@@ -71,6 +81,7 @@ export async function POST(request: Request) {
     parserConfidence: degreeWorksAnalysis.confidence,
     semesterPlanAnalysis,
     prerequisiteCheck,
+    gapReport,
     aiCertificateCheck,
     softwareEngineeringCheck,
     computerScienceCheck,

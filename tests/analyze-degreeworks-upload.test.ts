@@ -33,6 +33,13 @@ test("POST runs both deterministic Degree Works checks from one uploaded PDF", a
   assert.ok(result.parsedCourseCodes.includes("COMP 5600"));
   assert.equal(result.aiCertificateCheck.isLikelyComplete, true);
   assert.equal(result.aiCertificateCheck.advisorVerificationRequired, true);
+  assert.equal(result.gapReport.bestFitPath, "ai_certificate");
+  assert.equal(result.gapReport.overallStatus, "missing_requirements");
+  assert.ok(
+    result.gapReport.satisfiedHighlights.some((highlight: string) =>
+      highlight.includes("AI Engineering certificate looks likely complete"),
+    ),
+  );
   assert.equal(result.softwareEngineeringCheck.isLikelyComplete, false);
   assert.equal(
     result.softwareEngineeringCheck.advisorVerificationRequired,
@@ -46,11 +53,26 @@ test("POST runs both deterministic Degree Works checks from one uploaded PDF", a
     ),
     ["ENGL 1100", "ENGL 1120", "ENGR 1100", "ELEC 2200"],
   );
+  assert.ok(
+    result.gapReport.missingRequirements.some(
+      (requirement: { area: string; items: string[] }) =>
+        requirement.area === "Software Engineering" &&
+        requirement.items.some((item) => item.includes("ENGL 1100")) &&
+        requirement.items.some((item) => item.includes("ELEC 2200")),
+    ),
+  );
   assert.deepEqual(
     result.computerScienceCheck.exactRequiredCoursesMissing.map(
       (course: { code: string }) => course.code,
     ),
     ["ENGL 1100", "ENGL 1120", "ENGR 1100", "ELEC 2200", "COMP 4200"],
+  );
+  assert.ok(
+    result.gapReport.missingRequirements.some(
+      (requirement: { area: string; items: string[] }) =>
+        requirement.area === "Computer Science" &&
+        requirement.items.some((item) => item.includes("COMP 4200")),
+    ),
   );
   assert.ok(
     result.notes.some((note: string) =>

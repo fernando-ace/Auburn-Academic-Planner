@@ -10,7 +10,7 @@ The MVP supports two complementary paths:
 
 - Gemini RAG chat for Auburn source-grounded advising questions.
 - Deterministic requirement checkers for quota-free progress review.
-- `/plan-check` supports a combined Degree Works PDF upload that runs the AI Engineering certificate check, Software Engineering degree progress check, Computer Science degree progress check, and deterministic semester/prerequisite sequence check from one upload, plus manual/sample/PDF checks for each deterministic requirement checker and a copyable Advisor Meeting Summary.
+- `/plan-check` supports a combined Degree Works PDF upload that runs the AI Engineering certificate check, Software Engineering degree progress check, Computer Science degree progress check, deterministic semester/prerequisite sequence check, and a unified Gap Report and Next Actions card from one upload, plus manual/sample/PDF checks for each deterministic requirement checker and a copyable Advisor Meeting Summary.
 
 ## Demo flow
 
@@ -24,25 +24,31 @@ The MVP supports two complementary paths:
 3. Ask: `What courses are required for the Artificial Intelligence Engineering certificate?`
 4. Open `http://localhost:3000/plan-check`.
 5. In `Analyze Degree Works PDF`, upload `sources/auburn/degreeworks-plan-sample.pdf`.
-6. Confirm the shared parsed details show:
+6. Confirm the Gap Report and Next Actions card appears before the detailed results and shows:
+   - overall status
+   - best fit path
+   - AI Engineering certificate as a satisfied highlight or likely-complete path
+   - Software Engineering and Computer Science missing requirement summaries
+   - next actions and advisor questions
+7. Confirm the shared parsed details show:
    - source file name: `degreeworks-plan-sample.pdf`
    - parsed course count: `45`
    - total planned credits: `122`
    - parsed courses in the collapsible summary
    - parser confidence
    - PDF parsing notes when parser warnings or signals are present
-7. Confirm the Semester and prerequisite check appears with detected terms, confidence, advisor-review items, and sequence validity.
-8. Confirm the AI Engineering certificate result shows likely complete: `Yes`.
-9. Confirm the Software Engineering degree progress result shows:
+8. Confirm the Semester and prerequisite check appears with detected terms, confidence, advisor-review items, and sequence validity.
+9. Confirm the AI Engineering certificate result shows likely complete: `Yes`.
+10. Confirm the Software Engineering degree progress result shows:
    - likely complete: `No`
    - missing exact courses: `ENGL 1100`, `ENGL 1120`, `ENGR 1100`, `ELEC 2200`
    - advisor verification required
-10. Confirm the Computer Science degree progress result shows:
+11. Confirm the Computer Science degree progress result shows:
    - likely complete: `No`
    - missing exact courses: `ENGL 1100`, `ENGL 1120`, `ENGR 1100`, `ELEC 2200`, `COMP 4200`
    - advisor verification required
-11. Confirm the Advisor Meeting Summary appears, includes AI Engineering certificate, Software Engineering degree progress, Computer Science degree progress, and prerequisite/advisor questions, and can be copied for an advising meeting.
-12. Optional separate checks remain available:
+12. Confirm the Advisor Meeting Summary appears, includes the gap report, AI Engineering certificate, Software Engineering degree progress, Computer Science degree progress, and prerequisite/advisor questions, and can be copied for an advising meeting.
+13. Optional separate checks remain available:
    - Paste custom AI certificate courses, such as `COMP 5600, COMP 5630, COMP 5130, COMP 5610`.
    - Run the AI certificate sample or AI certificate PDF upload.
    - Run the Software Engineering manual, sample, or separate Degree Works PDF checker.
@@ -57,6 +63,7 @@ The MVP supports two complementary paths:
 - Uploaded PDFs are not permanently stored.
 - Uploaded PDF checks are deterministic and do not call Gemini.
 - Degree Works PDF results include parser confidence, parser warnings, and detected AP, transfer, substitution, exception, in-progress, or insufficient-text signals when the extracted text suggests extra advisor review is needed.
+- The Gap Report and Next Actions card is a planning summary, not an official degree audit. It is intended to help students prepare for advisor meetings before reading the detailed check cards.
 - The combined Degree Works PDF flow includes deterministic semester extraction when term labels are present and a conservative local Software Engineering prerequisite sequence check.
 - The prerequisite sequence model is preliminary and intentionally limited to a conservative subset of COMP prerequisite chains. It reports warnings and advisor-review items, not official registration decisions.
 - The Advisor Meeting Summary is local, deterministic, and does not call Gemini.
@@ -70,11 +77,11 @@ The MVP supports two complementary paths:
 - `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
-- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show shared parsed details, parser confidence, parser warnings, detected PDF signals, detected semester terms, conservative prerequisite sequence warnings, and run the AI Engineering certificate checker, Software Engineering degree checker, and Computer Science degree checker without calling Gemini.
+- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show a student-facing Gap Report and Next Actions summary before detailed checks, show shared parsed details, parser confidence, parser warnings, detected PDF signals, detected semester terms, conservative prerequisite sequence warnings, and run the AI Engineering certificate checker, Software Engineering degree checker, and Computer Science degree checker without calling Gemini.
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, parser diagnostics, and advisor verification status.
 - The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, parser diagnostics, and advisor verification status.
-- The Advisor Meeting Summary turns the latest check results into copyable preparation notes with missing requirements, parser warnings, prerequisite warnings, advisor-verified items, and questions to ask.
-- Local validation currently passes `56/56` deterministic tests.
+- The Advisor Meeting Summary turns the latest check results and unified gap report into copyable preparation notes with missing requirements, parser warnings, prerequisite warnings, advisor-verified items, next actions, and questions to ask.
+- Local validation currently passes `60/60` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Run Locally
@@ -228,7 +235,7 @@ npm run build
 
 Current validation coverage:
 
-- 56 deterministic tests through `npm test`
+- 60 deterministic tests through `npm test`
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`
