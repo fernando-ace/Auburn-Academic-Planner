@@ -112,6 +112,37 @@ type SoftwareEngineeringPrerequisiteCheck = {
   notes: string[];
 };
 
+type NextSemesterSuggestedCourse = {
+  code: string;
+  title?: string;
+  reason: string;
+  category:
+    | "missing_required"
+    | "certificate_requirement"
+    | "prerequisite_foundation"
+    | "advisor_review";
+  priority: "high" | "medium" | "low";
+  advisorVerificationRequired: boolean;
+};
+
+type NextSemesterNotYetRecommendedCourse = {
+  code: string;
+  reason: string;
+};
+
+type NextSemesterSuggestions = {
+  targetPath:
+    | "software_engineering"
+    | "computer_science"
+    | "ai_certificate"
+    | "mixed_or_unclear";
+  confidence: DegreeWorksParserConfidence;
+  suggestedCourses: NextSemesterSuggestedCourse[];
+  notYetRecommended: NextSemesterNotYetRecommendedCourse[];
+  advisorQuestions: string[];
+  notes: string[];
+};
+
 type CombinedDegreeWorksUploadResult = {
   sourceFileName: string;
   parsedCourseCount: number;
@@ -123,6 +154,7 @@ type CombinedDegreeWorksUploadResult = {
   semesterPlanAnalysis: DegreeWorksSemesterAnalysis;
   prerequisiteCheck: SoftwareEngineeringPrerequisiteCheck;
   gapReport: GapReport;
+  nextSemesterSuggestions: NextSemesterSuggestions;
   aiCertificateCheck: Omit<
     PlanCheckResult,
     | "planDescription"
@@ -1053,6 +1085,142 @@ function GapReportCard({ gapReport }: { gapReport: GapReport }) {
   );
 }
 
+function NextSemesterSuggestionsCard({
+  suggestions,
+}: {
+  suggestions: NextSemesterSuggestions;
+}) {
+  return (
+    <section className="mb-5 rounded-md border border-[#03244d]/25 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+            Advisor planning
+          </p>
+          <h2 className="mt-2 text-[22px] font-semibold leading-8 text-slate-950">
+            Next Semester Suggestions
+          </h2>
+          <div className="mt-2 max-w-3xl space-y-1 text-[14px] leading-6 text-slate-600">
+            <p>
+              These are planning suggestions to discuss with an academic
+              advisor.
+            </p>
+            <p>This is not registration advice or an official schedule.</p>
+            <p>
+              Course availability, prerequisites, AP/transfer credit,
+              substitutions, and advisor approval may change these suggestions.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:w-[30rem]">
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Target path
+            </p>
+            <p className="mt-2 text-[14px] font-semibold leading-5 text-slate-800">
+              {formatGapBestFitPath(suggestions.targetPath)}
+            </p>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Confidence
+            </p>
+            <span
+              className={`mt-2 inline-flex rounded-sm border px-2.5 py-1 text-[13px] font-semibold ${getSuggestionConfidenceClassName(
+                suggestions.confidence,
+              )}`}
+            >
+              {suggestions.confidence}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4">
+        <ResultSection title="Suggested courses to discuss">
+          {suggestions.suggestedCourses.length > 0 ? (
+            <ul className="grid gap-3 md:grid-cols-2">
+              {suggestions.suggestedCourses.map((course) => (
+                <li
+                  className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                  key={course.code}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[15px] font-semibold leading-5 text-slate-950">
+                        {course.code}
+                      </p>
+                      {course.title ? (
+                        <p className="mt-1 text-[13px] leading-5 text-slate-600">
+                          {course.title}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="rounded-sm border border-[#dd550c]/25 bg-white px-2 py-1 text-[12px] font-semibold uppercase text-[#9b3900]">
+                      {course.priority}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-[13px] leading-5 text-slate-700">
+                    {course.reason}
+                  </p>
+                  <p className="mt-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    {formatSuggestionCategory(course.category)}
+                  </p>
+                  {course.advisorVerificationRequired ? (
+                    <p className="mt-2 text-[12px] font-medium text-[#9b3900]">
+                      Advisor verification required
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+              No specific next-semester course suggestions were produced from
+              the current deterministic rules.
+            </p>
+          )}
+        </ResultSection>
+
+        <ResultSection title="Not yet recommended">
+          {suggestions.notYetRecommended.length > 0 ? (
+            <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              {suggestions.notYetRecommended.map((course) => (
+                <li
+                  className="flex gap-2 text-[13px] leading-5 text-slate-700"
+                  key={course.code}
+                >
+                  <AlertCircle
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0 text-[#b84300]"
+                    size={15}
+                  />
+                  <span>
+                    <span className="font-semibold text-slate-950">
+                      {course.code}:
+                    </span>{" "}
+                    {course.reason}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+              No modeled course was held back by missing prerequisites.
+            </p>
+          )}
+        </ResultSection>
+
+        <GapReportList
+          items={suggestions.advisorQuestions}
+          title="Advisor questions"
+        />
+        <GapReportList items={suggestions.notes} title="Notes" />
+      </div>
+    </section>
+  );
+}
+
 function GapReportList({
   emptyText = "Nothing to show.",
   items,
@@ -1115,6 +1283,19 @@ function getGapStatusClassName(status: GapReportStatus) {
   }
 }
 
+function getSuggestionConfidenceClassName(
+  confidence: DegreeWorksParserConfidence,
+) {
+  switch (confidence) {
+    case "high":
+      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+    case "medium":
+      return "border-sky-200 bg-sky-50 text-sky-800";
+    case "low":
+      return "border-slate-300 bg-slate-100 text-slate-700";
+  }
+}
+
 function formatGapBestFitPath(path: GapReportBestFitPath) {
   switch (path) {
     case "ai_certificate":
@@ -1125,6 +1306,21 @@ function formatGapBestFitPath(path: GapReportBestFitPath) {
       return "Computer Science";
     case "mixed_or_unclear":
       return "Mixed or unclear";
+  }
+}
+
+function formatSuggestionCategory(
+  category: NextSemesterSuggestedCourse["category"],
+) {
+  switch (category) {
+    case "missing_required":
+      return "Missing required";
+    case "certificate_requirement":
+      return "Certificate requirement";
+    case "prerequisite_foundation":
+      return "Prerequisite foundation";
+    case "advisor_review":
+      return "Advisor review";
   }
 }
 
@@ -1378,9 +1574,12 @@ export default function PlanCheckPage() {
         computerScienceResult,
         prerequisiteCheck: combinedDegreeWorksResult?.prerequisiteCheck ?? null,
         gapReport: combinedDegreeWorksResult?.gapReport ?? null,
+        nextSemesterSuggestions:
+          combinedDegreeWorksResult?.nextSemesterSuggestions ?? null,
       }),
     [
       combinedDegreeWorksResult?.gapReport,
+      combinedDegreeWorksResult?.nextSemesterSuggestions,
       combinedDegreeWorksResult?.prerequisiteCheck,
       computerScienceResult,
       result,
@@ -2753,6 +2952,9 @@ export default function PlanCheckPage() {
           {combinedDegreeWorksResult ? (
             <>
               <GapReportCard gapReport={combinedDegreeWorksResult.gapReport} />
+              <NextSemesterSuggestionsCard
+                suggestions={combinedDegreeWorksResult.nextSemesterSuggestions}
+              />
               <CombinedDegreeWorksParsedDetails
                 result={combinedDegreeWorksResult}
               />

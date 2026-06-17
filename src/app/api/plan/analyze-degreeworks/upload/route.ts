@@ -2,6 +2,7 @@ import { extractPdfText, hasPdfHeader } from "../../../../../lib/pdf/pdf-text.ts
 import { analyzeDegreeWorksText } from "../../../../../lib/plan/degreeworks-analysis.ts";
 import { extractDegreeWorksSemesters } from "../../../../../lib/plan/degreeworks-semesters.ts";
 import { buildGapReport } from "../../../../../lib/plan/gap-report.ts";
+import { buildNextSemesterSuggestions } from "../../../../../lib/plan/next-semester-suggestions.ts";
 import { checkAiEngineeringCertificate } from "../../../../../lib/rules/ai-certificate.ts";
 import { checkComputerScienceDegree } from "../../../../../lib/rules/computer-science-degree.ts";
 import { checkSoftwareEngineeringDegree } from "../../../../../lib/rules/software-engineering-degree.ts";
@@ -70,6 +71,16 @@ export async function POST(request: Request) {
     parserConfidence: degreeWorksAnalysis.confidence,
     prerequisiteCheck,
   });
+  const nextSemesterSuggestions = buildNextSemesterSuggestions({
+    parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
+    aiCertificateCheck,
+    softwareEngineeringCheck,
+    computerScienceCheck,
+    prerequisiteCheck,
+    parserConfidence: degreeWorksAnalysis.confidence,
+    parserWarnings: degreeWorksAnalysis.parserWarnings,
+    targetPath: "auto",
+  });
 
   return Response.json({
     sourceFileName: uploadedFile.name,
@@ -82,6 +93,7 @@ export async function POST(request: Request) {
     semesterPlanAnalysis,
     prerequisiteCheck,
     gapReport,
+    nextSemesterSuggestions,
     aiCertificateCheck,
     softwareEngineeringCheck,
     computerScienceCheck,

@@ -273,3 +273,47 @@ test("builds concise advisor summary gap report section", () => {
   assert.match(summary, /Gap report advisor questions:/);
   assert.ok(summary.split("\n").length < 30);
 });
+
+test("builds advisor summary with next semester suggestions", () => {
+  const summary = buildAdvisorMeetingSummary({
+    aiResult: null,
+    softwareEngineeringResult: null,
+    nextSemesterSuggestions: {
+      targetPath: "software_engineering",
+      confidence: "high",
+      suggestedCourses: [
+        {
+          code: "ENGL 1100",
+          title: "English Composition I",
+          reason:
+            "ENGL 1100 is a missing exact required Software Engineering course in the local deterministic check.",
+          category: "missing_required",
+          priority: "high",
+          advisorVerificationRequired: true,
+        },
+      ],
+      notYetRecommended: [
+        {
+          code: "COMP 3270",
+          reason:
+            "COMP 3270 should wait until modeled prerequisites are completed or verified by an advisor.",
+        },
+      ],
+      advisorQuestions: [
+        "Which of these courses are actually available next semester?",
+        "Would this set create a reasonable semester load?",
+      ],
+      notes: [
+        "This is not registration advice or an official schedule.",
+      ],
+    },
+  });
+
+  assert.match(summary, /Next Semester Suggestions/);
+  assert.match(summary, /Target path: Software Engineering/);
+  assert.match(summary, /Top suggested courses:/);
+  assert.match(summary, /ENGL 1100/);
+  assert.match(summary, /Not yet recommended:/);
+  assert.match(summary, /COMP 3270/);
+  assert.match(summary, /Next-semester advisor questions:/);
+});

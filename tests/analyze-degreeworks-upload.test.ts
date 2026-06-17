@@ -115,6 +115,33 @@ test("POST includes semester and prerequisite analysis fields", async () => {
   assert.ok(Array.isArray(result.prerequisiteCheck.advisorReviewItems));
 });
 
+test("POST includes deterministic next semester suggestions", async () => {
+  const response = await POST(await pdfUploadRequest(samplePdfPath));
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(result.nextSemesterSuggestions);
+  assert.match(
+    result.nextSemesterSuggestions.targetPath,
+    /^(software_engineering|computer_science|ai_certificate|mixed_or_unclear)$/,
+  );
+  assert.match(result.nextSemesterSuggestions.confidence, /^(high|medium|low)$/);
+  assert.ok(Array.isArray(result.nextSemesterSuggestions.suggestedCourses));
+  assert.ok(
+    result.nextSemesterSuggestions.suggestedCourses.every(
+      (course: { reason?: string; priority?: string }) =>
+        typeof course.reason === "string" &&
+        /^(high|medium|low)$/.test(course.priority ?? ""),
+    ),
+  );
+  assert.ok(Array.isArray(result.nextSemesterSuggestions.advisorQuestions));
+  assert.ok(
+    result.nextSemesterSuggestions.notes.some((note: string) =>
+      note.includes("not registration advice"),
+    ),
+  );
+});
+
 async function pdfUploadRequest(pdfPath: string) {
   const pdfData = await readFile(pdfPath);
   const formData = new FormData();

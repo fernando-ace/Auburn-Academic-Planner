@@ -4,6 +4,7 @@ import type {
 } from "./degreeworks-analysis.ts";
 import type { GapReport } from "./gap-report.ts";
 import { formatBestFitPath } from "./gap-report.ts";
+import type { NextSemesterSuggestions } from "./next-semester-suggestions.ts";
 
 type AdvisorSummaryCourse = {
   code: string;
@@ -85,6 +86,7 @@ export type AdvisorSummaryPrerequisiteCheck = {
 };
 
 export type AdvisorSummaryGapReport = GapReport;
+export type AdvisorSummaryNextSemesterSuggestions = NextSemesterSuggestions;
 
 function formatCourseCodes(courses: AdvisorSummaryCourse[]) {
   return courses.length > 0
@@ -149,19 +151,22 @@ export function buildAdvisorMeetingSummary({
   computerScienceResult = null,
   prerequisiteCheck = null,
   gapReport = null,
+  nextSemesterSuggestions = null,
 }: {
   aiResult: AdvisorSummaryAiCertificateResult | null;
   softwareEngineeringResult: AdvisorSummarySoftwareEngineeringResult | null;
   computerScienceResult?: AdvisorSummaryDegreeResult | null;
   prerequisiteCheck?: AdvisorSummaryPrerequisiteCheck | null;
   gapReport?: AdvisorSummaryGapReport | null;
+  nextSemesterSuggestions?: AdvisorSummaryNextSemesterSuggestions | null;
 }) {
   if (
     !aiResult &&
     !softwareEngineeringResult &&
     !computerScienceResult &&
     !prerequisiteCheck &&
-    !gapReport
+    !gapReport &&
+    !nextSemesterSuggestions
   ) {
     return "";
   }
@@ -177,6 +182,10 @@ export function buildAdvisorMeetingSummary({
 
   if (gapReport) {
     addGapReportSummary(lines, gapReport);
+  }
+
+  if (nextSemesterSuggestions) {
+    addNextSemesterSuggestionsSummary(lines, nextSemesterSuggestions);
   }
 
   if (aiResult) {
@@ -294,6 +303,47 @@ export function buildAdvisorMeetingSummary({
   );
 
   return lines.join("\n");
+}
+
+function addNextSemesterSuggestionsSummary(
+  lines: string[],
+  suggestions: AdvisorSummaryNextSemesterSuggestions,
+) {
+  lines.push(
+    "Next Semester Suggestions",
+    `Target path: ${formatBestFitPath(suggestions.targetPath)}`,
+    `Suggestion confidence: ${suggestions.confidence}`,
+    "These are planning suggestions to discuss with an academic advisor.",
+  );
+
+  if (suggestions.suggestedCourses.length > 0) {
+    lines.push(
+      "Top suggested courses:",
+      ...suggestions.suggestedCourses
+        .slice(0, 5)
+        .map((course) => `- ${course.code}: ${course.reason}`),
+    );
+  }
+
+  if (suggestions.notYetRecommended.length > 0) {
+    lines.push(
+      "Not yet recommended:",
+      ...suggestions.notYetRecommended
+        .slice(0, 4)
+        .map((course) => `- ${course.code}: ${course.reason}`),
+    );
+  }
+
+  if (suggestions.advisorQuestions.length > 0) {
+    lines.push(
+      "Next-semester advisor questions:",
+      ...suggestions.advisorQuestions
+        .slice(0, 4)
+        .map((question) => `- ${question}`),
+    );
+  }
+
+  lines.push("");
 }
 
 function addGapReportSummary(lines: string[], gapReport: AdvisorSummaryGapReport) {

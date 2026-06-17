@@ -159,6 +159,28 @@ export function checkSoftwareEngineeringPrerequisites({
   };
 }
 
+export function getModeledMissingPrerequisites(
+  courseCode: string,
+  plannedCourseCodes: string[],
+) {
+  const normalizedCourseCode = normalizeCourseCode(courseCode);
+  const rule = softwareEngineeringPrerequisiteRule.rules.find(
+    (candidateRule) =>
+      normalizeCourseCode(candidateRule.courseCode) === normalizedCourseCode &&
+      candidateRule.verification === "modeled",
+  );
+
+  if (!rule) {
+    return [];
+  }
+
+  const plannedCourseSet = new Set(plannedCourseCodes.map(normalizeCourseCode));
+
+  return rule.prerequisites
+    .map(normalizeCourseCode)
+    .filter((prerequisite) => !plannedCourseSet.has(prerequisite));
+}
+
 function buildTermIndexByCourse(terms: DegreeWorksSemesterTerm[]) {
   const termIndexByCourse = new Map<string, number>();
 
