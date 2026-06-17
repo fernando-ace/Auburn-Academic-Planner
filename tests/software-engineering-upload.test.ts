@@ -25,6 +25,9 @@ test("POST extracts Software Engineering total planned credits from uploaded Deg
   assert.equal(result.totalPlannedCredits, 122);
   assert.match(result.parserConfidence, /^(high|medium|low)$/);
   assert.ok(Array.isArray(result.parserWarnings));
+  assert.ok(Array.isArray(result.courseStatusRecords));
+  assert.equal(result.courseStatusRecords.length, 45);
+  assert.equal(typeof result.courseStatusCounts.planned, "number");
   assert.equal(typeof result.detectedSignals.hasInProgressSignal, "boolean");
   assert.equal(result.hasEnoughTotalCredits, true);
   assert.ok(Array.isArray(result.requirementBlocks));

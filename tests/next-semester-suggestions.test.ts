@@ -131,3 +131,49 @@ test("caps suggestions to avoid huge lists", () => {
 
   assert.equal(suggestions.suggestedCourses.length, 5);
 });
+
+test("avoids recommending completed or already planned missing courses", () => {
+  const courseCodes = getDegreeWorksPlanSampleCourseCodes();
+  const suggestions = buildNextSemesterSuggestions({
+    parsedCourseCodes: courseCodes,
+    softwareEngineeringCheck: checkSoftwareEngineeringDegree({
+      courseCodes,
+      totalPlannedCredits: 122,
+    }),
+    targetPath: "software_engineering",
+    parserConfidence: "high",
+    courseStatusRecords: [
+      {
+        code: "ENGL 1100",
+        status: "completed",
+        confidence: "high",
+      },
+      {
+        code: "ENGL 1120",
+        status: "planned",
+        confidence: "medium",
+      },
+    ],
+  });
+
+  assert.ok(
+    !suggestions.suggestedCourses.some((course) => course.code === "ENGL 1100"),
+  );
+  assert.ok(
+    !suggestions.suggestedCourses.some((course) => course.code === "ENGL 1120"),
+  );
+  assert.ok(
+    suggestions.notYetRecommended.some(
+      (course) =>
+        course.code === "ENGL 1100" &&
+        course.reason.includes("appears completed"),
+    ),
+  );
+  assert.ok(
+    suggestions.notYetRecommended.some(
+      (course) =>
+        course.code === "ENGL 1120" &&
+        course.reason.includes("verify enrollment or completion"),
+    ),
+  );
+});

@@ -2,6 +2,7 @@ import type {
   DegreeWorksDetectedSignals,
   DegreeWorksParserConfidence,
 } from "./degreeworks-analysis.ts";
+import type { DegreeWorksCourseStatusCounts } from "./degreeworks-course-status.ts";
 import type { GapReport } from "./gap-report.ts";
 import { formatBestFitPath } from "./gap-report.ts";
 import type { NextSemesterSuggestions } from "./next-semester-suggestions.ts";
@@ -21,6 +22,7 @@ export type AdvisorSummaryAiCertificateResult = {
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
   detectedSignals?: DegreeWorksDetectedSignals;
+  courseStatusCounts?: DegreeWorksCourseStatusCounts;
   parserWarnings?: string[];
   parserConfidence?: DegreeWorksParserConfidence;
   requiredCoursesSatisfied: AdvisorSummaryCourse[];
@@ -69,6 +71,7 @@ export type AdvisorSummaryDegreeResult = {
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
   detectedSignals?: DegreeWorksDetectedSignals;
+  courseStatusCounts?: DegreeWorksCourseStatusCounts;
   parserWarnings?: string[];
   parserConfidence?: DegreeWorksParserConfidence;
   totalPlannedCredits: number | null;
@@ -152,6 +155,10 @@ function addParserDiagnostics(
 ) {
   if (result.parserConfidence) {
     lines.push(`Parser confidence: ${result.parserConfidence}`);
+  }
+
+  if (result.courseStatusCounts) {
+    lines.push(`Course status counts: ${formatCourseStatusCounts(result.courseStatusCounts)}`);
   }
 
   if (result.parserWarnings && result.parserWarnings.length > 0) {
@@ -291,6 +298,10 @@ export function buildAdvisorMeetingSummary({
     hasAdvisorQuestionSignals(aiResult?.detectedSignals) ||
     hasAdvisorQuestionSignals(softwareEngineeringResult?.detectedSignals) ||
     hasAdvisorQuestionSignals(computerScienceResult?.detectedSignals);
+  const shouldAskCourseStatusQuestion =
+    Boolean(aiResult?.courseStatusCounts) ||
+    Boolean(softwareEngineeringResult?.courseStatusCounts) ||
+    Boolean(computerScienceResult?.courseStatusCounts);
   const shouldAskPrerequisiteQuestions = Boolean(prerequisiteCheck);
   const questions = [
     "- Which missing or unmatched requirements still need official Degree Works review?",
@@ -307,6 +318,14 @@ export function buildAdvisorMeetingSummary({
     );
   }
 
+  if (shouldAskCourseStatusQuestion) {
+    questions.splice(
+      1,
+      0,
+      "- Can you verify which courses are completed, in progress, planned, transferred/AP, substituted, or waived in Degree Works?",
+    );
+  }
+
   if (shouldAskPrerequisiteQuestions) {
     questions.push(
       "- Can you verify that my planned course order satisfies prerequisites?",
@@ -320,6 +339,18 @@ export function buildAdvisorMeetingSummary({
   );
 
   return lines.join("\n");
+}
+
+function formatCourseStatusCounts(counts: DegreeWorksCourseStatusCounts) {
+  return [
+    `completed ${counts.completed}`,
+    `in progress ${counts.in_progress}`,
+    `planned ${counts.planned}`,
+    `transfer/AP ${counts.transfer_or_ap}`,
+    `substituted/waived ${counts.substituted_or_waived}`,
+    `missing ${counts.missing}`,
+    `unknown ${counts.unknown}`,
+  ].join("; ");
 }
 
 function addNextSemesterSuggestionsSummary(

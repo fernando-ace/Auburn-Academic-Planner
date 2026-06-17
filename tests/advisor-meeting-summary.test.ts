@@ -105,6 +105,15 @@ test("builds advisor summary for combined Degree Works result", () => {
     "Possible AP, AICE, IB, or Advanced Placement credit was detected and needs advisor verification.",
     "Possible transfer credit was detected and needs advisor verification.",
   ];
+  const courseStatusCounts = {
+    completed: 1,
+    in_progress: 2,
+    planned: 40,
+    transfer_or_ap: 1,
+    substituted_or_waived: 1,
+    missing: 0,
+    unknown: 0,
+  };
   const aiResult = {
     ...buildCustomAiCertificatePlanCheck({
       courseCodes,
@@ -116,6 +125,7 @@ test("builds advisor summary for combined Degree Works result", () => {
     parsedCourseCodes: courseCodes,
     parsedCourseCount: courseCodes.length,
     detectedSignals,
+    courseStatusCounts,
     parserWarnings,
     parserConfidence: "medium" as const,
   };
@@ -130,6 +140,7 @@ test("builds advisor summary for combined Degree Works result", () => {
     parsedCourseCodes: courseCodes,
     parsedCourseCount: courseCodes.length,
     detectedSignals,
+    courseStatusCounts,
     parserWarnings,
     parserConfidence: "medium" as const,
   };
@@ -144,6 +155,7 @@ test("builds advisor summary for combined Degree Works result", () => {
     parsedCourseCodes: courseCodes,
     parsedCourseCount: courseCodes.length,
     detectedSignals,
+    courseStatusCounts,
     parserWarnings,
     parserConfidence: "medium" as const,
   };
@@ -159,6 +171,7 @@ test("builds advisor summary for combined Degree Works result", () => {
   assert.match(summary, /Computer Science Degree Progress/);
   assert.match(summary, new RegExp(`Parsed course count: ${courseCodes.length}`));
   assert.match(summary, /Parser confidence: medium/);
+  assert.match(summary, /Course status counts: completed 1; in progress 2/);
   assert.match(summary, /Parser warnings:/);
   assert.match(summary, /Possible AP, AICE, IB, or Advanced Placement credit/);
   assert.match(summary, /Questions to ask an advisor:/);
@@ -167,6 +180,10 @@ test("builds advisor summary for combined Degree Works result", () => {
   assert.match(
     summary,
     /Do AP, transfer, substitutions, or repeated courses change this progress check\?/,
+  );
+  assert.match(
+    summary,
+    /Can you verify which courses are completed, in progress, planned, transferred\/AP, substituted, or waived in Degree Works\?/,
   );
   assert.match(
     summary,

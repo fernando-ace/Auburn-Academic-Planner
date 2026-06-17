@@ -7,6 +7,10 @@ import type {
   DegreeWorksDetectedSignals,
   DegreeWorksParserConfidence,
 } from "./degreeworks-analysis.ts";
+import type {
+  DegreeWorksCourseStatus,
+  DegreeWorksCourseStatusRecord,
+} from "./degreeworks-course-status.ts";
 
 export type GapReportStatus =
   | "strong_progress"
@@ -45,6 +49,7 @@ export function buildGapReport({
   parserWarnings,
   parserConfidence,
   prerequisiteCheck,
+  courseStatusRecords = [],
 }: {
   aiCertificateCheck: AiCertificateCheckResult;
   softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult;
@@ -53,11 +58,13 @@ export function buildGapReport({
   parserWarnings: string[];
   parserConfidence: DegreeWorksParserConfidence;
   prerequisiteCheck: SoftwareEngineeringPrerequisiteCheckResult;
+  courseStatusRecords?: DegreeWorksCourseStatusRecord[];
 }): GapReport {
   const missingRequirements = buildMissingRequirements({
     aiCertificateCheck,
     softwareEngineeringCheck,
     computerScienceCheck,
+    courseStatusRecords,
   });
   const advisorReviewItems = buildAdvisorReviewItems({
     detectedSignals,
@@ -65,6 +72,7 @@ export function buildGapReport({
     prerequisiteCheck,
     softwareEngineeringCheck,
     computerScienceCheck,
+    courseStatusRecords,
   });
   const overallStatus = getOverallStatus({
     parserConfidence,
@@ -118,17 +126,20 @@ function buildMissingRequirements({
   aiCertificateCheck,
   softwareEngineeringCheck,
   computerScienceCheck,
+  courseStatusRecords,
 }: {
   aiCertificateCheck: AiCertificateCheckResult;
   softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult;
   computerScienceCheck: ComputerScienceDegreeCheckResult;
+  courseStatusRecords: DegreeWorksCourseStatusRecord[];
 }) {
   const missingRequirements: GapReportMissingRequirement[] = [];
+  const courseStatuses = getCourseStatusMap(courseStatusRecords);
 
   if (aiCertificateCheck.requiredCoursesMissing.length > 0) {
     missingRequirements.push({
       area: "AI Engineering Certificate",
-      items: capCourseItems(aiCertificateCheck.requiredCoursesMissing),
+      items: capCourseItems(aiCertificateCheck.requiredCoursesMissing, courseStatuses),
       severity: "warning",
     });
   }
@@ -144,10 +155,12 @@ function buildMissingRequirements({
   addDegreeMissingRequirements(missingRequirements, {
     area: "Software Engineering",
     result: softwareEngineeringCheck,
+    courseStatuses,
   });
   addDegreeMissingRequirements(missingRequirements, {
     area: "Computer Science",
     result: computerScienceCheck,
+    courseStatuses,
   });
 
   return missingRequirements;
@@ -158,15 +171,17 @@ function addDegreeMissingRequirements(
   {
     area,
     result,
+    courseStatuses,
   }: {
     area: string;
     result: SoftwareEngineeringDegreeCheckResult | ComputerScienceDegreeCheckResult;
+    courseStatuses: Map<string, DegreeWorksCourseStatusRecord>;
   },
 ) {
   if (result.exactRequiredCoursesMissing.length > 0) {
     missingRequirements.push({
       area,
-      items: capCourseItems(result.exactRequiredCoursesMissing),
+      items: capCourseItems(result.exactRequiredCoursesMissing, courseStatuses),
       severity: "warning",
     });
   }
@@ -396,16 +411,19 @@ function buildAdvisorReviewItems({
   prerequisiteCheck,
   softwareEngineeringCheck,
   computerScienceCheck,
+  courseStatusRecords,
 }: {
   detectedSignals: DegreeWorksDetectedSignals;
   parserWarnings: string[];
   prerequisiteCheck: SoftwareEngineeringPrerequisiteCheckResult;
   softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult;
   computerScienceCheck: ComputerScienceDegreeCheckResult;
+  courseStatusRecords: DegreeWorksCourseStatusRecord[];
 }) {
   return dedupe([
     ...parserWarnings,
     ...buildSignalReviewItems(detectedSignals),
+    ...buildCourseStatusReviewItems(courseStatusRecords),
     ...prerequisiteCheck.prerequisiteIssues.map((issue) => issue.message),
     ...prerequisiteCheck.advisorReviewItems,
     ...softwareEngineeringCheck.requirementBlocks
@@ -425,6 +443,26 @@ function buildAdvisorReviewItems({
           )}).`,
       ),
   ]).slice(0, 10);
+}
+
+function buildCourseStatusReviewItems(
+  courseStatusRecords: DegreeWorksCourseStatusRecord[],
+) {
+  const items = courseStatusRecords
+    .filter((record) =>
+      ["planned", "in_progress", "transfer_or_ap", "substituted_or_waived"].includes(
+        record.status,
+      ),
+    )
+    .map((record) => {
+      if (record.status === "planned" || record.status === "in_progress") {
+        return `${record.code} was found as ${formatCourseStatus(record.status)} and should be verified before treating it as completed.`;
+      }
+
+      return `${record.code} was found with ${formatCourseStatus(record.status)} status evidence and needs advisor verification.`;
+    });
+
+  return capTextItems(dedupe(items), 5);
 }
 
 function buildSignalReviewItems(detectedSignals: DegreeWorksDetectedSignals) {
@@ -564,8 +602,27 @@ function hasAdvisorSignals(detectedSignals: DegreeWorksDetectedSignals) {
   );
 }
 
-function capCourseItems(courses: CourseRule[]) {
-  return capTextItems(courses.map((course) => `${course.code} - ${course.title}`));
+function capCourseItems(
+  courses: CourseRule[],
+  courseStatuses?: Map<string, DegreeWorksCourseStatusRecord>,
+) {
+  return capTextItems(
+    courses.map((course) => {
+      const statusRecord = courseStatuses?.get(course.code);
+
+      if (
+        statusRecord &&
+        statusRecord.status !== "missing" &&
+        statusRecord.status !== "unknown"
+      ) {
+        return `${course.code} - ${course.title} was found as ${formatCourseStatus(
+          statusRecord.status,
+        )}; verify completion or applicability with an advisor.`;
+      }
+
+      return `${course.code} - ${course.title}`;
+    }),
+  );
 }
 
 function capTextItems(items: string[], limit = 5) {
@@ -578,6 +635,29 @@ function capTextItems(items: string[], limit = 5) {
 
 function dedupe(items: string[]) {
   return Array.from(new Set(items.filter(Boolean)));
+}
+
+function getCourseStatusMap(records: DegreeWorksCourseStatusRecord[]) {
+  return new Map(records.map((record) => [record.code, record]));
+}
+
+function formatCourseStatus(status: DegreeWorksCourseStatus) {
+  switch (status) {
+    case "completed":
+      return "completed";
+    case "in_progress":
+      return "in progress";
+    case "planned":
+      return "planned";
+    case "transfer_or_ap":
+      return "transfer/AP";
+    case "substituted_or_waived":
+      return "substituted/waived";
+    case "missing":
+      return "missing";
+    case "unknown":
+      return "unknown";
+  }
 }
 
 export function formatBestFitPath(path: GapReportBestFitPath) {

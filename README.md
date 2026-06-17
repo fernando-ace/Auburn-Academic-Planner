@@ -10,7 +10,7 @@ The MVP supports two complementary paths:
 
 - Gemini RAG chat for Auburn source-grounded advising questions.
 - Deterministic requirement checkers for quota-free progress review.
-- `/plan-check` supports a combined Degree Works PDF upload that runs the AI Engineering certificate check, Software Engineering degree progress check, Computer Science degree progress check, structured requirement-block review, deterministic semester/prerequisite sequence check, a unified Gap Report and Next Actions card, and deterministic Next Semester Suggestions from one upload, plus manual/sample/PDF checks for each deterministic requirement checker and a copyable Advisor Meeting Summary.
+- `/plan-check` supports a combined Degree Works PDF upload that runs the AI Engineering certificate check, Software Engineering degree progress check, Computer Science degree progress check, structured requirement-block review, deterministic course-status interpretation, deterministic semester/prerequisite sequence check, a unified Gap Report and Next Actions card, and deterministic Next Semester Suggestions from one upload, plus manual/sample/PDF checks for each deterministic requirement checker and a copyable Advisor Meeting Summary.
 
 ## Demo flow
 
@@ -40,6 +40,8 @@ The MVP supports two complementary paths:
    - parsed course count: `45`
    - total planned credits: `122`
    - parsed courses in the collapsible summary
+   - course status summary counts for completed, in progress, planned, transfer/AP, substituted/waived, missing, and unknown courses
+   - parsed course statuses in the collapsible status summary
    - parser confidence
    - PDF parsing notes when parser warnings or signals are present
 9. Confirm the Semester and prerequisite check appears with detected terms, confidence, advisor-review items, and sequence validity.
@@ -71,6 +73,8 @@ The MVP supports two complementary paths:
 - Uploaded PDFs are not permanently stored.
 - Uploaded PDF checks are deterministic and do not call Gemini.
 - Degree Works PDF results include parser confidence, parser warnings, and detected AP, transfer, substitution, exception, in-progress, or insufficient-text signals when the extracted text suggests extra advisor review is needed.
+- Degree Works course status interpretation is deterministic and conservative. It can label courses as completed, in progress, planned, transfer/AP, substituted/waived, missing, or unknown when nearby extracted text provides enough evidence.
+- Unknown or unclear course statuses require advisor verification. Status interpretation helps prepare questions; it does not replace Degree Works, the Registrar, or academic advisors.
 - The Gap Report and Next Actions card is a planning summary, not an official degree audit. It is intended to help students prepare for advisor meetings before reading the detailed check cards.
 - Next Semester Suggestions are deterministic planning suggestions to discuss with an academic advisor. They are not registration advice, an official schedule, or a full graduation plan.
 - Course availability, prerequisites, AP/transfer credit, substitutions, semester load, and advisor approval may change Next Semester Suggestions.
@@ -87,11 +91,11 @@ The MVP supports two complementary paths:
 - `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
-- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show a student-facing Gap Report and Next Actions summary, show deterministic Next Semester Suggestions with advisor-safe wording, show shared parsed details, parser confidence, parser warnings, detected PDF signals, detected requirement-block labels, detected semester terms, conservative prerequisite sequence warnings, and run the AI Engineering certificate checker, Software Engineering degree checker, and Computer Science degree checker without calling Gemini.
+- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show a student-facing Gap Report and Next Actions summary, show deterministic Next Semester Suggestions with advisor-safe wording, show shared parsed details, conservative course status counts, parser confidence, parser warnings, detected PDF signals, detected requirement-block labels, detected semester terms, conservative prerequisite sequence warnings, and run the AI Engineering certificate checker, Software Engineering degree checker, and Computer Science degree checker without calling Gemini.
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The Advisor Meeting Summary turns the latest check results, unified gap report, and Next Semester Suggestions into copyable preparation notes with missing requirements, parser warnings, prerequisite warnings, unresolved requirement blocks, next actions, and questions to ask.
-- Local validation currently passes `71/71` deterministic tests.
+- Local validation currently passes `82/82` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Run Locally
@@ -245,7 +249,7 @@ npm run build
 
 Current validation coverage:
 
-- 71 deterministic tests through `npm test`
+- 82 deterministic tests through `npm test`
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`

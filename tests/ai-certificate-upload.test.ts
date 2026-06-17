@@ -25,6 +25,9 @@ test("POST extracts and checks an uploaded Degree Works PDF", async () => {
   assert.equal(result.totalPlannedCredits, 122);
   assert.match(result.parserConfidence, /^(high|medium|low)$/);
   assert.ok(Array.isArray(result.parserWarnings));
+  assert.ok(Array.isArray(result.courseStatusRecords));
+  assert.equal(result.courseStatusRecords.length, 45);
+  assert.equal(typeof result.courseStatusCounts.planned, "number");
   assert.equal(typeof result.detectedSignals.hasTransferCreditSignal, "boolean");
   assert.ok(result.parsedCourseCodes.includes("COMP 5600"));
   assert.ok(result.parsedCourseCodes.includes("COMP 5630"));

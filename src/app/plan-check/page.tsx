@@ -17,6 +17,11 @@ import type {
   DegreeWorksDetectedSignals,
   DegreeWorksParserConfidence,
 } from "@/lib/plan/degreeworks-analysis";
+import type {
+  DegreeWorksCourseStatus,
+  DegreeWorksCourseStatusCounts,
+  DegreeWorksCourseStatusRecord,
+} from "@/lib/plan/degreeworks-course-status";
 import type { GapReport, GapReportBestFitPath, GapReportStatus } from "@/lib/plan/gap-report";
 
 type PlanCheckCourse = {
@@ -34,6 +39,8 @@ type PlanCheckResult = {
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
   detectedSignals?: DegreeWorksDetectedSignals;
+  courseStatusRecords?: DegreeWorksCourseStatusRecord[];
+  courseStatusCounts?: DegreeWorksCourseStatusCounts;
   parserWarnings?: string[];
   parserConfidence?: DegreeWorksParserConfidence;
   requiredCoursesSatisfied: PlanCheckCourse[];
@@ -84,6 +91,8 @@ type SoftwareEngineeringPlanCheckResult = {
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
   detectedSignals?: DegreeWorksDetectedSignals;
+  courseStatusRecords?: DegreeWorksCourseStatusRecord[];
+  courseStatusCounts?: DegreeWorksCourseStatusCounts;
   parserWarnings?: string[];
   parserConfidence?: DegreeWorksParserConfidence;
   totalPlannedCredits: number | null;
@@ -168,6 +177,8 @@ type CombinedDegreeWorksUploadResult = {
   parsedCourseCodes: string[];
   totalPlannedCredits: number | null;
   detectedSignals: DegreeWorksDetectedSignals;
+  courseStatusRecords: DegreeWorksCourseStatusRecord[];
+  courseStatusCounts: DegreeWorksCourseStatusCounts;
   parserWarnings: string[];
   parserConfidence: DegreeWorksParserConfidence;
   semesterPlanAnalysis: DegreeWorksSemesterAnalysis;
@@ -922,6 +933,115 @@ function ParsedCourseCodes({
   );
 }
 
+function CourseStatusSummary({
+  counts,
+}: {
+  counts: DegreeWorksCourseStatusCounts;
+}) {
+  const statusItems: { status: DegreeWorksCourseStatus; label: string }[] = [
+    { status: "completed", label: "Completed" },
+    { status: "in_progress", label: "In progress" },
+    { status: "planned", label: "Planned" },
+    { status: "transfer_or_ap", label: "Transfer/AP" },
+    { status: "substituted_or_waived", label: "Substituted/waived" },
+    { status: "missing", label: "Missing" },
+    { status: "unknown", label: "Unknown" },
+  ];
+
+  return (
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      {statusItems.map((item) => (
+        <div
+          className="rounded-md border border-slate-200 bg-slate-50 p-3"
+          key={item.status}
+        >
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            {item.label}
+          </p>
+          <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">
+            {counts[item.status]}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ParsedCourseStatuses({
+  records,
+}: {
+  records: DegreeWorksCourseStatusRecord[];
+}) {
+  if (records.length === 0) {
+    return (
+      <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+        No course statuses were parsed from this PDF.
+      </p>
+    );
+  }
+
+  return (
+    <details className="rounded-md border border-slate-200 bg-slate-50 p-3 text-[13px] leading-5 text-slate-700">
+      <summary className="cursor-pointer font-semibold text-slate-800">
+        {records.length} parsed course statuses
+      </summary>
+      <div className="mt-3 grid gap-2">
+        {records.map((record) => (
+          <div
+            className="rounded-md border border-slate-200 bg-white p-3"
+            key={`${record.code}-${record.status}-${record.termLabel ?? ""}`}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-slate-950">
+                {record.code}
+              </span>
+              <CourseStatusPill status={record.status} />
+              <span className="rounded-sm border border-slate-200 bg-slate-50 px-2 py-1 text-[12px] font-semibold text-slate-600">
+                {record.confidence} confidence
+              </span>
+              {record.termLabel ? (
+                <span className="text-[12px] text-slate-500">
+                  {record.termLabel}
+                </span>
+              ) : null}
+              {typeof record.credits === "number" ? (
+                <span className="text-[12px] text-slate-500">
+                  {record.credits} credits
+                </span>
+              ) : null}
+            </div>
+            {record.rawEvidence ? (
+              <p className="mt-2 max-h-10 overflow-hidden text-[12px] leading-5 text-slate-500">
+                {record.rawEvidence}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function CourseStatusPill({ status }: { status: DegreeWorksCourseStatus }) {
+  const styleByStatus: Record<DegreeWorksCourseStatus, string> = {
+    completed: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    in_progress: "border-sky-200 bg-sky-50 text-sky-800",
+    planned: "border-blue-200 bg-blue-50 text-blue-800",
+    transfer_or_ap: "border-violet-200 bg-violet-50 text-violet-800",
+    substituted_or_waived: "border-amber-200 bg-amber-50 text-amber-800",
+    missing: "border-rose-200 bg-rose-50 text-rose-800",
+    unknown: "border-slate-200 bg-slate-50 text-slate-600",
+  };
+
+  return (
+    <span
+      className={`rounded-sm border px-2 py-1 text-[12px] font-semibold uppercase ${styleByStatus[status]}`}
+    >
+      {formatCourseStatusLabel(status)}
+    </span>
+  );
+}
+
 function SequenceValidityPill({ value }: { value: boolean | null }) {
   if (value === null) {
     return (
@@ -1443,6 +1563,31 @@ function formatSuggestionCategory(
   }
 }
 
+function formatCourseStatusLabel(status: DegreeWorksCourseStatus) {
+  switch (status) {
+    case "completed":
+      return "completed";
+    case "in_progress":
+      return "in progress";
+    case "planned":
+      return "planned";
+    case "transfer_or_ap":
+      return "transfer/AP";
+    case "substituted_or_waived":
+      return "substituted/waived";
+    case "missing":
+      return "missing";
+    case "unknown":
+      return "unknown";
+  }
+}
+
+function isMostlyUnknownCourseStatuses(counts: DegreeWorksCourseStatusCounts) {
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+
+  return total >= 10 && counts.unknown / total >= 0.5;
+}
+
 function CombinedDegreeWorksParsedDetails({
   result,
 }: {
@@ -1497,6 +1642,27 @@ function CombinedDegreeWorksParsedDetails({
             courseCodes={result.parsedCourseCodes}
             parsedCourseCount={result.parsedCourseCount}
           />
+        </ResultSection>
+
+        <ResultSection title="Course status summary">
+          <div className="grid gap-3">
+            <CourseStatusSummary counts={result.courseStatusCounts} />
+            {isMostlyUnknownCourseStatuses(result.courseStatusCounts) ? (
+              <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-[13px] leading-5 text-amber-900">
+                <AlertCircle
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0"
+                  size={16}
+                />
+                <span>
+                  Many courses did not have enough nearby Degree Works status
+                  evidence. Treat unknown statuses as advisor-verification
+                  items.
+                </span>
+              </div>
+            ) : null}
+            <ParsedCourseStatuses records={result.courseStatusRecords} />
+          </div>
         </ResultSection>
 
         <ResultSection title="PDF parsing notes">
@@ -1786,6 +1952,8 @@ export default function PlanCheckPage() {
         parsedCourseCodes: combinedPayload.parsedCourseCodes,
         parsedCourseCount: combinedPayload.parsedCourseCount,
         detectedSignals: combinedPayload.detectedSignals,
+        courseStatusRecords: combinedPayload.courseStatusRecords,
+        courseStatusCounts: combinedPayload.courseStatusCounts,
         parserWarnings: combinedPayload.parserWarnings,
         parserConfidence: combinedPayload.parserConfidence,
       };

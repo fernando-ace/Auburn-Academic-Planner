@@ -25,6 +25,10 @@ test("POST runs both deterministic Degree Works checks from one uploaded PDF", a
   assert.equal(result.totalPlannedCredits, 122);
   assert.match(result.parserConfidence, /^(high|medium|low)$/);
   assert.ok(Array.isArray(result.parserWarnings));
+  assert.ok(Array.isArray(result.courseStatusRecords));
+  assert.equal(result.courseStatusRecords.length, 45);
+  assert.equal(typeof result.courseStatusCounts.planned, "number");
+  assert.equal(typeof result.courseStatusCounts.unknown, "number");
   assert.equal(typeof result.detectedSignals.hasApCreditSignal, "boolean");
   assert.equal(
     typeof result.detectedSignals.hasInsufficientTextSignal,

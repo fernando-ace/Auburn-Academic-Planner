@@ -137,3 +137,45 @@ test("turns prerequisite warnings into advisor review items and questions", () =
     ),
   );
 });
+
+test("adds advisor review language for planned and transfer course statuses", () => {
+  const courseCodes = ["COMP 5130", "COMP 5600", "COMP 5630", "COMP 5610"];
+  const report = buildGapReport({
+    aiCertificateCheck: checkAiEngineeringCertificate(courseCodes),
+    softwareEngineeringCheck: checkSoftwareEngineeringDegree({
+      courseCodes,
+      totalPlannedCredits: null,
+    }),
+    computerScienceCheck: checkComputerScienceDegree({
+      courseCodes,
+      totalPlannedCredits: null,
+    }),
+    detectedSignals: noDetectedSignals,
+    parserWarnings: [],
+    parserConfidence: "medium",
+    prerequisiteCheck: checkSoftwareEngineeringPrerequisites({ courseCodes }),
+    courseStatusRecords: [
+      {
+        code: "COMP 5130",
+        status: "planned",
+        confidence: "medium",
+      },
+      {
+        code: "COMP 5600",
+        status: "transfer_or_ap",
+        confidence: "high",
+      },
+    ],
+  });
+
+  assert.ok(
+    report.advisorReviewItems.some((item) =>
+      item.includes("COMP 5130 was found as planned"),
+    ),
+  );
+  assert.ok(
+    report.advisorReviewItems.some((item) =>
+      item.includes("COMP 5600 was found with transfer/AP"),
+    ),
+  );
+});

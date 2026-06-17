@@ -32,6 +32,9 @@ test("analyzes Degree Works-like text with courses and total planned credits", (
   const analysis = analyzeDegreeWorksText(buildDegreeWorksText());
 
   assert.equal(analysis.parsedCourseCount, 32);
+  assert.equal(analysis.courseStatusRecords.length, 32);
+  assert.equal(analysis.courseStatusCounts.planned, 32);
+  assert.equal(analysis.courseStatusCounts.unknown, 0);
   assert.deepEqual(analysis.parsedCourseCodes.slice(0, 3), [
     "COMP 1000",
     "COMP 1001",
@@ -40,6 +43,30 @@ test("analyzes Degree Works-like text with courses and total planned credits", (
   assert.equal(analysis.totalPlannedCredits, 122);
   assert.equal(analysis.confidence, "high");
   assert.deepEqual(analysis.parserWarnings, []);
+});
+
+test("warns and lowers confidence when many course statuses are unknown", () => {
+  const courseText = cleanCourseCodes
+    .map((courseCode, index) => `${courseCode} Course Name ${index + 1}`)
+    .join("\n");
+  const analysis = analyzeDegreeWorksText(
+    [
+      "Degree Works audit worksheet for Software Engineering progress.",
+      "Catalog year 2025-2026. Total planned credits: 122.",
+      "The following extracted coursework appears in unclassified audit text.",
+      courseText,
+      "Additional ordinary audit text repeats neutral requirement labels and advising notes so extracted text length is sufficient for deterministic confidence checks.",
+      "No reliable status words are present near the parsed course codes.",
+    ].join("\n"),
+  );
+
+  assert.equal(analysis.courseStatusCounts.unknown, 32);
+  assert.equal(analysis.confidence, "low");
+  assert.ok(
+    analysis.parserWarnings.some((warning) =>
+      warning.includes("statuses marked unknown"),
+    ),
+  );
 });
 
 test("warns when AP, transfer, substitution, exception, and in-progress signals appear", () => {

@@ -53,6 +53,8 @@ export async function POST(request: Request) {
     detectedSignals: degreeWorksAnalysis.detectedSignals,
     detectedRequirementBlockLabels:
       degreeWorksAnalysis.detectedRequirementBlockLabels,
+    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
+    courseStatusCounts: degreeWorksAnalysis.courseStatusCounts,
     parserWarnings: degreeWorksAnalysis.parserWarnings,
     parserConfidence: degreeWorksAnalysis.confidence,
     exactRequiredCoursesSatisfied: degreeCheck.exactRequiredCoursesSatisfied,

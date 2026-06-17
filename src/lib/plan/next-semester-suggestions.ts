@@ -6,6 +6,10 @@ import {
 } from "../rules/software-engineering-prerequisites.ts";
 import type { SoftwareEngineeringDegreeCheckResult } from "../rules/software-engineering-degree.ts";
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
+import type {
+  DegreeWorksCourseStatus,
+  DegreeWorksCourseStatusRecord,
+} from "./degreeworks-course-status.ts";
 
 export type NextSemesterTargetPath =
   | "software_engineering"
@@ -59,6 +63,7 @@ export function buildNextSemesterSuggestions({
   parserConfidence = "medium",
   parserWarnings = [],
   targetPath = "auto",
+  courseStatusRecords = [],
 }: {
   parsedCourseCodes: string[];
   softwareEngineeringCheck?: SoftwareEngineeringDegreeCheckResult | null;
@@ -68,7 +73,9 @@ export function buildNextSemesterSuggestions({
   parserConfidence?: DegreeWorksParserConfidence;
   parserWarnings?: string[];
   targetPath?: NextSemesterTargetPathInput;
+  courseStatusRecords?: DegreeWorksCourseStatusRecord[];
 }): NextSemesterSuggestions {
+  const courseStatuses = getCourseStatusMap(courseStatusRecords);
   const resolvedTargetPath =
     targetPath === "auto"
       ? resolveAutoTargetPath({
@@ -85,6 +92,7 @@ export function buildNextSemesterSuggestions({
     parsedCourseCodes,
     softwareEngineeringCheck,
     targetPath: resolvedTargetPath,
+    courseStatuses,
   });
   const suggestedCourses = dedupeSuggestedCourses(collected.suggestedCourses).slice(
     0,
@@ -239,15 +247,17 @@ function collectSuggestionsForTarget({
   parsedCourseCodes,
   softwareEngineeringCheck,
   targetPath,
+  courseStatuses,
 }: {
   aiCertificateCheck: AiCertificateCheckResult | null;
   computerScienceCheck: ComputerScienceDegreeCheckResult | null;
   parsedCourseCodes: string[];
   softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult | null;
   targetPath: NextSemesterTargetPath;
+  courseStatuses: Map<string, DegreeWorksCourseStatusRecord>;
 }) {
   if (targetPath === "ai_certificate") {
-    return collectAiCertificateSuggestions(aiCertificateCheck);
+    return collectAiCertificateSuggestions(aiCertificateCheck, courseStatuses);
   }
 
   if (targetPath === "software_engineering") {
@@ -255,6 +265,7 @@ function collectSuggestionsForTarget({
       degreeName: "Software Engineering",
       missingCourses: softwareEngineeringCheck?.exactRequiredCoursesMissing ?? [],
       parsedCourseCodes,
+      courseStatuses,
     });
   }
 
@@ -263,19 +274,25 @@ function collectSuggestionsForTarget({
       degreeName: "Computer Science",
       missingCourses: computerScienceCheck?.exactRequiredCoursesMissing ?? [],
       parsedCourseCodes,
+      courseStatuses,
     });
   }
 
-  const aiSuggestions = collectAiCertificateSuggestions(aiCertificateCheck);
+  const aiSuggestions = collectAiCertificateSuggestions(
+    aiCertificateCheck,
+    courseStatuses,
+  );
   const softwareEngineeringSuggestions = collectDegreeSuggestions({
     degreeName: "Software Engineering",
     missingCourses: softwareEngineeringCheck?.exactRequiredCoursesMissing ?? [],
     parsedCourseCodes,
+    courseStatuses,
   });
   const computerScienceSuggestions = collectDegreeSuggestions({
     degreeName: "Computer Science",
     missingCourses: computerScienceCheck?.exactRequiredCoursesMissing ?? [],
     parsedCourseCodes,
+    courseStatuses,
   });
 
   return {
@@ -294,26 +311,25 @@ function collectSuggestionsForTarget({
 
 function collectAiCertificateSuggestions(
   aiCertificateCheck: AiCertificateCheckResult | null,
+  courseStatuses: Map<string, DegreeWorksCourseStatusRecord>,
 ) {
   if (!aiCertificateCheck) {
     return { suggestedCourses: [], notYetRecommended: [] };
   }
 
   if (aiCertificateCheck.requiredCoursesMissing.length > 0) {
-    return {
-      suggestedCourses: aiCertificateCheck.requiredCoursesMissing.map(
-        (course) => ({
-          code: course.code,
-          title: course.title,
-          reason:
-            "This required AI Engineering certificate course was not found in the parsed Degree Works plan.",
-          category: "certificate_requirement" as const,
-          priority: "high" as const,
-          advisorVerificationRequired: true,
-        }),
-      ),
-      notYetRecommended: [],
-    };
+    return partitionStatusAwareSuggestions(
+      aiCertificateCheck.requiredCoursesMissing.map((course) => ({
+        code: course.code,
+        title: course.title,
+        reason:
+          "This required AI Engineering certificate course was not found in the parsed Degree Works plan.",
+        category: "certificate_requirement" as const,
+        priority: "high" as const,
+        advisorVerificationRequired: true,
+      })),
+      courseStatuses,
+    );
   }
 
   if (aiCertificateCheck.electiveCandidatesFound.length === 0) {
@@ -339,15 +355,40 @@ function collectDegreeSuggestions({
   degreeName,
   missingCourses,
   parsedCourseCodes,
+  courseStatuses,
 }: {
   degreeName: string;
   missingCourses: CourseRule[];
   parsedCourseCodes: string[];
+  courseStatuses: Map<string, DegreeWorksCourseStatusRecord>;
 }) {
   const suggestedCourses: NextSemesterSuggestedCourse[] = [];
   const notYetRecommended: NextSemesterNotYetRecommendedCourse[] = [];
 
   for (const course of missingCourses) {
+    const statusRecord = courseStatuses.get(course.code);
+
+    if (statusRecord?.status === "completed" && statusRecord.confidence === "high") {
+      notYetRecommended.push({
+        code: course.code,
+        reason: `${course.code} appears completed in the parsed Degree Works status evidence; verify it with an advisor instead of adding it again.`,
+      });
+      continue;
+    }
+
+    if (
+      statusRecord &&
+      (statusRecord.status === "planned" || statusRecord.status === "in_progress")
+    ) {
+      notYetRecommended.push({
+        code: course.code,
+        reason: `${course.code} appears ${formatCourseStatus(
+          statusRecord.status,
+        )} in Degree Works; verify enrollment or completion with an advisor instead of adding it again.`,
+      });
+      continue;
+    }
+
     const missingPrerequisites = getModeledMissingPrerequisites(
       course.code,
       parsedCourseCodes,
@@ -373,6 +414,43 @@ function collectDegreeSuggestions({
       priority: "high",
       advisorVerificationRequired: true,
     });
+  }
+
+  return { suggestedCourses, notYetRecommended };
+}
+
+function partitionStatusAwareSuggestions(
+  suggestions: NextSemesterSuggestedCourse[],
+  courseStatuses: Map<string, DegreeWorksCourseStatusRecord>,
+) {
+  const suggestedCourses: NextSemesterSuggestedCourse[] = [];
+  const notYetRecommended: NextSemesterNotYetRecommendedCourse[] = [];
+
+  for (const suggestion of suggestions) {
+    const statusRecord = courseStatuses.get(suggestion.code);
+
+    if (statusRecord?.status === "completed" && statusRecord.confidence === "high") {
+      notYetRecommended.push({
+        code: suggestion.code,
+        reason: `${suggestion.code} appears completed in the parsed Degree Works status evidence; verify it with an advisor instead of adding it again.`,
+      });
+      continue;
+    }
+
+    if (
+      statusRecord &&
+      (statusRecord.status === "planned" || statusRecord.status === "in_progress")
+    ) {
+      notYetRecommended.push({
+        code: suggestion.code,
+        reason: `${suggestion.code} appears ${formatCourseStatus(
+          statusRecord.status,
+        )} in Degree Works; verify enrollment or completion with an advisor instead of adding it again.`,
+      });
+      continue;
+    }
+
+    suggestedCourses.push(suggestion);
   }
 
   return { suggestedCourses, notYetRecommended };
@@ -497,4 +575,27 @@ function dedupeNotYetRecommended(
 
 function dedupeStrings(items: string[]) {
   return Array.from(new Set(items));
+}
+
+function getCourseStatusMap(records: DegreeWorksCourseStatusRecord[]) {
+  return new Map(records.map((record) => [record.code, record]));
+}
+
+function formatCourseStatus(status: DegreeWorksCourseStatus) {
+  switch (status) {
+    case "completed":
+      return "completed";
+    case "in_progress":
+      return "in progress";
+    case "planned":
+      return "planned";
+    case "transfer_or_ap":
+      return "transfer/AP";
+    case "substituted_or_waived":
+      return "substituted/waived";
+    case "missing":
+      return "missing";
+    case "unknown":
+      return "unknown";
+  }
 }

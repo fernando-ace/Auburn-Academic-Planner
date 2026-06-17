@@ -69,6 +69,7 @@ export async function POST(request: Request) {
     detectedSignals: degreeWorksAnalysis.detectedSignals,
     parserWarnings: degreeWorksAnalysis.parserWarnings,
     parserConfidence: degreeWorksAnalysis.confidence,
+    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
     prerequisiteCheck,
   });
   const nextSemesterSuggestions = buildNextSemesterSuggestions({
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
     prerequisiteCheck,
     parserConfidence: degreeWorksAnalysis.confidence,
     parserWarnings: degreeWorksAnalysis.parserWarnings,
+    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
     targetPath: "auto",
   });
 
@@ -90,6 +92,8 @@ export async function POST(request: Request) {
     detectedSignals: degreeWorksAnalysis.detectedSignals,
     detectedRequirementBlockLabels:
       degreeWorksAnalysis.detectedRequirementBlockLabels,
+    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
+    courseStatusCounts: degreeWorksAnalysis.courseStatusCounts,
     parserWarnings: degreeWorksAnalysis.parserWarnings,
     parserConfidence: degreeWorksAnalysis.confidence,
     semesterPlanAnalysis,

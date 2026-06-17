@@ -51,6 +51,8 @@ export async function POST(request: Request) {
     parsedCourseCount: degreeWorksAnalysis.parsedCourseCount,
     totalPlannedCredits: degreeWorksAnalysis.totalPlannedCredits,
     detectedSignals: degreeWorksAnalysis.detectedSignals,
+    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
+    courseStatusCounts: degreeWorksAnalysis.courseStatusCounts,
     parserWarnings: degreeWorksAnalysis.parserWarnings,
     parserConfidence: degreeWorksAnalysis.confidence,
     requiredCoursesSatisfied: certificateCheck.requiredCoursesSatisfied,

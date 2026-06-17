@@ -1,4 +1,10 @@
 import { parseCourseCodes } from "../courses/course-code-parser.ts";
+import {
+  countDegreeWorksCourseStatuses,
+  extractDegreeWorksCourseStatuses,
+  type DegreeWorksCourseStatusCounts,
+  type DegreeWorksCourseStatusRecord,
+} from "./degreeworks-course-status.ts";
 import { extractTotalPlannedCredits } from "./total-planned-credits.ts";
 
 export type DegreeWorksParserConfidence = "high" | "medium" | "low";
@@ -15,6 +21,8 @@ export type DegreeWorksDetectedSignals = {
 export type DegreeWorksAnalysis = {
   parsedCourseCodes: string[];
   parsedCourseCount: number;
+  courseStatusRecords: DegreeWorksCourseStatusRecord[];
+  courseStatusCounts: DegreeWorksCourseStatusCounts;
   totalPlannedCredits: number | null;
   detectedRequirementBlockLabels: string[];
   detectedSignals: DegreeWorksDetectedSignals;
@@ -47,6 +55,8 @@ const requirementBlockLabelPatterns = [
 export function analyzeDegreeWorksText(text: string): DegreeWorksAnalysis {
   const parsedCourseCodes = parseCourseCodes(text);
   const parsedCourseCount = parsedCourseCodes.length;
+  const courseStatusRecords = extractDegreeWorksCourseStatuses(text);
+  const courseStatusCounts = countDegreeWorksCourseStatuses(courseStatusRecords);
   const totalPlannedCredits = extractTotalPlannedCredits(text);
   const normalizedText = text.trim();
   const detectedRequirementBlockLabels = detectRequirementBlockLabels(text);
@@ -65,6 +75,8 @@ export function analyzeDegreeWorksText(text: string): DegreeWorksAnalysis {
   const parserWarnings = buildParserWarnings(
     detectedSignals,
     detectedRequirementBlockLabels,
+    courseStatusRecords,
+    courseStatusCounts,
   );
   const hasWarningSignals =
     detectedSignals.hasTransferCreditSignal ||
@@ -76,17 +88,19 @@ export function analyzeDegreeWorksText(text: string): DegreeWorksAnalysis {
   return {
     parsedCourseCodes,
     parsedCourseCount,
+    courseStatusRecords,
+    courseStatusCounts,
     totalPlannedCredits,
     detectedRequirementBlockLabels,
     detectedSignals,
     parserWarnings,
-    confidence: detectedSignals.hasInsufficientTextSignal
-      ? "low"
-      : hasWarningSignals
-        ? "medium"
-        : parsedCourseCount >= highConfidenceCourseCount
-          ? "high"
-          : "medium",
+    confidence: getAnalysisConfidence({
+      detectedSignals,
+      hasWarningSignals,
+      parsedCourseCount,
+      courseStatusRecords,
+      courseStatusCounts,
+    }),
   };
 }
 
@@ -99,6 +113,8 @@ function detectRequirementBlockLabels(text: string) {
 function buildParserWarnings(
   detectedSignals: DegreeWorksDetectedSignals,
   detectedRequirementBlockLabels: string[],
+  courseStatusRecords: DegreeWorksCourseStatusRecord[],
+  courseStatusCounts: DegreeWorksCourseStatusCounts,
 ) {
   const warnings: string[] = [];
 
@@ -146,5 +162,51 @@ function buildParserWarnings(
     );
   }
 
+  if (hasManyUnknownStatuses(courseStatusRecords, courseStatusCounts)) {
+    warnings.push(
+      "Many parsed courses did not have enough nearby Degree Works status evidence, so course statuses marked unknown require advisor verification.",
+    );
+  }
+
   return warnings;
+}
+
+function getAnalysisConfidence({
+  detectedSignals,
+  hasWarningSignals,
+  parsedCourseCount,
+  courseStatusRecords,
+  courseStatusCounts,
+}: {
+  detectedSignals: DegreeWorksDetectedSignals;
+  hasWarningSignals: boolean;
+  parsedCourseCount: number;
+  courseStatusRecords: DegreeWorksCourseStatusRecord[];
+  courseStatusCounts: DegreeWorksCourseStatusCounts;
+}): DegreeWorksParserConfidence {
+  if (detectedSignals.hasInsufficientTextSignal) {
+    return "low";
+  }
+
+  if (hasManyUnknownStatuses(courseStatusRecords, courseStatusCounts)) {
+    return courseStatusCounts.unknown === courseStatusRecords.length
+      ? "low"
+      : "medium";
+  }
+
+  if (hasWarningSignals) {
+    return "medium";
+  }
+
+  return parsedCourseCount >= highConfidenceCourseCount ? "high" : "medium";
+}
+
+function hasManyUnknownStatuses(
+  courseStatusRecords: DegreeWorksCourseStatusRecord[],
+  courseStatusCounts: DegreeWorksCourseStatusCounts,
+) {
+  return (
+    courseStatusRecords.length >= minimumParsedCourseCount &&
+    courseStatusCounts.unknown / courseStatusRecords.length >= 0.5
+  );
 }
