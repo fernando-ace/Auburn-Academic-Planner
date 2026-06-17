@@ -1,5 +1,6 @@
 import type { AiCertificateCheckResult, CourseRule } from "../rules/ai-certificate.ts";
 import type { ComputerScienceDegreeCheckResult } from "../rules/computer-science-degree.ts";
+import type { RequirementBlockResult } from "../rules/requirement-blocks.ts";
 import type { SoftwareEngineeringDegreeCheckResult } from "../rules/software-engineering-degree.ts";
 import type { SoftwareEngineeringPrerequisiteCheckResult } from "../rules/software-engineering-prerequisites.ts";
 import type {
@@ -191,6 +192,20 @@ function addDegreeMissingRequirements(
           : `Total planned credits are below the ${result.totalHoursRequired}-credit requirement.`,
       ],
       severity: "advisor_review",
+    });
+  }
+
+  const unresolvedBlocks = result.requirementBlocks.filter(
+    (block) => block.status !== "satisfied",
+  );
+
+  if (unresolvedBlocks.length > 0) {
+    missingRequirements.push({
+      area: `${area} requirement blocks`,
+      items: capTextItems(unresolvedBlocks.map(formatRequirementBlockGapItem), 8),
+      severity: unresolvedBlocks.some((block) => block.status === "missing")
+        ? "warning"
+        : "advisor_review",
     });
   }
 }
@@ -393,15 +408,23 @@ function buildAdvisorReviewItems({
     ...buildSignalReviewItems(detectedSignals),
     ...prerequisiteCheck.prerequisiteIssues.map((issue) => issue.message),
     ...prerequisiteCheck.advisorReviewItems,
-    ...softwareEngineeringCheck.advisorVerifiedRequirements.map(
-      (requirement) =>
-        `Software Engineering ${requirement.name} (${requirement.creditHoursRequired} credits) needs advisor or Degree Works verification.`,
-    ),
-    ...computerScienceCheck.advisorVerifiedRequirements.map(
-      (requirement) =>
-        `Computer Science ${requirement.name} (${requirement.creditHoursRequired} credits) needs advisor or Degree Works verification.`,
-    ),
-  ]).slice(0, 8);
+    ...softwareEngineeringCheck.requirementBlocks
+      .filter((block) => block.status !== "satisfied")
+      .map(
+        (block) =>
+          `Software Engineering ${block.blockName} needs advisor or Degree Works verification (${formatRequirementBlockStatus(
+            block,
+          )}).`,
+      ),
+    ...computerScienceCheck.requirementBlocks
+      .filter((block) => block.status !== "satisfied")
+      .map(
+        (block) =>
+          `Computer Science ${block.blockName} needs advisor or Degree Works verification (${formatRequirementBlockStatus(
+            block,
+          )}).`,
+      ),
+  ]).slice(0, 10);
 }
 
 function buildSignalReviewItems(detectedSignals: DegreeWorksDetectedSignals) {
@@ -422,6 +445,40 @@ function buildSignalReviewItems(detectedSignals: DegreeWorksDetectedSignals) {
       ? "Exceptions, waivers, or petitions may affect this check."
       : null,
   ].filter((item): item is string => Boolean(item));
+}
+
+function formatRequirementBlockGapItem(block: RequirementBlockResult) {
+  const credits =
+    typeof block.requiredCredits === "number"
+      ? `, ${block.matchedCredits ?? 0}/${block.requiredCredits} modeled credits`
+      : "";
+  const candidates =
+    block.candidateCourses.length > 0
+      ? `; candidates found: ${block.candidateCourses.join(", ")}`
+      : "";
+
+  return `${block.blockName}: ${block.status}${credits}${candidates}`;
+}
+
+function formatRequirementBlockStatus(block: RequirementBlockResult) {
+  const credits =
+    typeof block.requiredCredits === "number"
+      ? `, ${block.matchedCredits ?? 0}/${block.requiredCredits} modeled credits`
+      : "";
+  const candidates =
+    block.candidateCourses.length > 0
+      ? `, candidates: ${block.candidateCourses.join(", ")}`
+      : "";
+
+  return `${block.status}${credits}${candidates}`;
+}
+
+function hasUnresolvedRequirementBlocks(
+  missingRequirements: GapReportMissingRequirement[],
+) {
+  return missingRequirements.some((requirement) =>
+    requirement.area.includes("requirement blocks"),
+  );
 }
 
 function buildNextActions({
@@ -486,6 +543,12 @@ function buildAdvisorQuestions({
 
   if (missingRequirements.some((requirement) => requirement.area.includes("total credits"))) {
     questions.push("Does my official Degree Works audit show enough credits for this path?");
+  }
+
+  if (hasUnresolvedRequirementBlocks(missingRequirements)) {
+    questions.push(
+      "Which unresolved core, math elective, technical elective, or free elective blocks does Degree Works already mark complete?",
+    );
   }
 
   return dedupe(questions).slice(0, 6);

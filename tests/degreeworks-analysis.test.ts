@@ -95,3 +95,22 @@ test("uses low confidence for empty or very short extracted text", () => {
     ),
   );
 });
+
+test("detects requirement block labels without assigning nearby courses", () => {
+  const analysis = analyzeDegreeWorksText(
+    buildDegreeWorksText({
+      extraText:
+        "Core Science Sequence Technical Elective Free Elective Humanities Social Science Math Elective",
+    }),
+  );
+
+  assert.ok(analysis.detectedRequirementBlockLabels.includes("Core Science"));
+  assert.ok(
+    analysis.detectedRequirementBlockLabels.includes("Technical Elective"),
+  );
+  assert.ok(
+    analysis.parserWarnings.some((warning) =>
+      warning.includes("does not safely map nearby courses"),
+    ),
+  );
+});

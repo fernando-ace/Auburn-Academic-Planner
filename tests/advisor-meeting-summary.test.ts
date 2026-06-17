@@ -54,6 +54,9 @@ test("builds advisor summary for Software Engineering result only", () => {
   );
   assert.match(summary, /Advisor-verified items that need review:/);
   assert.match(summary, /- Core Science Sequence \(8 credits\)/);
+  assert.match(summary, /Structured requirement blocks:/);
+  assert.match(summary, /- Technical Electives: advisor_review/);
+  assert.match(summary, /candidates: COMP 5600/);
 });
 
 test("builds advisor summary for Computer Science result only", () => {
@@ -84,6 +87,8 @@ test("builds advisor summary for Computer Science result only", () => {
   assert.match(summary, /- Ethics requirement: satisfied/);
   assert.match(summary, /Advisor-verified items that need review:/);
   assert.match(summary, /- Technical Electives \(18 credits\)/);
+  assert.match(summary, /Structured requirement blocks:/);
+  assert.match(summary, /- Math Elective: advisor_review/);
 });
 
 test("builds advisor summary for combined Degree Works result", () => {

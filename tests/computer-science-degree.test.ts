@@ -15,6 +15,16 @@ test("Degree Works sample has enough total credits but is not proven complete fo
 
   assert.equal(result.hasEnoughTotalCredits, true);
   assert.equal(result.isLikelyComplete, false);
+  assert.equal(result.requirementBlocks.length, 8);
+  assert.ok(
+    result.requirementBlocks.some(
+      (block) =>
+        block.blockName === "Technical Electives" &&
+        block.status === "advisor_review" &&
+        block.candidateCourses.includes("COMP 5600") &&
+        block.candidateCourses.includes("COMP 5610"),
+    ),
+  );
   assert.deepEqual(
     result.exactRequiredCoursesMissing.map((course) => course.code),
     ["ENGL 1100", "ENGL 1120", "ENGR 1100", "ELEC 2200", "COMP 4200"],
@@ -41,6 +51,13 @@ test("all exact required Computer Science courses plus one ethics option is like
   assert.equal(result.hasEnoughTotalCredits, true);
   assert.equal(result.isLikelyComplete, true);
   assert.equal(result.advisorVerificationRequired, true);
+  assert.ok(
+    result.requirementBlocks.some(
+      (block) =>
+        block.blockName === "Math Elective" &&
+        block.status === "advisor_review",
+    ),
+  );
 });
 
 test("complete Computer Science courses without total planned credits are not likely complete", () => {

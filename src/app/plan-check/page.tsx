@@ -58,6 +58,24 @@ type AdvisorVerifiedRequirement = {
   creditHoursRequired: number;
 };
 
+type RequirementBlockStatus =
+  | "satisfied"
+  | "missing"
+  | "partial"
+  | "advisor_review"
+  | "insufficient_data";
+
+type RequirementBlockResult = {
+  blockName: string;
+  status: RequirementBlockStatus;
+  satisfiedCourses: string[];
+  missingCourses: string[];
+  candidateCourses: string[];
+  requiredCredits?: number;
+  matchedCredits?: number;
+  notes: string[];
+};
+
 type SoftwareEngineeringPlanCheckResult = {
   planDescription?: string;
   major?: string;
@@ -73,6 +91,7 @@ type SoftwareEngineeringPlanCheckResult = {
   exactRequiredCoursesMissing: PlanCheckCourse[];
   alternativeCourseGroups: SoftwareEngineeringAlternativeCourseGroup[];
   advisorVerifiedRequirements: AdvisorVerifiedRequirement[];
+  requirementBlocks: RequirementBlockResult[];
   totalHoursRequired: number;
   hasEnoughTotalCredits: boolean | null;
   isLikelyComplete: boolean;
@@ -398,6 +417,102 @@ function AdvisorRequirementList({
   );
 }
 
+function RequirementBlockStatusPill({
+  status,
+}: {
+  status: RequirementBlockStatus;
+}) {
+  const styleByStatus: Record<RequirementBlockStatus, string> = {
+    satisfied: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    partial: "border-amber-200 bg-amber-50 text-amber-800",
+    missing: "border-orange-200 bg-orange-50 text-orange-800",
+    advisor_review: "border-[#dd550c]/25 bg-[#fff7f1] text-[#9b3900]",
+    insufficient_data: "border-slate-200 bg-slate-50 text-slate-600",
+  };
+
+  return (
+    <span
+      className={`rounded-sm border px-2 py-1 text-[12px] font-semibold uppercase ${styleByStatus[status]}`}
+    >
+      {status.replace("_", " ")}
+    </span>
+  );
+}
+
+function RequirementBlockList({
+  blocks,
+}: {
+  blocks: RequirementBlockResult[];
+}) {
+  if (blocks.length === 0) {
+    return (
+      <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+        No structured requirement blocks were returned.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      {blocks.map((block) => (
+        <details
+          className="rounded-md border border-slate-200 bg-slate-50 p-3"
+          key={block.blockName}
+        >
+          <summary className="cursor-pointer list-none">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-[14px] font-semibold text-slate-950">
+                  {block.blockName}
+                </h3>
+                {typeof block.requiredCredits === "number" ? (
+                  <p className="mt-1 text-[13px] leading-5 text-slate-600">
+                    {block.matchedCredits ?? 0} of {block.requiredCredits} modeled
+                    credits
+                  </p>
+                ) : null}
+              </div>
+              <RequirementBlockStatusPill status={block.status} />
+            </div>
+          </summary>
+
+          <div className="mt-3 grid gap-3 text-[13px] leading-5 text-slate-700">
+            {block.satisfiedCourses.length > 0 ? (
+              <p>
+                <span className="font-semibold text-slate-900">
+                  Satisfied:
+                </span>{" "}
+                {block.satisfiedCourses.join(", ")}
+              </p>
+            ) : null}
+            {block.missingCourses.length > 0 ? (
+              <p>
+                <span className="font-semibold text-slate-900">Missing:</span>{" "}
+                {block.missingCourses.join(", ")}
+              </p>
+            ) : null}
+            {block.candidateCourses.length > 0 ? (
+              <p>
+                <span className="font-semibold text-slate-900">
+                  Candidate courses:
+                </span>{" "}
+                {block.candidateCourses.join(", ")}
+              </p>
+            ) : null}
+            {block.notes.length > 0 ? (
+              <ul className="space-y-1">
+                {block.notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
 function ResultSection({
   title,
   children,
@@ -718,6 +833,10 @@ function DegreeProgressResultCard({
               </section>
             ))}
           </div>
+        </ResultSection>
+
+        <ResultSection title="Requirement Blocks">
+          <RequirementBlockList blocks={result.requirementBlocks ?? []} />
         </ResultSection>
 
         <ResultSection title="Advisor-verified requirement blocks">

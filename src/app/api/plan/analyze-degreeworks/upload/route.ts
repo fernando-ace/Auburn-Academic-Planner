@@ -88,6 +88,8 @@ export async function POST(request: Request) {
     parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
     totalPlannedCredits: degreeWorksAnalysis.totalPlannedCredits,
     detectedSignals: degreeWorksAnalysis.detectedSignals,
+    detectedRequirementBlockLabels:
+      degreeWorksAnalysis.detectedRequirementBlockLabels,
     parserWarnings: degreeWorksAnalysis.parserWarnings,
     parserConfidence: degreeWorksAnalysis.confidence,
     semesterPlanAnalysis,

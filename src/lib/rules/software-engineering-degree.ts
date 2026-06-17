@@ -1,4 +1,9 @@
 import softwareEngineeringDegreeRuleJson from "../../../rules/auburn/software-engineering-degree.json" with { type: "json" };
+import {
+  evaluateRequirementBlocks,
+  type RequirementBlockDefinition,
+  type RequirementBlockResult,
+} from "./requirement-blocks.ts";
 
 export type CourseRule = {
   code: string;
@@ -26,6 +31,7 @@ export type SoftwareEngineeringDegreeRule = {
   exactRequiredCourses: CourseRule[];
   alternativeCourseGroups: AlternativeCourseGroupRule[];
   advisorVerifiedRequirements: AdvisorVerifiedRequirementRule[];
+  requirementBlocks: RequirementBlockDefinition[];
 };
 
 export type AlternativeCourseGroupCheck = AlternativeCourseGroupRule & {
@@ -39,6 +45,7 @@ export type SoftwareEngineeringDegreeCheckResult = {
   exactRequiredCoursesMissing: CourseRule[];
   alternativeCourseGroups: AlternativeCourseGroupCheck[];
   advisorVerifiedRequirements: AdvisorVerifiedRequirementRule[];
+  requirementBlocks: RequirementBlockResult[];
   totalHoursRequired: number;
   totalPlannedCredits: number | null;
   hasEnoughTotalCredits: boolean | null;
@@ -94,6 +101,10 @@ export function checkSoftwareEngineeringDegree({
   const allAlternativeGroupsSatisfied = alternativeCourseGroups.every(
     (group) => group.isSatisfied,
   );
+  const requirementBlocks = evaluateRequirementBlocks({
+    blocks: softwareEngineeringDegreeRule.requirementBlocks,
+    courseCodes: courseCodes,
+  });
   const hasEnoughTotalCredits =
     totalPlannedCredits === null
       ? null
@@ -110,6 +121,7 @@ export function checkSoftwareEngineeringDegree({
     alternativeCourseGroups,
     advisorVerifiedRequirements:
       softwareEngineeringDegreeRule.advisorVerifiedRequirements,
+    requirementBlocks,
     totalHoursRequired: softwareEngineeringDegreeRule.totalHoursRequired,
     totalPlannedCredits,
     hasEnoughTotalCredits,
@@ -119,6 +131,7 @@ export function checkSoftwareEngineeringDegree({
       allExactRequiredCoursesSatisfied,
       allAlternativeGroupsSatisfied,
       hasEnoughTotalCredits,
+      requirementBlocks,
     }),
   };
 }
@@ -127,10 +140,12 @@ function buildNotes({
   allExactRequiredCoursesSatisfied,
   allAlternativeGroupsSatisfied,
   hasEnoughTotalCredits,
+  requirementBlocks,
 }: {
   allExactRequiredCoursesSatisfied: boolean;
   allAlternativeGroupsSatisfied: boolean;
   hasEnoughTotalCredits: boolean | null;
+  requirementBlocks: RequirementBlockResult[];
 }) {
   const notes: string[] = [
     `${softwareEngineeringDegreeRule.degreeName} requires ${softwareEngineeringDegreeRule.totalHoursRequired} total hours for catalog year ${softwareEngineeringDegreeRule.catalogYear}.`,
@@ -160,8 +175,18 @@ function buildNotes({
   }
 
   notes.push(
-    "Core, math elective, technical elective, free elective, transfer, substitution, prerequisite, and semester-order checks require advisor verification.",
+    "Structured core and elective requirement blocks are included, but unresolved blocks still require advisor or official Degree Works verification.",
   );
+
+  const unresolvedBlockNames = requirementBlocks
+    .filter((block) => block.status !== "satisfied")
+    .map((block) => `${block.blockName} (${block.status})`);
+
+  if (unresolvedBlockNames.length > 0) {
+    notes.push(
+      `Unresolved requirement blocks: ${unresolvedBlockNames.join(", ")}.`,
+    );
+  }
 
   return notes;
 }

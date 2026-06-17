@@ -94,11 +94,13 @@ export function buildNextSemesterSuggestions({
     collected.notYetRecommended,
   );
   const notes = buildNotes({
+    computerScienceCheck,
     parserConfidence,
     parserWarnings,
     prerequisiteCheck,
     resolvedTargetPath,
     suggestedCourses,
+    softwareEngineeringCheck,
   });
 
   return {
@@ -117,6 +119,14 @@ export function buildNextSemesterSuggestions({
       "Do these courses satisfy prerequisites and catalog rules for my official program?",
       "Would this set create a reasonable semester load with work, labs, and other commitments?",
       "Are any electives, substitutions, or advisor-approved alternatives better next steps?",
+      ...(hasUnresolvedRequirementBlocks({
+        computerScienceCheck,
+        softwareEngineeringCheck,
+      })
+        ? [
+            "Which unresolved core, math elective, technical elective, or free elective blocks should I prioritize after Degree Works review?",
+          ]
+        : []),
     ],
     notes,
   };
@@ -369,17 +379,21 @@ function collectDegreeSuggestions({
 }
 
 function buildNotes({
+  computerScienceCheck,
   parserConfidence,
   parserWarnings,
   prerequisiteCheck,
   resolvedTargetPath,
   suggestedCourses,
+  softwareEngineeringCheck,
 }: {
+  computerScienceCheck: ComputerScienceDegreeCheckResult | null;
   parserConfidence: DegreeWorksParserConfidence;
   parserWarnings: string[];
   prerequisiteCheck: SoftwareEngineeringPrerequisiteCheckResult | null;
   resolvedTargetPath: NextSemesterTargetPath;
   suggestedCourses: NextSemesterSuggestedCourse[];
+  softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult | null;
 }) {
   const notes = [
     "These are conservative next-semester planning suggestions, not a complete graduation plan.",
@@ -404,6 +418,17 @@ function buildNotes({
     );
   }
 
+  if (
+    hasUnresolvedRequirementBlocks({
+      computerScienceCheck,
+      softwareEngineeringCheck,
+    })
+  ) {
+    notes.push(
+      "Unresolved core and elective requirement blocks are not converted into specific course suggestions unless the local rules can verify them safely.",
+    );
+  }
+
   if (suggestedCourses.length === 0) {
     notes.push(
       "No specific course suggestions were produced from the current deterministic rules; discuss remaining advisor-review items instead.",
@@ -411,6 +436,18 @@ function buildNotes({
   }
 
   return dedupeStrings(notes);
+}
+
+function hasUnresolvedRequirementBlocks({
+  computerScienceCheck,
+  softwareEngineeringCheck,
+}: {
+  computerScienceCheck: ComputerScienceDegreeCheckResult | null;
+  softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult | null;
+}) {
+  return [computerScienceCheck, softwareEngineeringCheck].some((check) =>
+    check?.requirementBlocks.some((block) => block.status !== "satisfied"),
+  );
 }
 
 function formatTargetPath(path: NextSemesterTargetPath) {

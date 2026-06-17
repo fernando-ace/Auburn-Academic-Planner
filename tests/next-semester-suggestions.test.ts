@@ -49,6 +49,21 @@ test("suggests missing Software Engineering required courses when eligible", () 
       (course) => course.category === "missing_required",
     ),
   );
+  assert.ok(
+    suggestions.notes.some((note) =>
+      note.includes("Unresolved core and elective requirement blocks"),
+    ),
+  );
+  assert.ok(
+    suggestions.advisorQuestions.some((question) =>
+      question.includes("unresolved core, math elective, technical elective"),
+    ),
+  );
+  assert.ok(
+    !suggestions.suggestedCourses.some((course) =>
+      /elective/i.test(course.code),
+    ),
+  );
 });
 
 test("does not suggest a modeled course when prerequisites are missing", () => {

@@ -64,6 +64,7 @@ function buildComputerSciencePlanCheck({
     exactRequiredCoursesMissing: result.exactRequiredCoursesMissing,
     alternativeCourseGroups: result.alternativeCourseGroups,
     advisorVerifiedRequirements: result.advisorVerifiedRequirements,
+    requirementBlocks: result.requirementBlocks,
     totalHoursRequired: result.totalHoursRequired,
     hasEnoughTotalCredits: result.hasEnoughTotalCredits,
     isLikelyComplete: result.isLikelyComplete,

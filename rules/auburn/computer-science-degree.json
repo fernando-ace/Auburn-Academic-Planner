@@ -53,5 +53,79 @@
     { "name": "Core Fine Arts", "creditHoursRequired": 3 },
     { "name": "Technical Electives", "creditHoursRequired": 18 },
     { "name": "Free Elective", "creditHoursRequired": 3 }
+  ],
+  "requirementBlocks": [
+    {
+      "blockName": "Core Science Sequence",
+      "type": "advisor_verified",
+      "requiredCredits": 8,
+      "notes": [
+        "Bulletin lists Core Science Sequence (Series B, D, H) and says selections must follow approved listings."
+      ]
+    },
+    {
+      "blockName": "Core History Sequence",
+      "type": "advisor_verified",
+      "requiredCredits": 6,
+      "notes": [
+        "Bulletin identifies this as a core sequence, but the local rule does not include the approved sequence list."
+      ]
+    },
+    {
+      "blockName": "Core Literature",
+      "type": "advisor_verified",
+      "requiredCredits": 3,
+      "notes": [
+        "Core literature credit must be verified against Auburn Core and Degree Works."
+      ]
+    },
+    {
+      "blockName": "Core Social Science Elective",
+      "type": "advisor_verified",
+      "requiredCredits": 3,
+      "notes": [
+        "Core social science elective credit must be verified against Auburn Core and Degree Works."
+      ]
+    },
+    {
+      "blockName": "Math Elective",
+      "type": "prefix_level_candidate",
+      "requiredCredits": 3,
+      "prefixes": ["MATH", "STAT"],
+      "minimumLevel": 3000,
+      "defaultCreditHours": 3,
+      "excludedCourses": ["MATH 1610", "MATH 1620", "MATH 2660", "STAT 3010"],
+      "notes": [
+        "Bulletin footnote says Math Elective credit must follow CSSE department policies and approved course listings."
+      ]
+    },
+    {
+      "blockName": "Core Fine Arts",
+      "type": "advisor_verified",
+      "requiredCredits": 3,
+      "notes": [
+        "Core fine arts credit must be verified against Auburn Core and Degree Works."
+      ]
+    },
+    {
+      "blockName": "Technical Electives",
+      "type": "prefix_level_candidate",
+      "requiredCredits": 18,
+      "prefixes": ["COMP"],
+      "minimumLevel": 5000,
+      "defaultCreditHours": 3,
+      "excludedCourses": ["COMP 5120"],
+      "notes": [
+        "Bulletin footnote says Technical Elective credit must follow CSSE department policies and approved course listings."
+      ]
+    },
+    {
+      "blockName": "Free Elective",
+      "type": "advisor_verified",
+      "requiredCredits": 3,
+      "notes": [
+        "Free elective credit can be affected by transfer, duplicate, repeated, or excess-credit handling in Degree Works."
+      ]
+    }
   ]
 }

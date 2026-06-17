@@ -36,6 +36,22 @@ export type AdvisorSummaryVerifiedRequirement = {
   creditHoursRequired: number;
 };
 
+export type AdvisorSummaryRequirementBlock = {
+  blockName: string;
+  status:
+    | "satisfied"
+    | "missing"
+    | "partial"
+    | "advisor_review"
+    | "insufficient_data";
+  satisfiedCourses: string[];
+  missingCourses: string[];
+  candidateCourses: string[];
+  requiredCredits?: number;
+  matchedCredits?: number;
+  notes: string[];
+};
+
 export type AdvisorSummaryAlternativeCourseGroup = {
   name: string;
   minimumCoursesRequired: number;
@@ -59,6 +75,7 @@ export type AdvisorSummaryDegreeResult = {
   exactRequiredCoursesMissing: AdvisorSummaryCourse[];
   alternativeCourseGroups?: AdvisorSummaryAlternativeCourseGroup[];
   advisorVerifiedRequirements: AdvisorSummaryVerifiedRequirement[];
+  requirementBlocks?: AdvisorSummaryRequirementBlock[];
   totalHoursRequired: number;
   hasEnoughTotalCredits: boolean | null;
   isLikelyComplete: boolean;
@@ -438,6 +455,24 @@ function addDegreeSummary(
         (requirement) =>
           `- ${requirement.name} (${requirement.creditHoursRequired} credits)`,
       ),
+    );
+  }
+
+  if (result.requirementBlocks && result.requirementBlocks.length > 0) {
+    lines.push(
+      "Structured requirement blocks:",
+      ...result.requirementBlocks.map((block) => {
+        const credits =
+          typeof block.requiredCredits === "number"
+            ? `; credits: ${block.matchedCredits ?? 0}/${block.requiredCredits}`
+            : "";
+        const candidates =
+          block.candidateCourses.length > 0
+            ? `; candidates: ${block.candidateCourses.join(", ")}`
+            : "";
+
+        return `- ${block.blockName}: ${block.status}${credits}${candidates}`;
+      }),
     );
   }
 

@@ -27,6 +27,15 @@ test("POST extracts Software Engineering total planned credits from uploaded Deg
   assert.ok(Array.isArray(result.parserWarnings));
   assert.equal(typeof result.detectedSignals.hasInProgressSignal, "boolean");
   assert.equal(result.hasEnoughTotalCredits, true);
+  assert.ok(Array.isArray(result.requirementBlocks));
+  assert.ok(
+    result.requirementBlocks.some(
+      (block: { blockName: string; status: string; candidateCourses: string[] }) =>
+        block.blockName === "Technical Electives" &&
+        block.status === "advisor_review" &&
+        block.candidateCourses.includes("COMP 5610"),
+    ),
+  );
   assert.deepEqual(
     result.exactRequiredCoursesMissing.map(
       (course: { code: string }) => course.code,

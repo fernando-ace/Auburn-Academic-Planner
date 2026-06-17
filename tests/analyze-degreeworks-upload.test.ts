@@ -45,8 +45,24 @@ test("POST runs both deterministic Degree Works checks from one uploaded PDF", a
     result.softwareEngineeringCheck.advisorVerificationRequired,
     true,
   );
+  assert.ok(Array.isArray(result.softwareEngineeringCheck.requirementBlocks));
+  assert.ok(
+    result.softwareEngineeringCheck.requirementBlocks.some(
+      (block: { blockName: string; status: string }) =>
+        block.blockName === "Core Science Sequence" &&
+        block.status === "advisor_review",
+    ),
+  );
   assert.equal(result.computerScienceCheck.isLikelyComplete, false);
   assert.equal(result.computerScienceCheck.advisorVerificationRequired, true);
+  assert.ok(Array.isArray(result.computerScienceCheck.requirementBlocks));
+  assert.ok(
+    result.gapReport.missingRequirements.some(
+      (requirement: { area: string; items: string[] }) =>
+        requirement.area === "Software Engineering requirement blocks" &&
+        requirement.items.some((item) => item.includes("Technical Electives")),
+    ),
+  );
   assert.deepEqual(
     result.softwareEngineeringCheck.exactRequiredCoursesMissing.map(
       (course: { code: string }) => course.code,

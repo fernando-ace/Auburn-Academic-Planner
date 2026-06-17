@@ -57,6 +57,20 @@ test("reports AI certificate progress while degree paths have missing courses", 
         requirement.items.some((item) => item.includes("COMP 4200")),
     ),
   );
+  assert.ok(
+    report.missingRequirements.some(
+      (requirement) =>
+        requirement.area === "Software Engineering requirement blocks" &&
+        requirement.severity === "advisor_review" &&
+        requirement.items.some((item) => item.includes("Math Electives")) &&
+        requirement.items.some((item) => item.includes("Technical Electives")),
+    ),
+  );
+  assert.ok(
+    report.advisorQuestions.some((question) =>
+      question.includes("unresolved core, math elective, technical elective"),
+    ),
+  );
 });
 
 test("uses insufficient data status when parser confidence is low", () => {
