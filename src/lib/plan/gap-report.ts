@@ -11,6 +11,7 @@ import type {
   DegreeWorksCourseStatus,
   DegreeWorksCourseStatusRecord,
 } from "./degreeworks-course-status.ts";
+import type { PlanningTargetPathInput } from "./target-path.ts";
 
 export type GapReportStatus =
   | "strong_progress"
@@ -50,6 +51,8 @@ export function buildGapReport({
   parserConfidence,
   prerequisiteCheck,
   courseStatusRecords = [],
+  draftSemesterPlanGenerated = false,
+  targetPath = "auto",
 }: {
   aiCertificateCheck: AiCertificateCheckResult;
   softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult;
@@ -59,12 +62,15 @@ export function buildGapReport({
   parserConfidence: DegreeWorksParserConfidence;
   prerequisiteCheck: SoftwareEngineeringPrerequisiteCheckResult;
   courseStatusRecords?: DegreeWorksCourseStatusRecord[];
+  draftSemesterPlanGenerated?: boolean;
+  targetPath?: PlanningTargetPathInput;
 }): GapReport {
   const missingRequirements = buildMissingRequirements({
     aiCertificateCheck,
     softwareEngineeringCheck,
     computerScienceCheck,
     courseStatusRecords,
+    targetPath,
   });
   const advisorReviewItems = buildAdvisorReviewItems({
     detectedSignals,
@@ -73,6 +79,7 @@ export function buildGapReport({
     softwareEngineeringCheck,
     computerScienceCheck,
     courseStatusRecords,
+    targetPath,
   });
   const overallStatus = getOverallStatus({
     parserConfidence,
@@ -84,11 +91,13 @@ export function buildGapReport({
     softwareEngineeringCheck,
     computerScienceCheck,
     parserConfidence,
+    targetPath,
   });
   const satisfiedHighlights = buildSatisfiedHighlights({
     aiCertificateCheck,
     softwareEngineeringCheck,
     computerScienceCheck,
+    targetPath,
   });
   const summaryBullets = buildSummaryBullets({
     overallStatus,
@@ -113,6 +122,7 @@ export function buildGapReport({
       bestFitPath,
       missingRequirements,
       advisorReviewItems,
+      draftSemesterPlanGenerated,
     }),
     advisorQuestions: buildAdvisorQuestions({
       detectedSignals,
@@ -127,16 +137,21 @@ function buildMissingRequirements({
   softwareEngineeringCheck,
   computerScienceCheck,
   courseStatusRecords,
+  targetPath,
 }: {
   aiCertificateCheck: AiCertificateCheckResult;
   softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult;
   computerScienceCheck: ComputerScienceDegreeCheckResult;
   courseStatusRecords: DegreeWorksCourseStatusRecord[];
+  targetPath: PlanningTargetPathInput;
 }) {
   const missingRequirements: GapReportMissingRequirement[] = [];
   const courseStatuses = getCourseStatusMap(courseStatusRecords);
 
-  if (aiCertificateCheck.requiredCoursesMissing.length > 0) {
+  if (
+    (targetPath === "auto" || targetPath === "ai_certificate") &&
+    aiCertificateCheck.requiredCoursesMissing.length > 0
+  ) {
     missingRequirements.push({
       area: "AI Engineering Certificate",
       items: capCourseItems(aiCertificateCheck.requiredCoursesMissing, courseStatuses),
@@ -144,7 +159,10 @@ function buildMissingRequirements({
     });
   }
 
-  if (aiCertificateCheck.electiveCandidatesFound.length === 0) {
+  if (
+    (targetPath === "auto" || targetPath === "ai_certificate") &&
+    aiCertificateCheck.electiveCandidatesFound.length === 0
+  ) {
     missingRequirements.push({
       area: "AI Engineering Certificate elective",
       items: ["No planned AI elective candidate was found."],
@@ -152,16 +170,20 @@ function buildMissingRequirements({
     });
   }
 
-  addDegreeMissingRequirements(missingRequirements, {
-    area: "Software Engineering",
-    result: softwareEngineeringCheck,
-    courseStatuses,
-  });
-  addDegreeMissingRequirements(missingRequirements, {
-    area: "Computer Science",
-    result: computerScienceCheck,
-    courseStatuses,
-  });
+  if (targetPath === "auto" || targetPath === "software_engineering") {
+    addDegreeMissingRequirements(missingRequirements, {
+      area: "Software Engineering",
+      result: softwareEngineeringCheck,
+      courseStatuses,
+    });
+  }
+  if (targetPath === "auto" || targetPath === "computer_science") {
+    addDegreeMissingRequirements(missingRequirements, {
+      area: "Computer Science",
+      result: computerScienceCheck,
+      courseStatuses,
+    });
+  }
 
   return missingRequirements;
 }
@@ -258,12 +280,18 @@ function getBestFitPath({
   softwareEngineeringCheck,
   computerScienceCheck,
   parserConfidence,
+  targetPath,
 }: {
   aiCertificateCheck: AiCertificateCheckResult;
   softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult;
   computerScienceCheck: ComputerScienceDegreeCheckResult;
   parserConfidence: DegreeWorksParserConfidence;
+  targetPath: PlanningTargetPathInput;
 }): GapReportBestFitPath {
+  if (targetPath !== "auto") {
+    return targetPath;
+  }
+
   if (parserConfidence === "low") {
     return "mixed_or_unclear";
   }
@@ -333,28 +361,42 @@ function buildSatisfiedHighlights({
   aiCertificateCheck,
   softwareEngineeringCheck,
   computerScienceCheck,
+  targetPath,
 }: {
   aiCertificateCheck: AiCertificateCheckResult;
   softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult;
   computerScienceCheck: ComputerScienceDegreeCheckResult;
+  targetPath: PlanningTargetPathInput;
 }) {
   const highlights: string[] = [];
 
-  if (aiCertificateCheck.isLikelyComplete) {
+  if (
+    (targetPath === "auto" || targetPath === "ai_certificate") &&
+    aiCertificateCheck.isLikelyComplete
+  ) {
     highlights.push(
       "AI Engineering certificate looks likely complete, pending advisor verification.",
     );
-  } else if (aiCertificateCheck.requiredCoursesMissing.length === 0) {
+  } else if (
+    (targetPath === "auto" || targetPath === "ai_certificate") &&
+    aiCertificateCheck.requiredCoursesMissing.length === 0
+  ) {
     highlights.push("All required AI Engineering certificate courses were found.");
   }
 
-  if (softwareEngineeringCheck.hasEnoughTotalCredits) {
+  if (
+    (targetPath === "auto" || targetPath === "software_engineering") &&
+    softwareEngineeringCheck.hasEnoughTotalCredits
+  ) {
     highlights.push(
       "Software Engineering total planned credits meet the modeled 122-credit threshold.",
     );
   }
 
-  if (computerScienceCheck.hasEnoughTotalCredits) {
+  if (
+    (targetPath === "auto" || targetPath === "computer_science") &&
+    computerScienceCheck.hasEnoughTotalCredits
+  ) {
     highlights.push(
       "Computer Science total planned credits meet the modeled 122-credit threshold.",
     );
@@ -391,13 +433,20 @@ function buildSummaryBullets({
     ];
   }
 
+  const pathProgress =
+    bestFitPath === "ai_certificate"
+      ? aiCertificateCheck.isLikelyComplete
+        ? "The AI Engineering certificate appears likely complete in the uploaded plan."
+        : "The AI Engineering certificate still needs course or elective review."
+      : bestFitPath === "software_engineering"
+        ? `Software Engineering has ${softwareEngineeringCheck.exactRequiredCoursesMissing.length} exact required course(s) missing in the local model.`
+        : bestFitPath === "computer_science"
+          ? `Computer Science has ${computerScienceCheck.exactRequiredCoursesMissing.length} exact required course(s) missing in the local model.`
+          : "The automatic target remains mixed or unclear, so the report includes all modeled paths.";
+
   return [
     `Closest modeled path: ${formatBestFitPath(bestFitPath)}.`,
-    aiCertificateCheck.isLikelyComplete
-      ? "The AI Engineering certificate appears likely complete in the uploaded plan."
-      : "The AI Engineering certificate still needs course or elective review.",
-    `Software Engineering has ${softwareEngineeringCheck.exactRequiredCoursesMissing.length} exact required course(s) missing in the local model.`,
-    `Computer Science has ${computerScienceCheck.exactRequiredCoursesMissing.length} exact required course(s) missing in the local model.`,
+    pathProgress,
     missingRequirements.length === 0 && advisorReviewItems.length === 0
       ? "No modeled gaps were found, but advisor verification is still required."
       : `${missingRequirements.length} modeled gap area(s) and ${advisorReviewItems.length} advisor-review item(s) need attention.`,
@@ -412,6 +461,7 @@ function buildAdvisorReviewItems({
   softwareEngineeringCheck,
   computerScienceCheck,
   courseStatusRecords,
+  targetPath,
 }: {
   detectedSignals: DegreeWorksDetectedSignals;
   parserWarnings: string[];
@@ -419,6 +469,7 @@ function buildAdvisorReviewItems({
   softwareEngineeringCheck: SoftwareEngineeringDegreeCheckResult;
   computerScienceCheck: ComputerScienceDegreeCheckResult;
   courseStatusRecords: DegreeWorksCourseStatusRecord[];
+  targetPath: PlanningTargetPathInput;
 }) {
   return dedupe([
     ...parserWarnings,
@@ -426,22 +477,26 @@ function buildAdvisorReviewItems({
     ...buildCourseStatusReviewItems(courseStatusRecords),
     ...prerequisiteCheck.prerequisiteIssues.map((issue) => issue.message),
     ...prerequisiteCheck.advisorReviewItems,
-    ...softwareEngineeringCheck.requirementBlocks
+    ...(targetPath === "auto" || targetPath === "software_engineering"
+      ? softwareEngineeringCheck.requirementBlocks
       .filter((block) => block.status !== "satisfied")
       .map(
         (block) =>
           `Software Engineering ${block.blockName} needs advisor or Degree Works verification (${formatRequirementBlockStatus(
             block,
           )}).`,
-      ),
-    ...computerScienceCheck.requirementBlocks
+      )
+      : []),
+    ...(targetPath === "auto" || targetPath === "computer_science"
+      ? computerScienceCheck.requirementBlocks
       .filter((block) => block.status !== "satisfied")
       .map(
         (block) =>
           `Computer Science ${block.blockName} needs advisor or Degree Works verification (${formatRequirementBlockStatus(
             block,
           )}).`,
-      ),
+      )
+      : []),
   ]).slice(0, 10);
 }
 
@@ -524,16 +579,22 @@ function buildNextActions({
   bestFitPath,
   missingRequirements,
   advisorReviewItems,
+  draftSemesterPlanGenerated,
 }: {
   overallStatus: GapReportStatus;
   bestFitPath: GapReportBestFitPath;
   missingRequirements: GapReportMissingRequirement[];
   advisorReviewItems: string[];
+  draftSemesterPlanGenerated: boolean;
 }) {
   const actions = [
     "Bring this report and the official Degree Works audit to an academic advisor.",
     `Ask whether the ${formatBestFitPath(bestFitPath)} path is the right planning target.`,
   ];
+
+  if (draftSemesterPlanGenerated) {
+    actions.push("Review the draft semester plan with an academic advisor.");
+  }
 
   if (overallStatus === "insufficient_data") {
     actions.push(

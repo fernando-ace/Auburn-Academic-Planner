@@ -179,3 +179,23 @@ test("adds advisor review language for planned and transfer course statuses", ()
     ),
   );
 });
+
+test("adds a draft-plan review action when a draft was generated", () => {
+  const courseCodes = getDegreeWorksPlanSampleCourseCodes();
+  const report = buildGapReport({
+    aiCertificateCheck: checkAiEngineeringCertificate(courseCodes),
+    softwareEngineeringCheck: checkSoftwareEngineeringDegree({ courseCodes }),
+    computerScienceCheck: checkComputerScienceDegree({ courseCodes }),
+    detectedSignals: noDetectedSignals,
+    parserWarnings: [],
+    parserConfidence: "high",
+    prerequisiteCheck: checkSoftwareEngineeringPrerequisites({ courseCodes }),
+    draftSemesterPlanGenerated: true,
+  });
+
+  assert.ok(
+    report.nextActions.includes(
+      "Review the draft semester plan with an academic advisor.",
+    ),
+  );
+});

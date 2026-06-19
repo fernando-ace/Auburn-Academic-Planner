@@ -21,6 +21,7 @@ test("POST runs both deterministic Degree Works checks from one uploaded PDF", a
 
   assert.equal(response.status, 200);
   assert.equal(result.sourceFileName, "degreeworks-plan-sample.pdf");
+  assert.equal(result.selectedTargetPath, "auto");
   assert.equal(result.parsedCourseCount, 45);
   assert.equal(result.totalPlannedCredits, 122);
   assert.match(result.parserConfidence, /^(high|medium|low)$/);
@@ -162,7 +163,48 @@ test("POST includes deterministic next semester suggestions", async () => {
   );
 });
 
-async function pdfUploadRequest(pdfPath: string) {
+test("POST includes a deterministic draft semester plan", async () => {
+  const response = await POST(await pdfUploadRequest(samplePdfPath));
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(result.gapReport);
+  assert.ok(result.nextSemesterSuggestions);
+  assert.ok(result.draftSemesterPlan);
+  assert.match(
+    result.draftSemesterPlan.targetPath,
+    /^(software_engineering|computer_science|ai_certificate|mixed_or_unclear)$/,
+  );
+  assert.ok(Array.isArray(result.draftSemesterPlan.semesters));
+  assert.ok(
+    result.gapReport.nextActions.includes(
+      "Review the draft semester plan with an academic advisor.",
+    ),
+  );
+});
+
+test("POST accepts, propagates, and validates targetPath", async () => {
+  const response = await POST(
+    await pdfUploadRequest(samplePdfPath, "software_engineering"),
+  );
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(result.selectedTargetPath, "software_engineering");
+  assert.equal(result.gapReport.bestFitPath, "software_engineering");
+  assert.equal(result.nextSemesterSuggestions.targetPath, "software_engineering");
+  assert.equal(result.draftSemesterPlan.targetPath, "software_engineering");
+  assert.ok(result.aiCertificateCheck);
+  assert.ok(result.softwareEngineeringCheck);
+  assert.ok(result.computerScienceCheck);
+
+  const invalidResponse = await POST(
+    await pdfUploadRequest(samplePdfPath, "invalid_path"),
+  );
+  assert.equal(invalidResponse.status, 400);
+});
+
+async function pdfUploadRequest(pdfPath: string, targetPath?: string) {
   const pdfData = await readFile(pdfPath);
   const formData = new FormData();
   formData.append(
@@ -170,6 +212,9 @@ async function pdfUploadRequest(pdfPath: string) {
     new Blob([pdfData], { type: "application/pdf" }),
     path.basename(pdfPath),
   );
+  if (targetPath) {
+    formData.append("targetPath", targetPath);
+  }
 
   return formDataRequest(formData);
 }

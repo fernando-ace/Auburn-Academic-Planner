@@ -10,7 +10,7 @@ The MVP supports two complementary paths:
 
 - Gemini RAG chat for Auburn source-grounded advising questions.
 - Deterministic requirement checkers for quota-free progress review.
-- `/plan-check` supports a combined Degree Works PDF upload that runs the AI Engineering certificate check, Software Engineering degree progress check, Computer Science degree progress check, structured requirement-block review, deterministic course-status interpretation, deterministic semester/prerequisite sequence check, a unified Gap Report and Next Actions card, and deterministic Next Semester Suggestions from one upload, plus manual/sample/PDF checks for each deterministic requirement checker and a copyable Advisor Meeting Summary.
+- `/plan-check` supports a combined Degree Works PDF upload with an Auto, Software Engineering, Computer Science, or AI Engineering certificate planning target. The selected target focuses the Gap Report, Next Semester Suggestions, Draft Semester Plan, and concise copyable Advisor Meeting Summary while all three detailed deterministic checks still run and remain visible.
 
 ## Demo flow
 
@@ -23,12 +23,11 @@ The MVP supports two complementary paths:
 2. Open `http://localhost:3000/chat`.
 3. Ask: `What courses are required for the Artificial Intelligence Engineering certificate?`
 4. Open `http://localhost:3000/plan-check`.
-5. In `Analyze Degree Works PDF`, upload `sources/auburn/degreeworks-plan-sample.pdf`.
+5. In `Analyze Degree Works PDF`, select a planning target and upload `sources/auburn/degreeworks-plan-sample.pdf`.
 6. Confirm the Gap Report and Next Actions card appears before the detailed results and shows:
    - overall status
-   - best fit path
-   - AI Engineering certificate as a satisfied highlight or likely-complete path
-   - Software Engineering and Computer Science missing requirement summaries
+   - selected target path (or Auto with its inferred path)
+   - missing requirements focused on that target
    - next actions and advisor questions
 7. Confirm the Next Semester Suggestions card appears after the Gap Report and shows:
    - target path and confidence
@@ -56,12 +55,19 @@ The MVP supports two complementary paths:
    - missing exact courses: `ENGL 1100`, `ENGL 1120`, `ENGR 1100`, `ELEC 2200`, `COMP 4200`
    - Requirement Blocks with core/elective statuses such as advisor review
    - advisor verification required
-13. Confirm the Advisor Meeting Summary appears, includes the gap report, Next Semester Suggestions, AI Engineering certificate, Software Engineering degree progress, Computer Science degree progress, and prerequisite/advisor questions, and can be copied for an advising meeting.
-14. Optional separate checks remain available:
+13. Confirm the Draft Semester Plan appears after Next Semester Suggestions and shows:
+   - target path and confidence
+   - semester cards with exact modeled courses and estimated credits
+   - any unplaced courses and their reasons
+   - unresolved core/elective blocks as advisor-review items
+   - wording that it is a draft planning aid, not an official academic plan
+14. Confirm the Advisor Meeting Summary appears with the selected target, parser confidence and course-status counts, up to five missing items, top actions, the first draft semester or top suggestions, and no more than eight advisor questions. Detailed AI, Software Engineering, Computer Science, requirement-block, and parsed-status information remains on the page instead of being duplicated in the copyable summary.
+15. Optional separate checks remain available:
    - Paste custom AI certificate courses, such as `COMP 5600, COMP 5630, COMP 5130, COMP 5610`.
    - Run the AI certificate sample or AI certificate PDF upload.
    - Run the Software Engineering manual, sample, or separate Degree Works PDF checker.
    - Run the Computer Science manual, sample, or separate Degree Works PDF checker.
+   - Use `Generate draft plan` beside any manual course entry to call the standalone deterministic planner for that target path.
 
 ## Trust and safety
 
@@ -72,15 +78,18 @@ The MVP supports two complementary paths:
 - Uploaded PDFs are processed server-side for course extraction.
 - Uploaded PDFs are not permanently stored.
 - Uploaded PDF checks are deterministic and do not call Gemini.
+- The target selector changes only focused planning outputs. It does not skip or hide the detailed AI certificate, Software Engineering, or Computer Science checks.
 - Degree Works PDF results include parser confidence, parser warnings, and detected AP, transfer, substitution, exception, in-progress, or insufficient-text signals when the extracted text suggests extra advisor review is needed.
 - Degree Works course status interpretation is deterministic and conservative. It can label courses as completed, in progress, planned, transfer/AP, substituted/waived, missing, or unknown when nearby extracted text provides enough evidence.
 - Unknown or unclear course statuses require advisor verification. Status interpretation helps prepare questions; it does not replace Degree Works, the Registrar, or academic advisors.
 - The Gap Report and Next Actions card is a planning summary, not an official degree audit. It is intended to help students prepare for advisor meetings before reading the detailed check cards.
 - Next Semester Suggestions are deterministic planning suggestions to discuss with an academic advisor. They are not registration advice, an official schedule, or a full graduation plan.
 - Course availability, prerequisites, AP/transfer credit, substitutions, semester load, and advisor approval may change Next Semester Suggestions.
+- Draft Semester Plans are conservative, deterministic advising aids. They only place exact locally modeled requirements with known credit hours, never invent unresolved elective choices, and cap the draft at 15 credits per semester and six semesters by default.
+- Draft Semester Plans are not official academic plans. Course availability, prerequisites, substitutions, AP/transfer credit, catalog applicability, and semester load must be confirmed with an academic advisor.
 - The combined Degree Works PDF flow includes deterministic semester extraction when term labels are present and a conservative local Software Engineering prerequisite sequence check.
 - The prerequisite sequence model is preliminary and intentionally limited to a conservative subset of COMP prerequisite chains. It reports warnings and advisor-review items, not official registration decisions.
-- The Advisor Meeting Summary is local, deterministic, and does not call Gemini.
+- The concise Advisor Meeting Summary is local, deterministic, and does not call Gemini. It intentionally caps missing items, next actions, planning suggestions, and advisor questions rather than dumping every detailed check field.
 - Advisor verification is required for academic decisions.
 - The Software Engineering checker, Computer Science checker, and prerequisite sequence checker are progress checks, not final academic judgments. Real Degree Works PDFs can include AP, transfer credit, substitutions, exceptions, hidden sections, in-progress coursework, electives, prerequisites, standing requirements, and semester ordering that still require advisor review.
 - The Advisor Meeting Summary is a preparation summary, not an official degree audit.
@@ -91,11 +100,12 @@ The MVP supports two complementary paths:
 - `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
-- The combined Degree Works PDF upload is the main demo flow: it can analyze one uploaded PDF once, show a student-facing Gap Report and Next Actions summary, show deterministic Next Semester Suggestions with advisor-safe wording, show shared parsed details, conservative course status counts, parser confidence, parser warnings, detected PDF signals, detected requirement-block labels, detected semester terms, conservative prerequisite sequence warnings, and run the AI Engineering certificate checker, Software Engineering degree checker, and Computer Science degree checker without calling Gemini.
+- The combined Degree Works PDF upload is the main demo flow: it analyzes one uploaded PDF once, focuses planning reports on the selected target, shows shared parser and course-status details, and still runs all three detailed checkers without calling Gemini or permanently storing the PDF.
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, structured requirement blocks, parser diagnostics, and advisor verification status.
-- The Advisor Meeting Summary turns the latest check results, unified gap report, and Next Semester Suggestions into copyable preparation notes with missing requirements, parser warnings, prerequisite warnings, unresolved requirement blocks, next actions, and questions to ask.
-- Local validation currently passes `82/82` deterministic tests.
+- The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists.
+- The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
+- Local validation currently passes `103/103` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Run Locally
@@ -249,7 +259,7 @@ npm run build
 
 Current validation coverage:
 
-- 82 deterministic tests through `npm test`
+- 103 deterministic tests through `npm test`
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`

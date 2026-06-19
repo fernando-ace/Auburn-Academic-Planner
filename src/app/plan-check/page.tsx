@@ -22,7 +22,9 @@ import type {
   DegreeWorksCourseStatusCounts,
   DegreeWorksCourseStatusRecord,
 } from "@/lib/plan/degreeworks-course-status";
+import type { DraftSemesterPlan } from "@/lib/plan/draft-semester-plan";
 import type { GapReport, GapReportBestFitPath, GapReportStatus } from "@/lib/plan/gap-report";
+import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
 
 type PlanCheckCourse = {
   code: string;
@@ -172,6 +174,7 @@ type NextSemesterSuggestions = {
 };
 
 type CombinedDegreeWorksUploadResult = {
+  selectedTargetPath: PlanningTargetPathInput;
   sourceFileName: string;
   parsedCourseCount: number;
   parsedCourseCodes: string[];
@@ -185,6 +188,7 @@ type CombinedDegreeWorksUploadResult = {
   prerequisiteCheck: SoftwareEngineeringPrerequisiteCheck;
   gapReport: GapReport;
   nextSemesterSuggestions: NextSemesterSuggestions;
+  draftSemesterPlan: DraftSemesterPlan;
   aiCertificateCheck: Omit<
     PlanCheckResult,
     | "planDescription"
@@ -219,6 +223,7 @@ const planCheckEndpoint = "/api/plan/check-ai-certificate";
 const planCheckUploadEndpoint = "/api/plan/check-ai-certificate/upload";
 const combinedDegreeWorksUploadEndpoint =
   "/api/plan/analyze-degreeworks/upload";
+const draftSemesterPlanEndpoint = "/api/plan/draft-semester-plan";
 const softwareEngineeringPlanCheckEndpoint =
   "/api/plan/check-software-engineering";
 const softwareEngineeringPlanCheckUploadEndpoint =
@@ -1220,7 +1225,13 @@ function SemesterPrerequisiteCheck({
   );
 }
 
-function GapReportCard({ gapReport }: { gapReport: GapReport }) {
+function GapReportCard({
+  gapReport,
+  selectedTargetPath,
+}: {
+  gapReport: GapReport;
+  selectedTargetPath?: PlanningTargetPathInput;
+}) {
   return (
     <section className="mb-5 rounded-md border border-[#dd550c]/35 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1251,10 +1262,10 @@ function GapReportCard({ gapReport }: { gapReport: GapReport }) {
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
             <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-              Best fit path
+              Target path
             </p>
             <p className="mt-2 text-[14px] font-semibold leading-5 text-slate-800">
-              {formatGapBestFitPath(gapReport.bestFitPath)}
+              {formatSelectedPlanningTarget(selectedTargetPath, gapReport.bestFitPath)}
             </p>
           </div>
         </div>
@@ -1326,8 +1337,10 @@ function GapReportCard({ gapReport }: { gapReport: GapReport }) {
 
 function NextSemesterSuggestionsCard({
   suggestions,
+  selectedTargetPath,
 }: {
   suggestions: NextSemesterSuggestions;
+  selectedTargetPath?: PlanningTargetPathInput;
 }) {
   return (
     <section className="mb-5 rounded-md border border-[#03244d]/25 bg-white p-4 shadow-sm sm:p-5">
@@ -1357,7 +1370,7 @@ function NextSemesterSuggestionsCard({
               Target path
             </p>
             <p className="mt-2 text-[14px] font-semibold leading-5 text-slate-800">
-              {formatGapBestFitPath(suggestions.targetPath)}
+              {formatSelectedPlanningTarget(selectedTargetPath, suggestions.targetPath)}
             </p>
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -1460,6 +1473,141 @@ function NextSemesterSuggestionsCard({
   );
 }
 
+function DraftSemesterPlanCard({
+  plan,
+  selectedTargetPath,
+}: {
+  plan: DraftSemesterPlan;
+  selectedTargetPath?: PlanningTargetPathInput;
+}) {
+  return (
+    <section className="mb-5 rounded-md border border-[#dd550c]/30 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+            Multi-semester planning aid
+          </p>
+          <h2 className="mt-2 text-[22px] font-semibold leading-8 text-slate-950">
+            Draft Semester Plan
+          </h2>
+          <div className="mt-2 max-w-3xl space-y-1 text-[14px] leading-6 text-slate-600">
+            <p>This is a draft planning aid, not an official academic plan.</p>
+            <p>
+              Confirm course availability, prerequisites, substitutions,
+              AP/transfer credit, and semester load with an advisor.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:w-[30rem]">
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Target path
+            </p>
+            <p className="mt-2 text-[14px] font-semibold leading-5 text-slate-800">
+              {formatSelectedPlanningTarget(selectedTargetPath, plan.targetPath)}
+            </p>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Confidence
+            </p>
+            <span
+              className={`mt-2 inline-flex rounded-sm border px-2.5 py-1 text-[13px] font-semibold ${getSuggestionConfidenceClassName(
+                plan.confidence,
+              )}`}
+            >
+              {plan.confidence}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4">
+        <ResultSection title="Semester cards">
+          {plan.semesters.length > 0 ? (
+            <div className="grid gap-3 xl:grid-cols-2">
+              {plan.semesters.map((semester) => (
+                <article
+                  className="rounded-md border border-slate-200 bg-slate-50 p-4"
+                  key={semester.label}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-[16px] font-semibold leading-6 text-slate-950">
+                      {semester.label}
+                    </h3>
+                    <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-600">
+                      {semester.estimatedCredits} estimated credits
+                    </span>
+                  </div>
+                  <ul className="mt-3 space-y-3">
+                    {semester.plannedCourses.map((course) => (
+                      <li
+                        className="rounded-md border border-slate-200 bg-white p-3"
+                        key={course.code}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-[14px] font-semibold text-slate-950">
+                            {course.code}
+                            {course.title ? ` — ${course.title}` : ""}
+                          </p>
+                          {course.creditHours ? (
+                            <span className="text-[12px] font-semibold text-slate-500">
+                              {course.creditHours} credits
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 text-[13px] leading-5 text-slate-700">
+                          {course.reason}
+                        </p>
+                        {course.advisorVerificationRequired ? (
+                          <p className="mt-2 text-[12px] font-medium text-[#9b3900]">
+                            Advisor verification required
+                          </p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                  {semester.notes.length > 0 ? (
+                    <ul className="mt-3 space-y-1 text-[12px] leading-5 text-slate-600">
+                      {semester.notes.map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+              No courses could be safely placed from the available
+              deterministic data.
+            </p>
+          )}
+        </ResultSection>
+
+        <ResultSection title="Unplaced courses">
+          {plan.unplacedCourses.length > 0 ? (
+            <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              {plan.unplacedCourses.map((course) => (
+                <li className="text-[13px] leading-5 text-slate-700" key={course.code}>
+                  <span className="font-semibold text-slate-950">{course.code}:</span>{" "}
+                  {course.reason}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+              No exact modeled course was left unplaced.
+            </p>
+          )}
+        </ResultSection>
+        <GapReportList items={plan.advisorReviewItems} title="Advisor review items" />
+        <GapReportList items={plan.notes} title="Draft plan notes" />
+      </div>
+    </section>
+  );
+}
+
 function GapReportList({
   emptyText = "Nothing to show.",
   items,
@@ -1546,6 +1694,15 @@ function formatGapBestFitPath(path: GapReportBestFitPath) {
     case "mixed_or_unclear":
       return "Mixed or unclear";
   }
+}
+
+function formatSelectedPlanningTarget(
+  selectedTargetPath: PlanningTargetPathInput | undefined,
+  resolvedTargetPath: GapReportBestFitPath,
+) {
+  return selectedTargetPath === "auto"
+    ? `Auto (inferred: ${formatGapBestFitPath(resolvedTargetPath)})`
+    : formatGapBestFitPath(selectedTargetPath ?? resolvedTargetPath);
 }
 
 function formatSuggestionCategory(
@@ -1773,6 +1930,8 @@ export default function PlanCheckPage() {
   const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
   const [selectedCombinedDegreeWorksPdfFile, setSelectedCombinedDegreeWorksPdfFile] =
     useState<File | null>(null);
+  const [selectedPlanningTargetPath, setSelectedPlanningTargetPath] =
+    useState<PlanningTargetPathInput>("auto");
   const [
     selectedSoftwareEngineeringPdfFile,
     setSelectedSoftwareEngineeringPdfFile,
@@ -1788,6 +1947,13 @@ export default function PlanCheckPage() {
     useState<ComputerSciencePlanCheckResult | null>(null);
   const [combinedDegreeWorksResult, setCombinedDegreeWorksResult] =
     useState<CombinedDegreeWorksUploadResult | null>(null);
+  const [manualDraftSemesterPlan, setManualDraftSemesterPlan] =
+    useState<DraftSemesterPlan | null>(null);
+  const [draftSemesterPlanError, setDraftSemesterPlanError] = useState<
+    string | null
+  >(null);
+  const [isDraftSemesterPlanLoading, setIsDraftSemesterPlanLoading] =
+    useState(false);
   const [error, setError] = useState<string | null>(null);
   const [combinedDegreeWorksError, setCombinedDegreeWorksError] = useState<
     string | null
@@ -1851,6 +2017,8 @@ export default function PlanCheckPage() {
     () => parseCourseCodes(enteredComputerScienceCourses),
     [enteredComputerScienceCourses],
   );
+  const activeDraftSemesterPlan =
+    combinedDegreeWorksResult?.draftSemesterPlan ?? manualDraftSemesterPlan;
   const advisorMeetingSummary = useMemo(
     () =>
       buildAdvisorMeetingSummary({
@@ -1861,11 +2029,15 @@ export default function PlanCheckPage() {
         gapReport: combinedDegreeWorksResult?.gapReport ?? null,
         nextSemesterSuggestions:
           combinedDegreeWorksResult?.nextSemesterSuggestions ?? null,
+        draftSemesterPlan: activeDraftSemesterPlan,
+        selectedTargetPath: combinedDegreeWorksResult?.selectedTargetPath,
       }),
     [
+      activeDraftSemesterPlan,
       combinedDegreeWorksResult?.gapReport,
       combinedDegreeWorksResult?.nextSemesterSuggestions,
       combinedDegreeWorksResult?.prerequisiteCheck,
+      combinedDegreeWorksResult?.selectedTargetPath,
       computerScienceResult,
       result,
       softwareEngineeringResult,
@@ -1914,7 +2086,10 @@ export default function PlanCheckPage() {
     }
   }
 
-  async function runCombinedDegreeWorksUploadPlanCheck(file: File) {
+  async function runCombinedDegreeWorksUploadPlanCheck(
+    file: File,
+    targetPath: PlanningTargetPathInput,
+  ) {
     if (isCombinedDegreeWorksLoading) {
       return;
     }
@@ -1927,6 +2102,7 @@ export default function PlanCheckPage() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("targetPath", targetPath);
 
     try {
       const response = await fetch(combinedDegreeWorksUploadEndpoint, {
@@ -1959,6 +2135,8 @@ export default function PlanCheckPage() {
       };
 
       setCombinedDegreeWorksResult(combinedPayload);
+      setManualDraftSemesterPlan(null);
+      setDraftSemesterPlanError(null);
       setResult({
         ...combinedPayload.aiCertificateCheck,
         ...sharedPlanFields,
@@ -1989,6 +2167,80 @@ export default function PlanCheckPage() {
       );
     } finally {
       setIsCombinedDegreeWorksLoading(false);
+    }
+  }
+
+  async function runManualDraftSemesterPlan({
+    courseCodes,
+    targetPath,
+    totalPlannedCreditsText = "",
+  }: {
+    courseCodes: string[];
+    targetPath:
+      | "software_engineering"
+      | "computer_science"
+      | "ai_certificate";
+    totalPlannedCreditsText?: string;
+  }) {
+    if (isDraftSemesterPlanLoading) {
+      return;
+    }
+
+    if (courseCodes.length === 0) {
+      setManualDraftSemesterPlan(null);
+      setDraftSemesterPlanError(
+        "Enter at least one planned course code before generating a draft plan.",
+      );
+      return;
+    }
+
+    const normalizedCredits = totalPlannedCreditsText.trim();
+    const totalPlannedCredits =
+      normalizedCredits.length > 0 ? Number(normalizedCredits) : null;
+
+    if (
+      totalPlannedCredits !== null &&
+      (!Number.isFinite(totalPlannedCredits) || totalPlannedCredits < 0)
+    ) {
+      setManualDraftSemesterPlan(null);
+      setDraftSemesterPlanError(
+        "Enter total planned credits as a non-negative number, or leave it blank.",
+      );
+      return;
+    }
+
+    setIsDraftSemesterPlanLoading(true);
+    setDraftSemesterPlanError(null);
+
+    try {
+      const response = await fetch(draftSemesterPlanEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseCodes, targetPath, totalPlannedCredits }),
+      });
+      const payload = (await response.json()) as
+        | DraftSemesterPlan
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The draft semester plan could not be generated.",
+        );
+      }
+
+      setCombinedDegreeWorksResult(null);
+      setManualDraftSemesterPlan(payload as DraftSemesterPlan);
+    } catch (fetchError) {
+      setManualDraftSemesterPlan(null);
+      setDraftSemesterPlanError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The draft semester plan could not be generated.",
+      );
+    } finally {
+      setIsDraftSemesterPlanLoading(false);
     }
   }
 
@@ -2528,6 +2780,7 @@ export default function PlanCheckPage() {
 
     void runCombinedDegreeWorksUploadPlanCheck(
       selectedCombinedDegreeWorksPdfFile,
+      selectedPlanningTargetPath,
     );
   }
 
@@ -2709,6 +2962,31 @@ export default function PlanCheckPage() {
             <div className="w-full rounded-md border border-slate-200 bg-slate-50 p-3 lg:w-[24rem]">
               <label
                 className="text-[13px] font-semibold leading-5 text-slate-700"
+                htmlFor="combined-degreeworks-target-path"
+              >
+                Planning target
+              </label>
+              <select
+                className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15"
+                disabled={isCombinedDegreeWorksLoading}
+                id="combined-degreeworks-target-path"
+                onChange={(event) =>
+                  setSelectedPlanningTargetPath(
+                    event.target.value as PlanningTargetPathInput,
+                  )
+                }
+                value={selectedPlanningTargetPath}
+              >
+                <option value="auto">Auto</option>
+                <option value="software_engineering">Software Engineering</option>
+                <option value="computer_science">Computer Science</option>
+                <option value="ai_certificate">AI Engineering certificate</option>
+              </select>
+              <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                Focuses the planning reports; all three detailed checks still run.
+              </p>
+              <label
+                className="mt-3 block text-[13px] font-semibold leading-5 text-slate-700"
                 htmlFor="combined-degreeworks-pdf"
               >
                 Degree Works PDF
@@ -2805,6 +3083,22 @@ export default function PlanCheckPage() {
                 />
               ) : null}
               Check entered courses
+            </button>
+            <button
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#03244d] bg-white px-4 py-2 text-center text-[14px] font-semibold leading-5 text-[#03244d] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+              disabled={isDraftSemesterPlanLoading}
+              onClick={() =>
+                void runManualDraftSemesterPlan({
+                  courseCodes: parsedCourseCodes,
+                  targetPath: "ai_certificate",
+                })
+              }
+              type="button"
+            >
+              {isDraftSemesterPlanLoading ? (
+                <Loader2 aria-hidden="true" className="animate-spin" size={17} />
+              ) : null}
+              Generate draft plan
             </button>
             <button
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-center text-[14px] font-semibold leading-5 text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
@@ -2964,6 +3258,25 @@ export default function PlanCheckPage() {
                 />
               ) : null}
               Check pasted Software Engineering plan
+            </button>
+
+            <button
+              className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#03244d] bg-white px-4 py-2 text-center text-[14px] font-semibold leading-5 text-[#03244d] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+              disabled={isDraftSemesterPlanLoading}
+              onClick={() =>
+                void runManualDraftSemesterPlan({
+                  courseCodes: parsedSoftwareEngineeringCourseCodes,
+                  targetPath: "software_engineering",
+                  totalPlannedCreditsText:
+                    enteredSoftwareEngineeringTotalCredits,
+                })
+              }
+              type="button"
+            >
+              {isDraftSemesterPlanLoading ? (
+                <Loader2 aria-hidden="true" className="animate-spin" size={17} />
+              ) : null}
+              Generate draft plan
             </button>
 
             <button
@@ -3130,6 +3443,24 @@ export default function PlanCheckPage() {
             </button>
 
             <button
+              className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#03244d] bg-white px-4 py-2 text-center text-[14px] font-semibold leading-5 text-[#03244d] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+              disabled={isDraftSemesterPlanLoading}
+              onClick={() =>
+                void runManualDraftSemesterPlan({
+                  courseCodes: parsedComputerScienceCourseCodes,
+                  targetPath: "computer_science",
+                  totalPlannedCreditsText: enteredComputerScienceTotalCredits,
+                })
+              }
+              type="button"
+            >
+              {isDraftSemesterPlanLoading ? (
+                <Loader2 aria-hidden="true" className="animate-spin" size={17} />
+              ) : null}
+              Generate draft plan
+            </button>
+
+            <button
               className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-center text-[14px] font-semibold leading-5 text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               disabled={isComputerScienceLoading}
               onClick={checkComputerScienceSamplePlan}
@@ -3210,6 +3541,36 @@ export default function PlanCheckPage() {
             />
           ) : null}
 
+          {draftSemesterPlanError ? (
+            <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-4">
+              <div className="flex gap-3">
+                <AlertCircle
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-orange-700"
+                  size={18}
+                />
+                <p className="text-[14px] leading-6 text-orange-800">
+                  {draftSemesterPlanError}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {isDraftSemesterPlanLoading ? (
+            <div className="mb-4 flex items-center gap-3 rounded-md border border-slate-200 bg-white p-4 text-[14px] text-slate-600 shadow-sm">
+              <Loader2
+                aria-hidden="true"
+                className="animate-spin text-[#dd550c]"
+                size={19}
+              />
+              Generating a deterministic draft semester plan...
+            </div>
+          ) : null}
+
+          {manualDraftSemesterPlan && !combinedDegreeWorksResult ? (
+            <DraftSemesterPlanCard plan={manualDraftSemesterPlan} />
+          ) : null}
+
           {combinedDegreeWorksError ? (
             <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-4">
               <div className="flex gap-3">
@@ -3238,9 +3599,17 @@ export default function PlanCheckPage() {
 
           {combinedDegreeWorksResult ? (
             <>
-              <GapReportCard gapReport={combinedDegreeWorksResult.gapReport} />
+              <GapReportCard
+                gapReport={combinedDegreeWorksResult.gapReport}
+                selectedTargetPath={combinedDegreeWorksResult.selectedTargetPath}
+              />
               <NextSemesterSuggestionsCard
+                selectedTargetPath={combinedDegreeWorksResult.selectedTargetPath}
                 suggestions={combinedDegreeWorksResult.nextSemesterSuggestions}
+              />
+              <DraftSemesterPlanCard
+                plan={combinedDegreeWorksResult.draftSemesterPlan}
+                selectedTargetPath={combinedDegreeWorksResult.selectedTargetPath}
               />
               <CombinedDegreeWorksParsedDetails
                 result={combinedDegreeWorksResult}

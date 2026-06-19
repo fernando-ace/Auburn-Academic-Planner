@@ -1,8 +1,13 @@
 import { extractPdfText, hasPdfHeader } from "../../../../../lib/pdf/pdf-text.ts";
 import { analyzeDegreeWorksText } from "../../../../../lib/plan/degreeworks-analysis.ts";
+import { buildDraftSemesterPlan } from "../../../../../lib/plan/draft-semester-plan.ts";
 import { extractDegreeWorksSemesters } from "../../../../../lib/plan/degreeworks-semesters.ts";
 import { buildGapReport } from "../../../../../lib/plan/gap-report.ts";
 import { buildNextSemesterSuggestions } from "../../../../../lib/plan/next-semester-suggestions.ts";
+import {
+  isPlanningTargetPathInput,
+  type PlanningTargetPathInput,
+} from "../../../../../lib/plan/target-path.ts";
 import { checkAiEngineeringCertificate } from "../../../../../lib/rules/ai-certificate.ts";
 import { checkComputerScienceDegree } from "../../../../../lib/rules/computer-science-degree.ts";
 import { checkSoftwareEngineeringDegree } from "../../../../../lib/rules/software-engineering-degree.ts";
@@ -21,6 +26,19 @@ export async function POST(request: Request) {
   }
 
   const uploadedFile = formData.get("file");
+  const targetPathValue = formData.get("targetPath") ?? "auto";
+
+  if (!isPlanningTargetPathInput(targetPathValue)) {
+    return Response.json(
+      {
+        error:
+          "targetPath must be auto, software_engineering, computer_science, or ai_certificate.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const targetPath: PlanningTargetPathInput = targetPathValue;
 
   if (!isUploadedFile(uploadedFile) || uploadedFile.size === 0) {
     return Response.json(
@@ -62,16 +80,6 @@ export async function POST(request: Request) {
     semesterPlanAnalysis,
     courseCodes: degreeWorksAnalysis.parsedCourseCodes,
   });
-  const gapReport = buildGapReport({
-    aiCertificateCheck,
-    softwareEngineeringCheck,
-    computerScienceCheck,
-    detectedSignals: degreeWorksAnalysis.detectedSignals,
-    parserWarnings: degreeWorksAnalysis.parserWarnings,
-    parserConfidence: degreeWorksAnalysis.confidence,
-    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
-    prerequisiteCheck,
-  });
   const nextSemesterSuggestions = buildNextSemesterSuggestions({
     parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
     aiCertificateCheck,
@@ -81,10 +89,37 @@ export async function POST(request: Request) {
     parserConfidence: degreeWorksAnalysis.confidence,
     parserWarnings: degreeWorksAnalysis.parserWarnings,
     courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
-    targetPath: "auto",
+    targetPath,
+  });
+  const draftSemesterPlan = buildDraftSemesterPlan({
+    parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
+    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
+    softwareEngineeringCheck,
+    computerScienceCheck,
+    aiCertificateCheck,
+    prerequisiteCheck,
+    requirementBlockResults: {
+      softwareEngineering: softwareEngineeringCheck.requirementBlocks,
+      computerScience: computerScienceCheck.requirementBlocks,
+    },
+    nextSemesterSuggestions,
+    targetPath,
+  });
+  const gapReport = buildGapReport({
+    aiCertificateCheck,
+    softwareEngineeringCheck,
+    computerScienceCheck,
+    detectedSignals: degreeWorksAnalysis.detectedSignals,
+    parserWarnings: degreeWorksAnalysis.parserWarnings,
+    parserConfidence: degreeWorksAnalysis.confidence,
+    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
+    prerequisiteCheck,
+    draftSemesterPlanGenerated: true,
+    targetPath,
   });
 
   return Response.json({
+    selectedTargetPath: targetPath,
     sourceFileName: uploadedFile.name,
     parsedCourseCount: degreeWorksAnalysis.parsedCourseCount,
     parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
@@ -100,6 +135,7 @@ export async function POST(request: Request) {
     prerequisiteCheck,
     gapReport,
     nextSemesterSuggestions,
+    draftSemesterPlan,
     aiCertificateCheck,
     softwareEngineeringCheck,
     computerScienceCheck,

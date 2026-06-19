@@ -177,3 +177,63 @@ test("avoids recommending completed or already planned missing courses", () => {
     ),
   );
 });
+
+test("Software Engineering target excludes Computer Science-only courses", () => {
+  const courseCodes = getDegreeWorksPlanSampleCourseCodes();
+  const suggestions = buildNextSemesterSuggestions({
+    parsedCourseCodes: courseCodes,
+    softwareEngineeringCheck: checkSoftwareEngineeringDegree({ courseCodes }),
+    computerScienceCheck: checkComputerScienceDegree({ courseCodes }),
+    targetPath: "software_engineering",
+    parserConfidence: "high",
+  });
+
+  assert.ok(!suggestions.suggestedCourses.some((course) => course.code === "COMP 4200"));
+  assert.ok(!suggestions.notYetRecommended.some((course) => course.code === "COMP 4200"));
+});
+
+test("Computer Science target can include missing COMP 4200", () => {
+  const courseCodes = getDegreeWorksPlanSampleCourseCodes();
+  const suggestions = buildNextSemesterSuggestions({
+    parsedCourseCodes: courseCodes,
+    computerScienceCheck: checkComputerScienceDegree({ courseCodes }),
+    targetPath: "computer_science",
+    parserConfidence: "high",
+  });
+
+  assert.ok(suggestions.suggestedCourses.some((course) => course.code === "COMP 4200"));
+});
+
+test("AI certificate target stays within certificate requirements and elective discussion", () => {
+  const courseCodes = ["COMP 5600", "COMP 5630", "COMP 5130"];
+  const suggestions = buildNextSemesterSuggestions({
+    parsedCourseCodes: courseCodes,
+    aiCertificateCheck: checkAiEngineeringCertificate(courseCodes),
+    softwareEngineeringCheck: checkSoftwareEngineeringDegree({ courseCodes }),
+    computerScienceCheck: checkComputerScienceDegree({ courseCodes }),
+    targetPath: "ai_certificate",
+    parserConfidence: "high",
+  });
+
+  assert.deepEqual(
+    suggestions.suggestedCourses.map((course) => course.code),
+    ["Approved AI elective"],
+  );
+  assert.ok(suggestions.suggestedCourses[0].reason.includes("AI certificate"));
+});
+
+test("auto target preserves mixed-path behavior when inference is unclear", () => {
+  const courseCodes: string[] = [];
+  const suggestions = buildNextSemesterSuggestions({
+    parsedCourseCodes: courseCodes,
+    aiCertificateCheck: checkAiEngineeringCertificate(courseCodes),
+    softwareEngineeringCheck: checkSoftwareEngineeringDegree({ courseCodes }),
+    computerScienceCheck: checkComputerScienceDegree({ courseCodes }),
+    targetPath: "auto",
+    parserConfidence: "low",
+  });
+
+  assert.equal(suggestions.targetPath, "mixed_or_unclear");
+  assert.ok(suggestions.suggestedCourses.some((course) => course.code === "COMP 5600"));
+  assert.ok(suggestions.suggestedCourses.some((course) => course.code === "ENGL 1100"));
+});

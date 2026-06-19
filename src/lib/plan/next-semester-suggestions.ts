@@ -10,6 +10,7 @@ import type {
   DegreeWorksCourseStatus,
   DegreeWorksCourseStatusRecord,
 } from "./degreeworks-course-status.ts";
+import type { PlanningTargetPathInput } from "./target-path.ts";
 
 export type NextSemesterTargetPath =
   | "software_engineering"
@@ -17,9 +18,7 @@ export type NextSemesterTargetPath =
   | "ai_certificate"
   | "mixed_or_unclear";
 
-export type NextSemesterTargetPathInput =
-  | NextSemesterTargetPath
-  | "auto";
+export type NextSemesterTargetPathInput = PlanningTargetPathInput;
 
 export type NextSemesterSuggestionCategory =
   | "missing_required"
@@ -102,13 +101,21 @@ export function buildNextSemesterSuggestions({
     collected.notYetRecommended,
   );
   const notes = buildNotes({
-    computerScienceCheck,
+    computerScienceCheck:
+      resolvedTargetPath === "computer_science" ||
+      resolvedTargetPath === "mixed_or_unclear"
+        ? computerScienceCheck
+        : null,
     parserConfidence,
     parserWarnings,
     prerequisiteCheck,
     resolvedTargetPath,
     suggestedCourses,
-    softwareEngineeringCheck,
+    softwareEngineeringCheck:
+      resolvedTargetPath === "software_engineering" ||
+      resolvedTargetPath === "mixed_or_unclear"
+        ? softwareEngineeringCheck
+        : null,
   });
 
   return {

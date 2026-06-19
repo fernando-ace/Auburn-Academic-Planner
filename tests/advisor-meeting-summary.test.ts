@@ -20,13 +20,12 @@ test("builds advisor summary for AI certificate result only", () => {
     softwareEngineeringResult: null,
   });
 
-  assert.match(summary, /AI Engineering Certificate/);
-  assert.match(summary, /Required courses satisfied: COMP 5600, COMP 5630/);
-  assert.match(summary, /Required courses missing: COMP 5130/);
-  assert.match(summary, /AI elective candidates found: COMP 5610/);
+  assert.match(summary, /Selected target path: AI Engineering certificate/);
+  assert.match(summary, /Top missing items:\n- COMP 5130/);
+  assert.doesNotMatch(summary, /Required courses satisfied:/);
   assert.match(
     summary,
-    /This is a preparation summary, not an official degree audit\./,
+    /This is a preparation summary, not an official degree audit/,
   );
 });
 
@@ -45,18 +44,10 @@ test("builds advisor summary for Software Engineering result only", () => {
     softwareEngineeringResult,
   });
 
-  assert.match(summary, /Software Engineering Degree Progress/);
-  assert.match(summary, /Total planned credits: 122/);
-  assert.match(summary, /Required credits: 122/);
-  assert.match(
-    summary,
-    /Exact required courses missing: ENGL 1100, ENGL 1120, ENGR 1100, ELEC 2200/,
-  );
-  assert.match(summary, /Advisor-verified items that need review:/);
-  assert.match(summary, /- Core Science Sequence \(8 credits\)/);
-  assert.match(summary, /Structured requirement blocks:/);
-  assert.match(summary, /- Technical Electives: advisor_review/);
-  assert.match(summary, /candidates: COMP 5600/);
+  assert.match(summary, /Selected target path: Software Engineering/);
+  assert.match(summary, /Top missing items:/);
+  assert.match(summary, /ENGL 1100/);
+  assert.doesNotMatch(summary, /Structured requirement blocks:/);
 });
 
 test("builds advisor summary for Computer Science result only", () => {
@@ -75,20 +66,10 @@ test("builds advisor summary for Computer Science result only", () => {
     computerScienceResult,
   });
 
-  assert.match(summary, /Computer Science Degree Progress/);
-  assert.match(summary, /Total planned credits: 122/);
-  assert.match(summary, /Required credits: 122/);
-  assert.match(summary, /Computer Science total credits status/);
-  assert.match(
-    summary,
-    /Exact required courses missing: ENGL 1100, ENGL 1120, ENGR 1100, ELEC 2200, COMP 4200/,
-  );
-  assert.match(summary, /Alternative course groups:/);
-  assert.match(summary, /- Ethics requirement: satisfied/);
-  assert.match(summary, /Advisor-verified items that need review:/);
-  assert.match(summary, /- Technical Electives \(18 credits\)/);
-  assert.match(summary, /Structured requirement blocks:/);
-  assert.match(summary, /- Math Elective: advisor_review/);
+  assert.match(summary, /Selected target path: Computer Science/);
+  assert.match(summary, /COMP 4200/);
+  assert.doesNotMatch(summary, /Alternative course groups:/);
+  assert.doesNotMatch(summary, /Structured requirement blocks:/);
 });
 
 test("builds advisor summary for combined Degree Works result", () => {
@@ -166,37 +147,11 @@ test("builds advisor summary for combined Degree Works result", () => {
     computerScienceResult,
   });
 
-  assert.match(summary, /AI Engineering Certificate/);
-  assert.match(summary, /Software Engineering Degree Progress/);
-  assert.match(summary, /Computer Science Degree Progress/);
-  assert.match(summary, new RegExp(`Parsed course count: ${courseCodes.length}`));
   assert.match(summary, /Parser confidence: medium/);
-  assert.match(summary, /Course status counts: completed 1; in progress 2/);
-  assert.match(summary, /Parser warnings:/);
-  assert.match(summary, /Possible AP, AICE, IB, or Advanced Placement credit/);
+  assert.match(summary, /Course status summary: completed 1; in progress 2/);
   assert.match(summary, /Questions to ask an advisor:/);
-  assert.match(summary, /AP, transfer, substitutions/);
-  assert.match(summary, /electives, prerequisites, and semester ordering/);
-  assert.match(
-    summary,
-    /Do AP, transfer, substitutions, or repeated courses change this progress check\?/,
-  );
-  assert.match(
-    summary,
-    /Can you verify which courses are completed, in progress, planned, transferred\/AP, substituted, or waived in Degree Works\?/,
-  );
-  assert.match(
-    summary,
-    /Can you verify whether AP, transfer, substitution, exception, or in-progress coursework changes this requirement check\?/,
-  );
-  assert.match(
-    summary,
-    /Which electives count toward the remaining Software Engineering, Computer Science, or certificate requirements\?/,
-  );
-  assert.match(
-    summary,
-    /Are prerequisites and semester ordering appropriate for the next registration plan\?/,
-  );
+  assert.match(summary, /Do AP, transfer, substitutions, exceptions, or in-progress courses/);
+  assert.doesNotMatch(summary, /Parser warnings:/);
 });
 
 test("builds advisor summary with prerequisite analysis questions", () => {
@@ -226,20 +181,11 @@ test("builds advisor summary with prerequisite analysis questions", () => {
     },
   });
 
-  assert.match(summary, /Semester and Prerequisite Check/);
-  assert.match(summary, /Modeled prerequisite sequence warnings found/);
-  assert.match(
-    summary,
-    /COMP 3270 appears before or in the same term as modeled prerequisite COMP 2210/,
-  );
   assert.match(
     summary,
     /Can you verify that my planned course order satisfies prerequisites\?/,
   );
-  assert.match(
-    summary,
-    /Do any senior design, upper-level COMP, or elective courses require additional approvals or standing\?/,
-  );
+  assert.doesNotMatch(summary, /COMP 3270 appears before/);
 });
 
 test("builds concise advisor summary gap report section", () => {
@@ -286,13 +232,10 @@ test("builds concise advisor summary gap report section", () => {
     },
   });
 
-  assert.match(summary, /Gap Report and Next Actions/);
-  assert.match(summary, /Overall status: missing_requirements/);
-  assert.match(summary, /Best fit path: AI Engineering certificate/);
-  assert.match(summary, /Top missing requirements:/);
+  assert.match(summary, /Selected target path: AI Engineering certificate/);
+  assert.match(summary, /Top missing items:/);
   assert.match(summary, /Software Engineering: ENGL 1100/);
-  assert.match(summary, /Next actions:/);
-  assert.match(summary, /Gap report advisor questions:/);
+  assert.match(summary, /Top next actions:/);
   assert.ok(summary.split("\n").length < 30);
 });
 
@@ -331,11 +274,92 @@ test("builds advisor summary with next semester suggestions", () => {
     },
   });
 
-  assert.match(summary, /Next Semester Suggestions/);
-  assert.match(summary, /Target path: Software Engineering/);
+  assert.match(summary, /Selected target path: Software Engineering/);
   assert.match(summary, /Top suggested courses:/);
   assert.match(summary, /ENGL 1100/);
-  assert.match(summary, /Not yet recommended:/);
-  assert.match(summary, /COMP 3270/);
-  assert.match(summary, /Next-semester advisor questions:/);
+  assert.doesNotMatch(summary, /Not yet recommended:/);
+});
+
+test("builds a concise advisor summary with draft semester plan details", () => {
+  const summary = buildAdvisorMeetingSummary({
+    aiResult: null,
+    softwareEngineeringResult: null,
+    draftSemesterPlan: {
+      targetPath: "computer_science",
+      confidence: "medium",
+      semesters: [
+        {
+          label: "Next Semester",
+          plannedCourses: [
+            {
+              code: "COMP 4200",
+              title: "Formal Languages",
+              creditHours: 3,
+              reason: "Exact missing Computer Science requirement.",
+              advisorVerificationRequired: true,
+            },
+          ],
+          estimatedCredits: 3,
+          notes: [],
+        },
+        {
+          label: "Semester 2",
+          plannedCourses: [
+            {
+              code: "ENGL 1100",
+              creditHours: 3,
+              reason: "Exact missing requirement.",
+              advisorVerificationRequired: true,
+            },
+          ],
+          estimatedCredits: 3,
+          notes: [],
+        },
+      ],
+      unplacedCourses: [
+        { code: "COMP 3270", reason: "Modeled prerequisites need review." },
+      ],
+      advisorReviewItems: [],
+      notes: [],
+    },
+  });
+
+  assert.match(summary, /Selected target path: Computer Science/);
+  assert.match(summary, /First draft semester \(3 estimated credits\):\n- COMP 4200/);
+  assert.doesNotMatch(summary, /Semester 2/);
+  assert.doesNotMatch(summary, /Unplaced courses to review:/);
+  assert.match(summary, /course.*available/i);
+  assert.match(summary, /semester load reasonable/i);
+});
+
+test("caps the concise summary and omits detailed requirement dumps", () => {
+  const summary = buildAdvisorMeetingSummary({
+    aiResult: null,
+    softwareEngineeringResult: null,
+    selectedTargetPath: "auto",
+    gapReport: {
+      overallStatus: "missing_requirements",
+      bestFitPath: "computer_science",
+      summaryBullets: [],
+      satisfiedHighlights: [],
+      missingRequirements: [
+        {
+          area: "Computer Science",
+          items: ["A", "B", "C", "D", "E", "F"],
+          severity: "warning",
+        },
+      ],
+      advisorReviewItems: [],
+      nextActions: ["One", "Two", "Three", "Four", "Five"],
+      advisorQuestions: Array.from({ length: 10 }, (_, index) => `Question ${index + 1}?`),
+    },
+  });
+  const missingLines = summary.split("\n").filter((line) => line.startsWith("- Computer Science:"));
+  const questionSection = summary.split("Questions to ask an advisor:\n")[1];
+
+  assert.match(summary, /Selected target path: Auto \(inferred: Computer Science\)/);
+  assert.equal(missingLines.length, 5);
+  assert.doesNotMatch(summary, /Computer Science: F/);
+  assert.doesNotMatch(summary, /Structured requirement blocks:/);
+  assert.equal(questionSection.split("\n").filter((line) => line.startsWith("- ")).length, 8);
 });

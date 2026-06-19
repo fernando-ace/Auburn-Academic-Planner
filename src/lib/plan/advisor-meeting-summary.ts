@@ -3,9 +3,11 @@ import type {
   DegreeWorksParserConfidence,
 } from "./degreeworks-analysis.ts";
 import type { DegreeWorksCourseStatusCounts } from "./degreeworks-course-status.ts";
+import type { DraftSemesterPlan } from "./draft-semester-plan.ts";
 import type { GapReport } from "./gap-report.ts";
 import { formatBestFitPath } from "./gap-report.ts";
 import type { NextSemesterSuggestions } from "./next-semester-suggestions.ts";
+import type { PlanningTargetPathInput } from "./target-path.ts";
 
 type AdvisorSummaryCourse = {
   code: string;
@@ -40,12 +42,7 @@ export type AdvisorSummaryVerifiedRequirement = {
 
 export type AdvisorSummaryRequirementBlock = {
   blockName: string;
-  status:
-    | "satisfied"
-    | "missing"
-    | "partial"
-    | "advisor_review"
-    | "insufficient_data";
+  status: "satisfied" | "missing" | "partial" | "advisor_review" | "insufficient_data";
   satisfiedCourses: string[];
   missingCourses: string[];
   candidateCourses: string[];
@@ -107,67 +104,9 @@ export type AdvisorSummaryPrerequisiteCheck = {
 
 export type AdvisorSummaryGapReport = GapReport;
 export type AdvisorSummaryNextSemesterSuggestions = NextSemesterSuggestions;
+export type AdvisorSummaryDraftSemesterPlan = DraftSemesterPlan;
 
-function formatCourseCodes(courses: AdvisorSummaryCourse[]) {
-  return courses.length > 0
-    ? courses.map((course) => course.code).join(", ")
-    : "None found.";
-}
-
-function formatNullableCredits(totalPlannedCredits: number | null | undefined) {
-  return typeof totalPlannedCredits === "number"
-    ? `${totalPlannedCredits}`
-    : "Not provided.";
-}
-
-function getPlanSourceDescription(
-  result:
-    | AdvisorSummaryAiCertificateResult
-    | AdvisorSummaryDegreeResult,
-) {
-  return (
-    result.planDescription ??
-    result.sourceFileName ??
-    result.major ??
-    "Plan source not provided."
-  );
-}
-
-function hasAdvisorQuestionSignals(detectedSignals?: DegreeWorksDetectedSignals) {
-  if (!detectedSignals) {
-    return false;
-  }
-
-  return (
-    detectedSignals.hasApCreditSignal ||
-    detectedSignals.hasTransferCreditSignal ||
-    detectedSignals.hasSubstitutionSignal ||
-    detectedSignals.hasExceptionSignal ||
-    detectedSignals.hasInProgressSignal
-  );
-}
-
-function addParserDiagnostics(
-  lines: string[],
-  result:
-    | AdvisorSummaryAiCertificateResult
-    | AdvisorSummaryDegreeResult,
-) {
-  if (result.parserConfidence) {
-    lines.push(`Parser confidence: ${result.parserConfidence}`);
-  }
-
-  if (result.courseStatusCounts) {
-    lines.push(`Course status counts: ${formatCourseStatusCounts(result.courseStatusCounts)}`);
-  }
-
-  if (result.parserWarnings && result.parserWarnings.length > 0) {
-    lines.push(
-      "Parser warnings:",
-      ...result.parserWarnings.map((warning) => `- ${warning}`),
-    );
-  }
-}
+type SummaryResult = AdvisorSummaryAiCertificateResult | AdvisorSummaryDegreeResult;
 
 export function buildAdvisorMeetingSummary({
   aiResult,
@@ -176,6 +115,8 @@ export function buildAdvisorMeetingSummary({
   prerequisiteCheck = null,
   gapReport = null,
   nextSemesterSuggestions = null,
+  draftSemesterPlan = null,
+  selectedTargetPath,
 }: {
   aiResult: AdvisorSummaryAiCertificateResult | null;
   softwareEngineeringResult: AdvisorSummarySoftwareEngineeringResult | null;
@@ -183,6 +124,8 @@ export function buildAdvisorMeetingSummary({
   prerequisiteCheck?: AdvisorSummaryPrerequisiteCheck | null;
   gapReport?: AdvisorSummaryGapReport | null;
   nextSemesterSuggestions?: AdvisorSummaryNextSemesterSuggestions | null;
+  draftSemesterPlan?: AdvisorSummaryDraftSemesterPlan | null;
+  selectedTargetPath?: PlanningTargetPathInput;
 }) {
   if (
     !aiResult &&
@@ -190,155 +133,174 @@ export function buildAdvisorMeetingSummary({
     !computerScienceResult &&
     !prerequisiteCheck &&
     !gapReport &&
-    !nextSemesterSuggestions
+    !nextSemesterSuggestions &&
+    !draftSemesterPlan
   ) {
     return "";
   }
 
+  const diagnosticResult =
+    aiResult ?? softwareEngineeringResult ?? computerScienceResult;
+  const resolvedPath =
+    gapReport?.bestFitPath ??
+    nextSemesterSuggestions?.targetPath ??
+    draftSemesterPlan?.targetPath ??
+    inferSingleResultPath({ aiResult, computerScienceResult, softwareEngineeringResult });
   const lines = [
     "Advisor Meeting Summary",
     "",
-    "This is a preparation summary, not an official degree audit.",
-    "Advisor verification is required.",
-    "AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may require advisor review.",
-    "",
+    "This is a preparation summary, not an official degree audit; advisor verification is required.",
+    `Selected target path: ${formatSelectedTarget(selectedTargetPath, resolvedPath)}`,
   ];
 
-  if (gapReport) {
-    addGapReportSummary(lines, gapReport);
-  }
+  addParserSummary(lines, diagnosticResult);
+  addMissingItems(lines, {
+    aiResult,
+    computerScienceResult,
+    gapReport,
+    resolvedPath,
+    softwareEngineeringResult,
+  });
 
-  if (nextSemesterSuggestions) {
-    addNextSemesterSuggestionsSummary(lines, nextSemesterSuggestions);
-  }
-
-  if (aiResult) {
+  if (gapReport?.nextActions.length) {
     lines.push(
-      "AI Engineering Certificate",
-      `Plan/source: ${getPlanSourceDescription(aiResult)}`,
-    );
-
-    if (typeof aiResult.parsedCourseCount === "number") {
-      lines.push(`Parsed course count: ${aiResult.parsedCourseCount}`);
-    }
-
-    addParserDiagnostics(lines, aiResult);
-
-    lines.push(
-      `Total planned credits: ${formatNullableCredits(
-        aiResult.totalPlannedCredits,
-      )}`,
-      `Required courses satisfied: ${formatCourseCodes(
-        aiResult.requiredCoursesSatisfied,
-      )}`,
-      `Required courses missing: ${formatCourseCodes(
-        aiResult.requiredCoursesMissing,
-      )}`,
-      `AI elective candidates found: ${formatCourseCodes(
-        aiResult.electiveCandidatesFound,
-      )}`,
-      `Advisor verification required: ${
-        aiResult.advisorVerificationRequired ? "Yes" : "No"
-      }`,
       "",
+      "Top next actions:",
+      ...gapReport.nextActions.slice(0, 4).map((action) => `- ${action}`),
     );
   }
 
-  if (softwareEngineeringResult) {
-    addDegreeSummary(lines, {
-      result: softwareEngineeringResult,
-      title: "Software Engineering Degree Progress",
-      creditStatusLabel: "Software Engineering total credits status",
-    });
-  }
-
-  if (computerScienceResult) {
-    addDegreeSummary(lines, {
-      result: computerScienceResult,
-      title: "Computer Science Degree Progress",
-      creditStatusLabel: "Computer Science total credits status",
-    });
-  }
-
-  if (prerequisiteCheck) {
-    const sequenceStatus =
-      prerequisiteCheck.isLikelySequenceValid === null
-        ? "Could not be determined from reliable term structure."
-        : prerequisiteCheck.isLikelySequenceValid
-          ? "No modeled sequence warnings found."
-          : "Modeled prerequisite sequence warnings found.";
-
-    lines.push(
-      "Semester and Prerequisite Check",
-      `Semester extraction confidence: ${prerequisiteCheck.semesterConfidence}`,
-      `Checked course count: ${prerequisiteCheck.checkedCourseCount}`,
-      `Sequence validity: ${sequenceStatus}`,
-    );
-
-    if (prerequisiteCheck.prerequisiteIssues.length > 0) {
-      lines.push(
-        "Prerequisite warnings and advisor-review items:",
-        ...prerequisiteCheck.prerequisiteIssues.map(
-          (issue) => `- ${issue.message}`,
-        ),
-      );
-    }
-
-    if (prerequisiteCheck.advisorReviewItems.length > 0) {
-      lines.push(
-        "Specific advisor-review items:",
-        ...prerequisiteCheck.advisorReviewItems.map((item) => `- ${item}`),
-      );
-    }
-
-    lines.push("");
-  }
-
-  const shouldAskParserSignalQuestion =
-    hasAdvisorQuestionSignals(aiResult?.detectedSignals) ||
-    hasAdvisorQuestionSignals(softwareEngineeringResult?.detectedSignals) ||
-    hasAdvisorQuestionSignals(computerScienceResult?.detectedSignals);
-  const shouldAskCourseStatusQuestion =
-    Boolean(aiResult?.courseStatusCounts) ||
-    Boolean(softwareEngineeringResult?.courseStatusCounts) ||
-    Boolean(computerScienceResult?.courseStatusCounts);
-  const shouldAskPrerequisiteQuestions = Boolean(prerequisiteCheck);
-  const questions = [
-    "- Which missing or unmatched requirements still need official Degree Works review?",
-    "- Do AP, transfer, substitutions, or repeated courses change this progress check?",
-    "- Which electives count toward the remaining Software Engineering, Computer Science, or certificate requirements?",
-    "- Are prerequisites and semester ordering appropriate for the next registration plan?",
-  ];
-
-  if (shouldAskParserSignalQuestion) {
-    questions.splice(
-      1,
-      0,
-      "- Can you verify whether AP, transfer, substitution, exception, or in-progress coursework changes this requirement check?",
-    );
-  }
-
-  if (shouldAskCourseStatusQuestion) {
-    questions.splice(
-      1,
-      0,
-      "- Can you verify which courses are completed, in progress, planned, transferred/AP, substituted, or waived in Degree Works?",
-    );
-  }
-
-  if (shouldAskPrerequisiteQuestions) {
-    questions.push(
-      "- Can you verify that my planned course order satisfies prerequisites?",
-      "- Do any senior design, upper-level COMP, or elective courses require additional approvals or standing?",
-    );
-  }
-
-  lines.push(
-    "Questions to ask an advisor:",
-    ...questions,
-  );
+  addPlanningPreview(lines, draftSemesterPlan, nextSemesterSuggestions);
+  lines.push("", "Questions to ask an advisor:", ...buildQuestions({
+    draftSemesterPlan,
+    gapReport,
+    nextSemesterSuggestions,
+    prerequisiteCheck,
+  }).map((question) => `- ${question}`));
 
   return lines.join("\n");
+}
+
+function addParserSummary(lines: string[], result: SummaryResult | null) {
+  if (!result) {
+    return;
+  }
+
+  lines.push(`Parser confidence: ${result.parserConfidence ?? "not available"}`);
+  if (result.courseStatusCounts) {
+    lines.push(`Course status summary: ${formatCourseStatusCounts(result.courseStatusCounts)}`);
+  }
+}
+
+function addMissingItems(
+  lines: string[],
+  {
+    aiResult,
+    computerScienceResult,
+    gapReport,
+    resolvedPath,
+    softwareEngineeringResult,
+  }: {
+    aiResult: AdvisorSummaryAiCertificateResult | null;
+    computerScienceResult: AdvisorSummaryDegreeResult | null;
+    gapReport: AdvisorSummaryGapReport | null;
+    resolvedPath: GapReport["bestFitPath"];
+    softwareEngineeringResult: AdvisorSummaryDegreeResult | null;
+  },
+) {
+  const items = gapReport
+    ? gapReport.missingRequirements.flatMap((requirement) =>
+        requirement.items.map((item) => `${requirement.area}: ${item}`),
+      )
+    : resolvedPath === "ai_certificate"
+      ? [
+          ...(aiResult?.requiredCoursesMissing.map((course) => course.code) ?? []),
+          ...(aiResult && aiResult.electiveCandidatesFound.length === 0
+            ? ["AI Engineering certificate elective selection needs advisor review."]
+            : []),
+        ]
+      : resolvedPath === "computer_science"
+        ? computerScienceResult?.exactRequiredCoursesMissing.map((course) => course.code) ?? []
+        : softwareEngineeringResult?.exactRequiredCoursesMissing.map((course) => course.code) ?? [];
+
+  if (items.length) {
+    lines.push("", "Top missing items:", ...items.slice(0, 5).map((item) => `- ${item}`));
+  }
+}
+
+function addPlanningPreview(
+  lines: string[],
+  draftSemesterPlan: AdvisorSummaryDraftSemesterPlan | null,
+  suggestions: AdvisorSummaryNextSemesterSuggestions | null,
+) {
+  const firstSemester = draftSemesterPlan?.semesters[0];
+  if (firstSemester?.plannedCourses.length) {
+    lines.push(
+      "",
+      `First draft semester (${firstSemester.estimatedCredits} estimated credits):`,
+      ...firstSemester.plannedCourses.map((course) => `- ${course.code}`),
+    );
+    return;
+  }
+
+  if (suggestions?.suggestedCourses.length) {
+    lines.push(
+      "",
+      "Top suggested courses:",
+      ...suggestions.suggestedCourses.slice(0, 5).map((course) => `- ${course.code}: ${course.reason}`),
+    );
+  }
+}
+
+function buildQuestions({
+  draftSemesterPlan,
+  gapReport,
+  nextSemesterSuggestions,
+  prerequisiteCheck,
+}: {
+  draftSemesterPlan: AdvisorSummaryDraftSemesterPlan | null;
+  gapReport: AdvisorSummaryGapReport | null;
+  nextSemesterSuggestions: AdvisorSummaryNextSemesterSuggestions | null;
+  prerequisiteCheck: AdvisorSummaryPrerequisiteCheck | null;
+}) {
+  return dedupe([
+    ...(gapReport?.advisorQuestions ?? []),
+    ...(nextSemesterSuggestions?.advisorQuestions ?? []),
+    "Which missing or unmatched requirements still need official Degree Works review?",
+    "Do AP, transfer, substitutions, exceptions, or in-progress courses change this summary?",
+    prerequisiteCheck
+      ? "Can you verify that my planned course order satisfies prerequisites?"
+      : "Are prerequisites appropriate for the next registration plan?",
+    draftSemesterPlan
+      ? "Which planned courses are actually available in the suggested semester?"
+      : "Which courses should I prioritize next semester?",
+    "Is the proposed semester load reasonable for my circumstances?",
+    "Which electives or advisor-approved alternatives best fit this target?",
+  ]).slice(0, 8);
+}
+
+function inferSingleResultPath({
+  aiResult,
+  computerScienceResult,
+  softwareEngineeringResult,
+}: {
+  aiResult: AdvisorSummaryAiCertificateResult | null;
+  computerScienceResult: AdvisorSummaryDegreeResult | null;
+  softwareEngineeringResult: AdvisorSummaryDegreeResult | null;
+}): GapReport["bestFitPath"] {
+  if (computerScienceResult && !aiResult && !softwareEngineeringResult) return "computer_science";
+  if (softwareEngineeringResult && !aiResult && !computerScienceResult) return "software_engineering";
+  if (aiResult && !softwareEngineeringResult && !computerScienceResult) return "ai_certificate";
+  return "mixed_or_unclear";
+}
+
+function formatSelectedTarget(
+  selectedTargetPath: PlanningTargetPathInput | undefined,
+  resolvedPath: GapReport["bestFitPath"],
+) {
+  return selectedTargetPath === "auto"
+    ? `Auto (inferred: ${formatBestFitPath(resolvedPath)})`
+    : formatBestFitPath(selectedTargetPath ?? resolvedPath);
 }
 
 function formatCourseStatusCounts(counts: DegreeWorksCourseStatusCounts) {
@@ -353,164 +315,6 @@ function formatCourseStatusCounts(counts: DegreeWorksCourseStatusCounts) {
   ].join("; ");
 }
 
-function addNextSemesterSuggestionsSummary(
-  lines: string[],
-  suggestions: AdvisorSummaryNextSemesterSuggestions,
-) {
-  lines.push(
-    "Next Semester Suggestions",
-    `Target path: ${formatBestFitPath(suggestions.targetPath)}`,
-    `Suggestion confidence: ${suggestions.confidence}`,
-    "These are planning suggestions to discuss with an academic advisor.",
-  );
-
-  if (suggestions.suggestedCourses.length > 0) {
-    lines.push(
-      "Top suggested courses:",
-      ...suggestions.suggestedCourses
-        .slice(0, 5)
-        .map((course) => `- ${course.code}: ${course.reason}`),
-    );
-  }
-
-  if (suggestions.notYetRecommended.length > 0) {
-    lines.push(
-      "Not yet recommended:",
-      ...suggestions.notYetRecommended
-        .slice(0, 4)
-        .map((course) => `- ${course.code}: ${course.reason}`),
-    );
-  }
-
-  if (suggestions.advisorQuestions.length > 0) {
-    lines.push(
-      "Next-semester advisor questions:",
-      ...suggestions.advisorQuestions
-        .slice(0, 4)
-        .map((question) => `- ${question}`),
-    );
-  }
-
-  lines.push("");
-}
-
-function addGapReportSummary(lines: string[], gapReport: AdvisorSummaryGapReport) {
-  lines.push(
-    "Gap Report and Next Actions",
-    `Overall status: ${gapReport.overallStatus}`,
-    `Best fit path: ${formatBestFitPath(gapReport.bestFitPath)}`,
-  );
-
-  const topMissingRequirements = gapReport.missingRequirements
-    .slice(0, 3)
-    .map(
-      (requirement) =>
-        `- ${requirement.area}: ${requirement.items.slice(0, 3).join(", ")}`,
-    );
-
-  if (topMissingRequirements.length > 0) {
-    lines.push("Top missing requirements:", ...topMissingRequirements);
-  }
-
-  if (gapReport.nextActions.length > 0) {
-    lines.push(
-      "Next actions:",
-      ...gapReport.nextActions.slice(0, 4).map((action) => `- ${action}`),
-    );
-  }
-
-  if (gapReport.advisorQuestions.length > 0) {
-    lines.push(
-      "Gap report advisor questions:",
-      ...gapReport.advisorQuestions
-        .slice(0, 4)
-        .map((question) => `- ${question}`),
-    );
-  }
-
-  lines.push("");
-}
-
-function addDegreeSummary(
-  lines: string[],
-  {
-    creditStatusLabel,
-    result,
-    title,
-  }: {
-    creditStatusLabel: string;
-    result: AdvisorSummaryDegreeResult;
-    title: string;
-  },
-) {
-  const creditStatus =
-    result.hasEnoughTotalCredits === null
-      ? "Total planned credits were not provided."
-      : result.hasEnoughTotalCredits
-        ? "Total planned credits meet or exceed the degree requirement."
-        : "Total planned credits are below the degree requirement.";
-
-  lines.push(title, `Plan/source: ${getPlanSourceDescription(result)}`);
-
-  if (typeof result.parsedCourseCount === "number") {
-    lines.push(`Parsed course count: ${result.parsedCourseCount}`);
-  }
-
-  addParserDiagnostics(lines, result);
-
-  lines.push(
-    `Total planned credits: ${formatNullableCredits(result.totalPlannedCredits)}`,
-    `Required credits: ${result.totalHoursRequired}`,
-    `${creditStatusLabel}: ${creditStatus}`,
-    `Exact required courses missing: ${formatCourseCodes(
-      result.exactRequiredCoursesMissing,
-    )}`,
-  );
-
-  if (result.alternativeCourseGroups && result.alternativeCourseGroups.length > 0) {
-    lines.push(
-      "Alternative course groups:",
-      ...result.alternativeCourseGroups.map((group) => {
-        const satisfiedCodes = formatCourseCodes(group.satisfiedCourses);
-        const status = group.isSatisfied ? "satisfied" : "needs review";
-
-        return `- ${group.name}: ${status}; satisfied courses: ${satisfiedCodes}`;
-      }),
-    );
-  }
-
-  if (result.advisorVerifiedRequirements.length > 0) {
-    lines.push(
-      "Advisor-verified items that need review:",
-      ...result.advisorVerifiedRequirements.map(
-        (requirement) =>
-          `- ${requirement.name} (${requirement.creditHoursRequired} credits)`,
-      ),
-    );
-  }
-
-  if (result.requirementBlocks && result.requirementBlocks.length > 0) {
-    lines.push(
-      "Structured requirement blocks:",
-      ...result.requirementBlocks.map((block) => {
-        const credits =
-          typeof block.requiredCredits === "number"
-            ? `; credits: ${block.matchedCredits ?? 0}/${block.requiredCredits}`
-            : "";
-        const candidates =
-          block.candidateCourses.length > 0
-            ? `; candidates: ${block.candidateCourses.join(", ")}`
-            : "";
-
-        return `- ${block.blockName}: ${block.status}${credits}${candidates}`;
-      }),
-    );
-  }
-
-  lines.push(
-    `Advisor verification required: ${
-      result.advisorVerificationRequired ? "Yes" : "No"
-    }`,
-    "",
-  );
+function dedupe(items: string[]) {
+  return Array.from(new Set(items));
 }
