@@ -1,4 +1,4 @@
-import { extractPdfText, hasPdfHeader } from "../../../../../lib/pdf/pdf-text.ts";
+import { validatePdfUpload } from "../../../../../lib/api/pdf-upload-validation.ts";
 import { analyzeDegreeWorksText } from "../../../../../lib/plan/degreeworks-analysis.ts";
 import { checkComputerScienceDegree } from "../../../../../lib/rules/computer-science-degree.ts";
 
@@ -16,38 +16,19 @@ export async function POST(request: Request) {
 
   const uploadedFile = formData.get("file");
 
-  if (!isUploadedFile(uploadedFile) || uploadedFile.size === 0) {
-    return Response.json(
-      { error: 'Upload a PDF file using the "file" form field.' },
-      { status: 400 },
-    );
+  const upload = await validatePdfUpload(uploadedFile);
+  if (!upload.ok) {
+    return Response.json({ error: upload.error }, { status: upload.status });
   }
 
-  if (!isPdfUpload(uploadedFile)) {
-    return Response.json(
-      { error: "Uploaded file must be a PDF." },
-      { status: 400 },
-    );
-  }
-
-  const pdfData = new Uint8Array(await uploadedFile.arrayBuffer());
-
-  if (!hasPdfHeader(pdfData)) {
-    return Response.json(
-      { error: "Uploaded file must be a valid PDF." },
-      { status: 400 },
-    );
-  }
-
-  const pdfText = await extractPdfText(pdfData);
-  const degreeWorksAnalysis = analyzeDegreeWorksText(pdfText);
+  const degreeWorksAnalysis = analyzeDegreeWorksText(upload.text);
   const degreeCheck = checkComputerScienceDegree({
     courseCodes: degreeWorksAnalysis.parsedCourseCodes,
     totalPlannedCredits: degreeWorksAnalysis.totalPlannedCredits,
   });
 
   return Response.json({
-    sourceFileName: uploadedFile.name,
+    sourceFileName: upload.fileName,
     parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
     parsedCourseCount: degreeWorksAnalysis.parsedCourseCount,
     detectedSignals: degreeWorksAnalysis.detectedSignals,
@@ -73,15 +54,4 @@ export async function POST(request: Request) {
       ...degreeCheck.notes,
     ],
   });
-}
-
-function isUploadedFile(value: FormDataEntryValue | null): value is File {
-  return value instanceof File;
-}
-
-function isPdfUpload(file: File) {
-  return (
-    file.type.toLowerCase() === "application/pdf" ||
-    file.name.toLowerCase().endsWith(".pdf")
-  );
 }

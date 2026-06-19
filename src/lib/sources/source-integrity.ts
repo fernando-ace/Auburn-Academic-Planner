@@ -1,6 +1,3 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
-
 const MAX_SOURCE_AGE_DAYS = 180;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -72,14 +69,20 @@ export type SourceIntegrityResult = {
 };
 
 export type SourceIntegrityOptions = {
-  projectRoot?: string;
+  reader: SourceIntegrityReader;
   checkedAt?: Date | string;
 };
 
+export type SourceIntegrityReader = {
+  hasFile(relativePath: string): boolean;
+  listRuleFiles(): string[] | undefined;
+  readText(relativePath: string): string | undefined;
+};
+
 export function checkSourceIntegrity(
-  options: SourceIntegrityOptions = {},
+  options: SourceIntegrityOptions,
 ): SourceIntegrityResult {
-  const projectRoot = options.projectRoot;
+  const { reader } = options;
   const checkedAtDate = new Date(options.checkedAt ?? new Date());
   const checkedAt = checkedAtDate.toISOString();
   const warnings: string[] = [];
@@ -89,17 +92,13 @@ export function checkSourceIntegrity(
   const sourceIdMismatches: SourceIntegrityMismatch[] = [];
   const driftFindings: SourceDriftFinding[] = [];
   const recommendedFixes: string[] = [];
-  const manifestPath = projectRoot
-    ? path.join(/*turbopackIgnore: true*/ projectRoot, "sources", "manifest.json")
-    : path.join(process.cwd(), "sources", "manifest.json");
-
-  if (!existsSync(manifestPath)) {
+  if (!reader.hasFile("sources/manifest.json")) {
     missingFiles.push("sources/manifest.json");
     recommendedFixes.push("Restore sources/manifest.json with metadata for checked-in sources.");
     return finishResult();
   }
 
-  const manifest = readJson(manifestPath, "sources/manifest.json");
+  const manifest = readJson("sources/manifest.json");
   if (!Array.isArray(manifest)) {
     if (manifest !== undefined) {
       errors.push("sources/manifest.json must contain a top-level array.");
@@ -111,19 +110,17 @@ export function checkSourceIntegrity(
   const manifestEntries = manifest as ManifestEntry[];
   validateManifestFreshness(manifestEntries);
 
-  const rulesDirectory = projectRoot
-    ? path.join(/*turbopackIgnore: true*/ projectRoot, "rules", "auburn")
-    : path.join(process.cwd(), "rules", "auburn");
-  if (!existsSync(rulesDirectory)) {
+  const ruleFileNames = reader.listRuleFiles();
+  if (!ruleFileNames) {
     missingFiles.push("rules/auburn");
     recommendedFixes.push("Restore the checked-in rules/auburn directory.");
     return finishResult();
   }
 
   const ruleDataByFile = new Map<string, RuleData>();
-  for (const fileName of readdirSync(rulesDirectory).filter((name) => name.endsWith(".json")).sort()) {
+  for (const fileName of ruleFileNames.filter((name) => name.endsWith(".json")).sort()) {
     const relativePath = `rules/auburn/${fileName}`;
-    const ruleData = readJson(path.join(rulesDirectory, fileName), relativePath);
+    const ruleData = readJson(relativePath);
     if (!isRecord(ruleData)) continue;
 
     const rule = ruleData as RuleData;
@@ -144,12 +141,17 @@ export function checkSourceIntegrity(
 
   return finishResult();
 
-  function readJson(filePath: string, label: string): unknown {
+  function readJson(relativePath: string): unknown {
     try {
-      return JSON.parse(readFileSync(filePath, "utf8"));
+      const text = reader.readText(relativePath);
+      if (text === undefined) {
+        missingFiles.push(relativePath);
+        return undefined;
+      }
+      return JSON.parse(text);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unknown JSON error";
-      errors.push(`${label} is not parseable JSON: ${detail}`);
+      errors.push(`${relativePath} is not parseable JSON: ${detail}`);
       return undefined;
     }
   }
@@ -220,7 +222,7 @@ export function checkSourceIntegrity(
     if (!sourceFile) {
       errors.push(`${ruleFile} provenance must include sourceFile.`);
       recommendedFixes.push(`Add a root-relative provenance sourceFile to ${ruleFile}.`);
-    } else if (!existsSync(resolveProjectFile(sourceFile))) {
+    } else if (!reader.hasFile(sourceFile)) {
       missingFiles.push(sourceFile);
       recommendedFixes.push(`Restore ${sourceFile} or correct the provenance sourceFile in ${ruleFile}.`);
     }
@@ -292,11 +294,11 @@ export function checkSourceIntegrity(
       recommendedFixes.push(`Add the public Auburn bulletin URL to ${ruleFile} and its manifest entry.`);
     }
 
-    if (!provenanceSourceFile || !existsSync(resolveProjectFile(provenanceSourceFile))) return;
+    if (!provenanceSourceFile || !reader.hasFile(provenanceSourceFile)) return;
 
-    const sourceText = normalizeSourceText(
-      readFileSync(resolveProjectFile(provenanceSourceFile), "utf8"),
-    );
+    const rawSourceText = reader.readText(provenanceSourceFile);
+    if (rawSourceText === undefined) return;
+    const sourceText = normalizeSourceText(rawSourceText);
     const courses = rule[definition.courseField];
     const missingCourseCodes = Array.isArray(courses)
       ? courses
@@ -354,21 +356,6 @@ export function checkSourceIntegrity(
     };
   }
 
-  function resolveProjectFile(relativePath: string) {
-    const normalized = normalizePath(relativePath);
-    if (projectRoot) {
-      return path.join(/*turbopackIgnore: true*/ projectRoot, normalized);
-    }
-
-    const [rootDirectory, ...segments] = normalized.split("/");
-    if (rootDirectory === "sources") {
-      return path.join(process.cwd(), "sources", ...segments);
-    }
-    if (rootDirectory === "rules") {
-      return path.join(process.cwd(), "rules", ...segments);
-    }
-    throw new Error(`Unsupported project-relative source path: ${relativePath}`);
-  }
 }
 
 function stringValue(value: unknown) {

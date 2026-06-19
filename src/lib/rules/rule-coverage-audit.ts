@@ -9,7 +9,7 @@ import type {
   RuleProvenanceOverride,
 } from "./rule-provenance.ts";
 import { softwareEngineeringDegreeRule } from "./software-engineering-degree.ts";
-import { checkSourceIntegrity } from "../sources/source-integrity.ts";
+import { checkBundledSourceIntegrity } from "../sources/source-integrity-bundled.ts";
 
 export type RuleCoverageProgramKey =
   | "ai_certificate"
@@ -99,7 +99,7 @@ export function buildRuleCoverageAudit(
   generatedAt = new Date().toISOString(),
 ): RuleCoverageAudit {
   const supportingModels = buildSupportingModels();
-  const sourceIntegrity = checkSourceIntegrity({ checkedAt: generatedAt });
+  const sourceIntegrity = checkBundledSourceIntegrity(generatedAt);
 
   return {
     generatedAt,

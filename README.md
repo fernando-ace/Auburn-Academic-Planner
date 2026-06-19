@@ -93,8 +93,8 @@ The MVP supports two complementary paths:
 - Source integrity checks compare local provenance and manifest metadata, verify referenced files and public bulletin URLs, and conservatively flag exact-course drift. They do not query live Auburn pages or prove that checked-in material is currently official.
 - The audit is a deterministic transparency tool, not an official Auburn audit. Its advisor-review-only blocks are never treated as fully verified.
 - Software Engineering and Computer Science core/elective requirement blocks are deterministic, conservative checks. Exact blocks can be satisfied by matched courses, candidate-only elective blocks remain advisor review unless the local approved-course data is strong enough, and insufficient source data is labeled for advisor review instead of being overclaimed.
-- Uploaded PDFs are processed server-side for course extraction.
-- Uploaded PDFs are not permanently stored.
+- Uploaded PDFs are processed transiently in memory for course extraction and are not permanently stored.
+- All four PDF upload routes reject files larger than 10 MiB, files without a PDF signature, unreadable or empty PDFs, and documents with more than 1,000,000 extracted characters. Validation errors are returned with user-friendly `400`, `413`, or `422` responses.
 - Uploaded PDF checks are deterministic and do not call Gemini.
 - The target selector changes only focused planning outputs. It does not skip or hide the detailed AI certificate, Software Engineering, or Computer Science checks.
 - Degree Works PDF results include parser confidence, parser warnings, and detected AP, transfer, substitution, exception, in-progress, or insufficient-text signals when the extracted text suggests extra advisor review is needed.
@@ -127,7 +127,7 @@ The MVP supports two complementary paths:
 - The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists and optionally accepts `startingTermLabel` for term-aware review.
 - The `/rule-audit` page and `GET /api/rules/coverage-audit` route expose a deterministic audit of exact rule coverage, requirement-block confidence, source integrity, supporting models, known limitations, and recommended improvements.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
-- Local validation currently passes `146/146` deterministic tests.
+- Local validation currently passes `161/161` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Degree Works compatibility fixtures
@@ -283,6 +283,8 @@ Missing or inconsistent metadata and missing source-backed course evidence fail 
 
 You can change `GEMINI_MODEL` for cost, speed, or quality experiments. For production academic planning questions, evaluate answer quality and source-grounding behavior before changing the default.
 
+Gemini configuration is required only for `/chat` and the optional source-upload/evaluation scripts. Deterministic `/plan-check`, `/rule-audit`, upload validation, source integrity, tests, and CI do not call Gemini and do not require Gemini environment variables.
+
 ## RAG Behavior
 
 The `/api/chat` route uses Gemini `generateContent` with the File Search tool enabled against `GEMINI_FILE_SEARCH_STORE_NAME`.
@@ -295,6 +297,26 @@ Every assistant answer is normalized to include:
 - `advisorVerificationNote`
 
 Displayed sources come from Gemini grounding metadata, not model-written citation text. If no real Auburn source is retrieved, the UI shows "No retrieved Auburn source found," and the answer is treated as low confidence.
+
+## Production readiness and deployment
+
+The repository includes `.github/workflows/ci.yml`. Pushes and pull requests use Node.js 22, install the checked-in `package-lock.json` with `npm ci`, and run the complete local validation gate without Gemini calls or live Auburn requests.
+
+Run the same gate locally with:
+
+```bash
+npm run validate
+```
+
+The command runs deterministic tests, local source integrity, ESLint, TypeScript, and the production Next.js build. The production `/rule-audit` loader uses a fixed, build-traceable set of checked-in source and rule files; fixture-directory discovery remains isolated to the source-check script and tests. This prevents Turbopack from tracing the whole project while keeping the runtime audit deployable.
+
+Deployment requirements:
+
+- Use Node.js 22 and install dependencies from `package-lock.json`.
+- Include the checked-in `sources/` and `rules/` files traced by the production build.
+- Configure `GEMINI_API_KEY`, optional `GEMINI_MODEL`, and `GEMINI_FILE_SEARCH_STORE_NAME` only when deploying `/chat`.
+- Do not configure persistent upload storage: PDF routes process request data in memory and discard it after the response.
+- Keep request-body limits at or above 10 MiB at the hosting proxy if PDF uploads are enabled; the application applies its own 10 MiB limit.
 
 ## Verification
 
@@ -310,7 +332,7 @@ npm run build
 
 Current validation coverage:
 
-- 146 deterministic tests through `npm test`, including source integrity, rule coverage audit, and the seven synthetic Degree Works compatibility fixtures
+- 161 deterministic tests through `npm test`, including source integrity, upload safety and route errors, rule coverage audit, and the seven synthetic Degree Works compatibility fixtures
 - `npm run check:sources`
 - `npm run lint`
 - `npx tsc --noEmit`

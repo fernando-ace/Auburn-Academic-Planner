@@ -4,13 +4,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { checkSourceIntegrity } from "../src/lib/sources/source-integrity.ts";
+import { checkProjectSourceIntegrity } from "../src/lib/sources/source-integrity-filesystem.ts";
 
 const projectRoot = process.cwd();
 const checkedAt = "2026-06-19T12:00:00.000Z";
 
 test("source integrity passes on current checked-in sources", () => {
-  const result = checkSourceIntegrity({ projectRoot, checkedAt });
+  const result = checkProjectSourceIntegrity({ projectRoot, checkedAt });
 
   assert.equal(result.status, "pass");
   assert.equal(result.warnings.length, 0);
@@ -22,7 +22,7 @@ test("detects a missing provenance source file", () => {
   withFixture((fixtureRoot) => {
     rmSync(path.join(fixtureRoot, "sources/auburn/software-engineering-bulletin.html"));
 
-    const result = checkSourceIntegrity({ projectRoot: fixtureRoot, checkedAt });
+    const result = checkProjectSourceIntegrity({ projectRoot: fixtureRoot, checkedAt });
 
     assert.equal(result.status, "fail");
     assert.ok(result.missingFiles.includes("sources/auburn/software-engineering-bulletin.html"));
@@ -36,7 +36,7 @@ test("detects a catalog year mismatch", () => {
       provenance.catalogYear = "2024-2025";
     });
 
-    const result = checkSourceIntegrity({ projectRoot: fixtureRoot, checkedAt });
+    const result = checkProjectSourceIntegrity({ projectRoot: fixtureRoot, checkedAt });
 
     assert.equal(result.status, "fail");
     assert.ok(result.catalogYearMismatches.some((mismatch) => mismatch.ruleFile.endsWith("computer-science-degree.json")));
@@ -49,7 +49,7 @@ test("detects a source ID mismatch", () => {
       rule.sourceId = "wrong-ai-source";
     });
 
-    const result = checkSourceIntegrity({ projectRoot: fixtureRoot, checkedAt });
+    const result = checkProjectSourceIntegrity({ projectRoot: fixtureRoot, checkedAt });
 
     assert.equal(result.status, "fail");
     assert.ok(result.sourceIdMismatches.some((mismatch) => mismatch.ruleFile.endsWith("ai-engineering-certificate.json")));
@@ -61,7 +61,7 @@ test("detects an exact rule course missing from local source text", () => {
     const sourcePath = path.join(fixtureRoot, "sources/auburn/software-engineering-bulletin.html");
     writeFileSync(sourcePath, readFileSync(sourcePath, "utf8").replaceAll("5700", "5799"));
 
-    const result = checkSourceIntegrity({ projectRoot: fixtureRoot, checkedAt });
+    const result = checkProjectSourceIntegrity({ projectRoot: fixtureRoot, checkedAt });
     const finding = result.driftFindings.find((candidate) => candidate.ruleFile.endsWith("software-engineering-degree.json"));
 
     assert.equal(result.status, "fail");
@@ -70,7 +70,7 @@ test("detects an exact rule course missing from local source text", () => {
 });
 
 test("AI certificate drift check finds required courses and credit-hour evidence", () => {
-  const result = checkSourceIntegrity({ projectRoot, checkedAt });
+  const result = checkProjectSourceIntegrity({ projectRoot, checkedAt });
   const finding = result.driftFindings.find((candidate) => candidate.ruleFile.endsWith("ai-engineering-certificate.json"));
 
   assert.equal(finding, undefined);

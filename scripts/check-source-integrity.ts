@@ -1,6 +1,6 @@
-import { checkSourceIntegrity } from "../src/lib/sources/source-integrity.ts";
+import { checkProjectSourceIntegrity } from "../src/lib/sources/source-integrity-filesystem.ts";
 
-const result = checkSourceIntegrity();
+const result = checkProjectSourceIntegrity();
 
 console.log(`Source integrity: ${result.status.toUpperCase()}`);
 console.log(`Checked at: ${result.checkedAt}`);

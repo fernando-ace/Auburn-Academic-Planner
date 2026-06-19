@@ -1,4 +1,4 @@
-import { extractPdfText, hasPdfHeader } from "../../../../../lib/pdf/pdf-text.ts";
+import { validatePdfUpload } from "../../../../../lib/api/pdf-upload-validation.ts";
 import { analyzeCombinedDegreeWorksText } from "../../../../../lib/plan/combined-degreeworks-analysis.ts";
 import {
   isPlanningTargetPathInput,
@@ -32,37 +32,18 @@ export async function POST(request: Request) {
 
   const targetPath: PlanningTargetPathInput = targetPathValue;
 
-  if (!isUploadedFile(uploadedFile) || uploadedFile.size === 0) {
-    return Response.json(
-      { error: 'Upload a PDF file using the "file" form field.' },
-      { status: 400 },
-    );
+  const upload = await validatePdfUpload(uploadedFile);
+  if (!upload.ok) {
+    return Response.json({ error: upload.error }, { status: upload.status });
   }
 
-  if (!isPdfUpload(uploadedFile)) {
-    return Response.json(
-      { error: "Uploaded file must be a PDF." },
-      { status: 400 },
-    );
-  }
-
-  const pdfData = new Uint8Array(await uploadedFile.arrayBuffer());
-
-  if (!hasPdfHeader(pdfData)) {
-    return Response.json(
-      { error: "Uploaded file must be a valid PDF." },
-      { status: 400 },
-    );
-  }
-
-  const pdfText = await extractPdfText(pdfData);
   const combinedAnalysis = analyzeCombinedDegreeWorksText({
-    text: pdfText,
+    text: upload.text,
     targetPath,
   });
 
   return Response.json({
-    sourceFileName: uploadedFile.name,
+    sourceFileName: upload.fileName,
     ...combinedAnalysis,
     notes: [
       "This combined Degree Works PDF analysis is not an official degree audit.",
@@ -70,15 +51,4 @@ export async function POST(request: Request) {
       "Extracted PDF text can omit substitutions, exceptions, transfer equivalencies, catalog changes, and advisor-approved electives.",
     ],
   });
-}
-
-function isUploadedFile(value: FormDataEntryValue | null): value is File {
-  return value instanceof File;
-}
-
-function isPdfUpload(file: File) {
-  return (
-    file.type.toLowerCase() === "application/pdf" ||
-    file.name.toLowerCase().endsWith(".pdf")
-  );
 }
