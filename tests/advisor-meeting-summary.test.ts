@@ -278,6 +278,10 @@ test("builds advisor summary with next semester suggestions", () => {
   assert.match(summary, /Top suggested courses:/);
   assert.match(summary, /ENGL 1100/);
   assert.doesNotMatch(summary, /Not yet recommended:/);
+  assert.match(
+    summary,
+    /Which suggested courses are actually offered in the target term, and are any restricted by standing, approvals, or department scheduling\?/,
+  );
 });
 
 test("builds a concise advisor summary with draft semester plan details", () => {
@@ -297,6 +301,9 @@ test("builds a concise advisor summary with draft semester plan details", () => 
               creditHours: 3,
               reason: "Exact missing Computer Science requirement.",
               advisorVerificationRequired: true,
+              availabilityConfidence: "unknown_requires_advisor_review",
+              availabilityNotes: ["Verify the target-term offering."],
+              planningNotes: [],
             },
           ],
           estimatedCredits: 3,
@@ -310,6 +317,9 @@ test("builds a concise advisor summary with draft semester plan details", () => 
               creditHours: 3,
               reason: "Exact missing requirement.",
               advisorVerificationRequired: true,
+              availabilityConfidence: "unknown_requires_advisor_review",
+              availabilityNotes: ["Verify the target-term offering."],
+              planningNotes: [],
             },
           ],
           estimatedCredits: 3,
@@ -328,7 +338,7 @@ test("builds a concise advisor summary with draft semester plan details", () => 
   assert.match(summary, /First draft semester \(3 estimated credits\):\n- COMP 4200/);
   assert.doesNotMatch(summary, /Semester 2/);
   assert.doesNotMatch(summary, /Unplaced courses to review:/);
-  assert.match(summary, /course.*available/i);
+  assert.match(summary, /courses are actually offered/i);
   assert.match(summary, /semester load reasonable/i);
 });
 
@@ -362,4 +372,5 @@ test("caps the concise summary and omits detailed requirement dumps", () => {
   assert.doesNotMatch(summary, /Computer Science: F/);
   assert.doesNotMatch(summary, /Structured requirement blocks:/);
   assert.equal(questionSection.split("\n").filter((line) => line.startsWith("- ")).length, 8);
+  assert.match(questionSection, /Which suggested courses are actually offered/);
 });

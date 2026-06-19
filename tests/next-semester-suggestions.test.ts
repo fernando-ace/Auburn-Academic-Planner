@@ -26,6 +26,15 @@ test("suggests missing AI certificate courses when missing", () => {
       (course) => course.category === "certificate_requirement",
     ),
   );
+  assert.equal(suggestions.suggestedCourses[0].creditHours, 3);
+  assert.equal(
+    suggestions.suggestedCourses[0].availabilityConfidence,
+    "unknown_requires_advisor_review",
+  );
+  assert.match(
+    suggestions.suggestedCourses[0].availabilityNotes?.[0] ?? "",
+    /verify the target-term offering/,
+  );
 });
 
 test("suggests missing Software Engineering required courses when eligible", () => {

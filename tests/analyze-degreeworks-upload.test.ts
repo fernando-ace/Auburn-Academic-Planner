@@ -150,9 +150,16 @@ test("POST includes deterministic next semester suggestions", async () => {
   assert.ok(Array.isArray(result.nextSemesterSuggestions.suggestedCourses));
   assert.ok(
     result.nextSemesterSuggestions.suggestedCourses.every(
-      (course: { reason?: string; priority?: string }) =>
+      (course: {
+        reason?: string;
+        priority?: string;
+        creditHours?: number;
+        availabilityNotes?: string[];
+      }) =>
         typeof course.reason === "string" &&
-        /^(high|medium|low)$/.test(course.priority ?? ""),
+        /^(high|medium|low)$/.test(course.priority ?? "") &&
+        typeof course.creditHours === "number" &&
+        Array.isArray(course.availabilityNotes),
     ),
   );
   assert.ok(Array.isArray(result.nextSemesterSuggestions.advisorQuestions));
@@ -176,6 +183,14 @@ test("POST includes a deterministic draft semester plan", async () => {
     /^(software_engineering|computer_science|ai_certificate|mixed_or_unclear)$/,
   );
   assert.ok(Array.isArray(result.draftSemesterPlan.semesters));
+  assert.ok(
+    result.draftSemesterPlan.semesters
+      .flatMap((semester: { plannedCourses: unknown[] }) => semester.plannedCourses)
+      .every(
+        (course: { availabilityNotes?: string[] }) =>
+          Array.isArray(course.availabilityNotes),
+      ),
+  );
   assert.ok(
     result.gapReport.nextActions.includes(
       "Review the draft semester plan with an academic advisor.",

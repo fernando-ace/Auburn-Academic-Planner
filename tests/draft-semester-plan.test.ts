@@ -120,6 +120,33 @@ test("keeps semester credits at or below the configured cap", () => {
   assert.ok(plan.semesters.every((semester) => semester.estimatedCredits <= 6));
 });
 
+test("moves zero-credit program requirements to advisor milestones", () => {
+  const plan = buildPlan();
+
+  assert.ok(
+    !plan.semesters.some((semester) =>
+      semester.plannedCourses.some(
+        (course) => course.code === "COMP 4810" || course.code === "UNIV 4AA0",
+      ),
+    ),
+  );
+  assert.ok(!plan.unplacedCourses.some((course) => course.code === "COMP 4810"));
+  assert.ok(
+    plan.advisorReviewItems.some(
+      (item) => item.includes("COMP 4810") && item.includes("zero-credit"),
+    ),
+  );
+});
+
+test("planned courses carry availability metadata and notes", () => {
+  const plan = buildPlan();
+  const course = plan.semesters.flatMap((semester) => semester.plannedCourses)[0];
+
+  assert.ok(course);
+  assert.equal(course.availabilityConfidence, "unknown_requires_advisor_review");
+  assert.ok(course.availabilityNotes.some((note) => note.includes("verify")));
+});
+
 test("caps the draft and returns remaining courses as unplaced", () => {
   const plan = buildPlan({ maxCreditsPerSemester: 3, maxSemesters: 1 });
 
@@ -171,7 +198,7 @@ test("turns unresolved requirement blocks into advisor review items", () => {
 
   assert.ok(
     plan.advisorReviewItems.some((item) =>
-      item.includes("confirm the applicable core or elective choices"),
+      item.includes("target-term offering"),
     ),
   );
 });

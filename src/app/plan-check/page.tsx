@@ -145,6 +145,7 @@ type SoftwareEngineeringPrerequisiteCheck = {
 type NextSemesterSuggestedCourse = {
   code: string;
   title?: string;
+  creditHours?: number;
   reason: string;
   category:
     | "missing_required"
@@ -153,6 +154,11 @@ type NextSemesterSuggestedCourse = {
     | "advisor_review";
   priority: "high" | "medium" | "low";
   advisorVerificationRequired: boolean;
+  availabilityConfidence?:
+    | "known_local_rule"
+    | "unknown_requires_advisor_review";
+  availabilityNotes?: string[];
+  planningNotes?: string[];
 };
 
 type NextSemesterNotYetRecommendedCourse = {
@@ -1407,6 +1413,11 @@ function NextSemesterSuggestionsCard({
                           {course.title}
                         </p>
                       ) : null}
+                      {typeof course.creditHours === "number" ? (
+                        <p className="mt-1 text-[12px] font-semibold text-slate-500">
+                          {course.creditHours} credits
+                        </p>
+                      ) : null}
                     </div>
                     <span className="rounded-sm border border-[#dd550c]/25 bg-white px-2 py-1 text-[12px] font-semibold uppercase text-[#9b3900]">
                       {course.priority}
@@ -1421,6 +1432,11 @@ function NextSemesterSuggestionsCard({
                   {course.advisorVerificationRequired ? (
                     <p className="mt-2 text-[12px] font-medium text-[#9b3900]">
                       Advisor verification required
+                    </p>
+                  ) : null}
+                  {course.availabilityNotes?.[0] ? (
+                    <p className="mt-2 text-[12px] leading-5 text-amber-800">
+                      {course.availabilityNotes[0]}
                     </p>
                   ) : null}
                 </li>
@@ -1550,7 +1566,7 @@ function DraftSemesterPlanCard({
                             {course.code}
                             {course.title ? ` — ${course.title}` : ""}
                           </p>
-                          {course.creditHours ? (
+                          {typeof course.creditHours === "number" ? (
                             <span className="text-[12px] font-semibold text-slate-500">
                               {course.creditHours} credits
                             </span>
@@ -1562,6 +1578,11 @@ function DraftSemesterPlanCard({
                         {course.advisorVerificationRequired ? (
                           <p className="mt-2 text-[12px] font-medium text-[#9b3900]">
                             Advisor verification required
+                          </p>
+                        ) : null}
+                        {course.availabilityNotes[0] ? (
+                          <p className="mt-2 text-[12px] leading-5 text-amber-800">
+                            {course.availabilityNotes[0]}
                           </p>
                         ) : null}
                       </li>

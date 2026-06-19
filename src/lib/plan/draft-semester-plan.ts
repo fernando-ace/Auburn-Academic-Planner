@@ -8,10 +8,15 @@ import {
 import type { SoftwareEngineeringDegreeCheckResult } from "../rules/software-engineering-degree.ts";
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
 import type { DegreeWorksCourseStatusRecord } from "./degreeworks-course-status.ts";
+import {
+  getRequirementBlockPlanningNote,
+  type AvailabilityConfidence,
+} from "./course-planning-metadata.ts";
 import type {
   NextSemesterSuggestions,
   NextSemesterTargetPathInput,
 } from "./next-semester-suggestions.ts";
+import { attachCoursePlanningConstraints } from "./planning-constraints.ts";
 
 export type DraftSemesterPlanTargetPath =
   | "software_engineering"
@@ -33,6 +38,9 @@ export type DraftSemesterPlanCourse = {
   creditHours?: number;
   reason: string;
   advisorVerificationRequired: boolean;
+  availabilityConfidence: AvailabilityConfidence;
+  availabilityNotes: string[];
+  planningNotes: string[];
 };
 
 export type DraftSemesterPlanSemester = {
@@ -143,7 +151,14 @@ export function buildDraftSemesterPlan({
       continue;
     }
 
-    if (!Number.isFinite(candidate.creditHours) || candidate.creditHours <= 0) {
+    if (candidate.creditHours === 0) {
+      advisorReviewItems.push(
+        `${candidate.code}${candidate.title ? ` (${candidate.title})` : ""} is a zero-credit program milestone; verify its timing and completion requirements with an advisor.`,
+      );
+      continue;
+    }
+
+    if (!Number.isFinite(candidate.creditHours) || candidate.creditHours < 0) {
       unplacedCourses.push({
         code: candidate.code,
         reason: "No reliable positive credit-hour value was available, so the planner did not guess a semester load.",
@@ -166,6 +181,10 @@ export function buildDraftSemesterPlan({
 
   while (remaining.length > 0 && semesters.length < maxSemesters) {
     const semesterCourses: DraftSemesterPlanCourse[] = [];
+    const semesterLabel = getSemesterLabel(
+      semesters.length,
+      startingTermLabel,
+    );
     let estimatedCredits = 0;
 
     for (let index = 0; index < remaining.length; ) {
@@ -185,13 +204,28 @@ export function buildDraftSemesterPlan({
         continue;
       }
 
+      const constraints = attachCoursePlanningConstraints(
+        candidate.code,
+        semesterLabel,
+      );
+
+      if (!constraints.canPlace) {
+        index += 1;
+        continue;
+      }
+
       semesterCourses.push({
         code: candidate.code,
-        title: candidate.title,
-        creditHours: candidate.creditHours,
+        title: constraints.metadata?.title ?? candidate.title,
+        creditHours:
+          constraints.metadata?.creditHours ?? candidate.creditHours,
         reason: candidate.reason,
         advisorVerificationRequired: true,
+        availabilityConfidence: constraints.availabilityConfidence,
+        availabilityNotes: constraints.availabilityNotes,
+        planningNotes: constraints.metadata?.planningNotes ?? [],
       });
+      advisorReviewItems.push(...constraints.advisorReviewItems);
       estimatedCredits += candidate.creditHours;
       remaining.splice(index, 1);
     }
@@ -201,10 +235,7 @@ export function buildDraftSemesterPlan({
     }
 
     semesters.push({
-      label:
-        semesters.length === 0
-          ? startingTermLabel.trim() || defaultStartingTermLabel
-          : `Semester ${semesters.length + 1}`,
+      label: semesterLabel,
       plannedCourses: semesterCourses,
       estimatedCredits,
       notes: [
@@ -222,11 +253,17 @@ export function buildDraftSemesterPlan({
       candidate.code,
       Array.from(availableBeforeDraft),
     );
+    const termConstraint = attachCoursePlanningConstraints(
+      candidate.code,
+      getSemesterLabel(0, startingTermLabel),
+    );
     unplacedCourses.push({
       code: candidate.code,
       reason:
         missingPrerequisites.length > 0
           ? `Modeled prerequisite(s) ${missingPrerequisites.join(", ")} could not be safely placed before this course within the draft.`
+          : !termConstraint.canPlace
+            ? termConstraint.availabilityNotes[0]
           : `The course could not be placed within ${maxSemesters} semester(s) and the ${maxCreditsPerSemester}-credit limit.`,
     });
   }
@@ -360,8 +397,13 @@ function buildInitialAdvisorReviewItems({
         ]
       : []),
     ...unresolvedBlocks.map(
-      (block) =>
-        `${block.blockName} remains ${block.status.replace("_", " ")}; confirm the applicable core or elective choices with an advisor.`,
+      (block) => {
+        const planningNote = getRequirementBlockPlanningNote(block.blockName);
+        return `${block.blockName} remains ${block.status.replace("_", " ")}; ${
+          planningNote ??
+          "confirm the applicable core or elective choices with an advisor."
+        }`;
+      },
     ),
   ];
 }
@@ -403,6 +445,12 @@ function getDraftConfidence({
 
 function normalizeCourseCode(courseCode: string) {
   return courseCode.trim().toUpperCase().replace(/\s+/g, " ");
+}
+
+function getSemesterLabel(index: number, startingTermLabel: string) {
+  return index === 0
+    ? startingTermLabel.trim() || defaultStartingTermLabel
+    : `Semester ${index + 1}`;
 }
 
 function formatStatus(status: DegreeWorksCourseStatusRecord["status"]) {

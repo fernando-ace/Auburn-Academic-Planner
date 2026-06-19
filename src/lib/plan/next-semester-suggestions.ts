@@ -11,6 +11,8 @@ import type {
   DegreeWorksCourseStatusRecord,
 } from "./degreeworks-course-status.ts";
 import type { PlanningTargetPathInput } from "./target-path.ts";
+import type { AvailabilityConfidence } from "./course-planning-metadata.ts";
+import { attachCoursePlanningConstraints } from "./planning-constraints.ts";
 
 export type NextSemesterTargetPath =
   | "software_engineering"
@@ -31,10 +33,14 @@ export type NextSemesterSuggestionPriority = "high" | "medium" | "low";
 export type NextSemesterSuggestedCourse = {
   code: string;
   title?: string;
+  creditHours?: number;
   reason: string;
   category: NextSemesterSuggestionCategory;
   priority: NextSemesterSuggestionPriority;
   advisorVerificationRequired: boolean;
+  availabilityConfidence?: AvailabilityConfidence;
+  availabilityNotes?: string[];
+  planningNotes?: string[];
 };
 
 export type NextSemesterNotYetRecommendedCourse = {
@@ -93,10 +99,9 @@ export function buildNextSemesterSuggestions({
     targetPath: resolvedTargetPath,
     courseStatuses,
   });
-  const suggestedCourses = dedupeSuggestedCourses(collected.suggestedCourses).slice(
-    0,
-    maxSuggestedCourses,
-  );
+  const suggestedCourses = dedupeSuggestedCourses(collected.suggestedCourses)
+    .map(attachSuggestionMetadata)
+    .slice(0, maxSuggestedCourses);
   const notYetRecommended = dedupeNotYetRecommended(
     collected.notYetRecommended,
   );
@@ -129,7 +134,7 @@ export function buildNextSemesterSuggestions({
     suggestedCourses,
     notYetRecommended,
     advisorQuestions: [
-      "Which of these courses are actually available next semester?",
+      "Which suggested courses are actually offered in the target term, and are any restricted by standing, approvals, or department scheduling?",
       "Do my AP, transfer, substitution, or in-progress credits change these suggestions?",
       "Do these courses satisfy prerequisites and catalog rules for my official program?",
       "Would this set create a reasonable semester load with work, labs, and other commitments?",
@@ -144,6 +149,24 @@ export function buildNextSemesterSuggestions({
         : []),
     ],
     notes,
+  };
+}
+
+function attachSuggestionMetadata(
+  suggestion: NextSemesterSuggestedCourse,
+): NextSemesterSuggestedCourse {
+  const constraints = attachCoursePlanningConstraints(
+    suggestion.code,
+    "Next Semester",
+  );
+
+  return {
+    ...suggestion,
+    title: suggestion.title ?? constraints.metadata?.title,
+    creditHours: suggestion.creditHours ?? constraints.metadata?.creditHours,
+    availabilityConfidence: constraints.availabilityConfidence,
+    availabilityNotes: constraints.availabilityNotes,
+    planningNotes: constraints.metadata?.planningNotes ?? [],
   };
 }
 

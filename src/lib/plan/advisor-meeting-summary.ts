@@ -172,7 +172,6 @@ export function buildAdvisorMeetingSummary({
 
   addPlanningPreview(lines, draftSemesterPlan, nextSemesterSuggestions);
   lines.push("", "Questions to ask an advisor:", ...buildQuestions({
-    draftSemesterPlan,
     gapReport,
     nextSemesterSuggestions,
     prerequisiteCheck,
@@ -253,17 +252,16 @@ function addPlanningPreview(
 }
 
 function buildQuestions({
-  draftSemesterPlan,
   gapReport,
   nextSemesterSuggestions,
   prerequisiteCheck,
 }: {
-  draftSemesterPlan: AdvisorSummaryDraftSemesterPlan | null;
   gapReport: AdvisorSummaryGapReport | null;
   nextSemesterSuggestions: AdvisorSummaryNextSemesterSuggestions | null;
   prerequisiteCheck: AdvisorSummaryPrerequisiteCheck | null;
 }) {
   return dedupe([
+    "Which suggested courses are actually offered in the target term, and are any restricted by standing, approvals, or department scheduling?",
     ...(gapReport?.advisorQuestions ?? []),
     ...(nextSemesterSuggestions?.advisorQuestions ?? []),
     "Which missing or unmatched requirements still need official Degree Works review?",
@@ -271,9 +269,7 @@ function buildQuestions({
     prerequisiteCheck
       ? "Can you verify that my planned course order satisfies prerequisites?"
       : "Are prerequisites appropriate for the next registration plan?",
-    draftSemesterPlan
-      ? "Which planned courses are actually available in the suggested semester?"
-      : "Which courses should I prioritize next semester?",
+    "Which courses should I prioritize next semester?",
     "Is the proposed semester load reasonable for my circumstances?",
     "Which electives or advisor-approved alternatives best fit this target?",
   ]).slice(0, 8);

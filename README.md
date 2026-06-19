@@ -31,7 +31,7 @@ The MVP supports two complementary paths:
    - next actions and advisor questions
 7. Confirm the Next Semester Suggestions card appears after the Gap Report and shows:
    - target path and confidence
-   - suggested courses with reasons and priorities
+   - suggested courses with reasons, priorities, known credits, and compact availability notes
    - courses not yet recommended because modeled prerequisites need review
    - advisor questions and advisor-safe notes
 8. Confirm the shared parsed details show:
@@ -57,7 +57,7 @@ The MVP supports two complementary paths:
    - advisor verification required
 13. Confirm the Draft Semester Plan appears after Next Semester Suggestions and shows:
    - target path and confidence
-   - semester cards with exact modeled courses and estimated credits
+   - semester cards with exact modeled courses, estimated credits, and offering-verification notes
    - any unplaced courses and their reasons
    - unresolved core/elective blocks as advisor-review items
    - wording that it is a draft planning aid, not an official academic plan
@@ -85,7 +85,10 @@ The MVP supports two complementary paths:
 - The Gap Report and Next Actions card is a planning summary, not an official degree audit. It is intended to help students prepare for advisor meetings before reading the detailed check cards.
 - Next Semester Suggestions are deterministic planning suggestions to discuss with an academic advisor. They are not registration advice, an official schedule, or a full graduation plan.
 - Course availability, prerequisites, AP/transfer credit, substitutions, semester load, and advisor approval may change Next Semester Suggestions.
+- Course planning metadata reuses titles and credit hours from checked-in Auburn rules. Live offerings are not available locally, so unknown availability is labeled for advisor or department verification rather than presented as fact.
+- Fall/Spring placement in checked-in bulletin plan grids is treated only as a curriculum hint. It does not prove that a course will be offered in a future target term and does not block draft placement.
 - Draft Semester Plans are conservative, deterministic advising aids. They only place exact locally modeled requirements with known credit hours, never invent unresolved elective choices, and cap the draft at 15 credits per semester and six semesters by default.
+- Zero-credit program assessment and graduation requirements are advisor-review milestones and are not counted as ordinary semester courses or credit load.
 - Draft Semester Plans are not official academic plans. Course availability, prerequisites, substitutions, AP/transfer credit, catalog applicability, and semester load must be confirmed with an academic advisor.
 - The combined Degree Works PDF flow includes deterministic semester extraction when term labels are present and a conservative local Software Engineering prerequisite sequence check.
 - The prerequisite sequence model is preliminary and intentionally limited to a conservative subset of COMP prerequisite chains. It reports warnings and advisor-review items, not official registration decisions.
@@ -103,9 +106,9 @@ The MVP supports two complementary paths:
 - The combined Degree Works PDF upload is the main demo flow: it analyzes one uploaded PDF once, focuses planning reports on the selected target, shows shared parser and course-status details, and still runs all three detailed checkers without calling Gemini or permanently storing the PDF.
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, structured requirement blocks, parser diagnostics, and advisor verification status.
-- The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists.
+- The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists and optionally accepts `startingTermLabel` for term-aware review.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
-- Local validation currently passes `103/103` deterministic tests.
+- Local validation currently passes `109/109` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Run Locally
@@ -259,7 +262,7 @@ npm run build
 
 Current validation coverage:
 
-- 103 deterministic tests through `npm test`
+- 109 deterministic tests through `npm test`
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`

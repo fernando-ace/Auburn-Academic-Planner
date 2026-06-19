@@ -13,6 +13,7 @@ test("POST builds a normalized deterministic draft semester plan", async () => {
         targetPath: "software_engineering",
         maxCreditsPerSemester: 6,
         maxSemesters: 2,
+        startingTermLabel: "Fall 2027",
       }),
     }),
   );
@@ -24,6 +25,13 @@ test("POST builds a normalized deterministic draft semester plan", async () => {
   assert.ok(
     result.semesters.every(
       (semester: { estimatedCredits: number }) => semester.estimatedCredits <= 6,
+    ),
+  );
+  assert.equal(result.semesters[0]?.label, "Fall 2027");
+  assert.ok(
+    result.semesters[0]?.plannedCourses.every(
+      (course: { availabilityNotes: string[] }) =>
+        Array.isArray(course.availabilityNotes),
     ),
   );
 });

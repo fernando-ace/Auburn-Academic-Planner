@@ -61,6 +61,9 @@ export async function POST(request: Request) {
       ...(input.maxSemesters === undefined
         ? {}
         : { maxSemesters: input.maxSemesters }),
+      ...(input.startingTermLabel === undefined
+        ? {}
+        : { startingTermLabel: input.startingTermLabel }),
     }),
   );
 }
@@ -114,6 +117,13 @@ function parseRequest(body: unknown) {
     };
   }
 
+  if (!isOptionalNonEmptyString(body.startingTermLabel)) {
+    return {
+      ok: false as const,
+      error: "startingTermLabel must be a non-empty string when provided.",
+    };
+  }
+
   return {
     ok: true as const,
     input: {
@@ -129,6 +139,10 @@ function parseRequest(body: unknown) {
           : undefined,
       maxSemesters:
         typeof body.maxSemesters === "number" ? body.maxSemesters : undefined,
+      startingTermLabel:
+        typeof body.startingTermLabel === "string"
+          ? body.startingTermLabel.trim()
+          : undefined,
     },
   };
 }
@@ -161,6 +175,10 @@ function isOptionalPositiveInteger(value: unknown) {
     value === undefined ||
     (typeof value === "number" && Number.isInteger(value) && value > 0)
   );
+}
+
+function isOptionalNonEmptyString(value: unknown) {
+  return value === undefined || isNonEmptyString(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
