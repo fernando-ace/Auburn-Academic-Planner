@@ -1,0 +1,17 @@
+DEGREE WORKS ACADEMIC AUDIT - SYNTHETIC TEST DATA
+Total Credits Planned = 122
+Fall 2026 Credits: 14
+COMP 3270 Introduction to Algorithms | In Progress | Credits: 3.0
+COMP 3700 Software Modeling and Design | Currently Enrolled | Credits: 3.0
+ELEC 2200 Digital Logic Circuits | Registered | Credits: 3.0
+STAT 3600 Probability and Statistics I | In-progress | Credits: 3.0
+Spring 2027 Credits: 15
+COMP 4300 Computer Architecture | Planned | Credits: 3.0
+COMP 4730 Computer Ethics | Planned | Credits: 2.0
+COMP 5600 Artificial Intelligence | Planned | Credits: 3.0
+COMP 5630 Machine Learning | Planned | Credits: 3.0
+COMP 5130 Data Mining | Planned | Credits: 3.0
+ENGL 1120 English Composition II | Planned | Credits: 3.0
+MATH 2660 Topics in Linear Algebra | Planned | Credits: 3.0
+COMM 1000 Public Speaking | Completed | Grade: A | Credits: 3.0
+The in-progress labels in this synthetic fixture represent enrollment indicators only. Registration, completion, prerequisites, and applicability still require advisor verification.

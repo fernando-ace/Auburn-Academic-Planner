@@ -1,0 +1,21 @@
+DEGREE WORKS STUDENT PLAN - SYNTHETIC TEST DATA
+Catalog Year 2025-2026
+Total Planned Credits: 122.0
+Fall 2026 Credits: 15
+COMP 1210 Fundamentals of Computing I | Planned | Credits: 4.0
+MATH 1610 Calculus I | Planned | Credits: 4.0
+ENGL 1100 English Composition I | Planned | Credits: 3.0
+ENGR 1100 Engineering Orientation | Planned | Credits: 0.0
+CHEM 1030 Fundamentals of Chemistry I | Planned | Credits: 3.0
+Spring 2027 Credits: 15
+COMP 2210 Fundamentals of Computing II | Planned | Credits: 4.0
+COMP 2710 Software Construction | Planned | Credits: 3.0
+MATH 1620 Calculus II | Planned | Credits: 4.0
+ENGL 1120 English Composition II | Planned | Credits: 3.0
+COMM 1000 Public Speaking | Planned | Credits: 3.0
+Fall 2027 Credits: 12
+COMP 3270 Introduction to Algorithms | Planned | Credits: 3.0
+COMP 3500 Introduction to Operating Systems | Planned | Credits: 3.0
+COMP 5600 Artificial Intelligence | Planned | Credits: 3.0
+COMP 5630 Machine Learning | Planned | Credits: 3.0
+Planning worksheet text is intentionally synthetic. Courses and terms are provided only to exercise deterministic parsing, status interpretation, requirement checks, and planning reports.

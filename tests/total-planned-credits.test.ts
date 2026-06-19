@@ -26,3 +26,8 @@ test("returns null when no confident total credit label is present", () => {
   );
   assert.equal(extractTotalPlannedCredits("Required course credits vary."), null);
 });
+
+test("extracts planned-hour labels and equals separators", () => {
+  assert.equal(extractTotalPlannedCredits("Total Planned Hours: 122"), 122);
+  assert.equal(extractTotalPlannedCredits("Total Credits Planned = 120.5"), 120.5);
+});

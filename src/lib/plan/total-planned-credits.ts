@@ -1,9 +1,9 @@
 const totalCreditPatterns = [
-  /\btotal\s+planned\s+credits?\s*:?\s*([0-9]+(?:\.[0-9]+)?)/i,
-  /\btotal\s+plan\s+credits?\s*:?\s*([0-9]+(?:\.[0-9]+)?)/i,
-  /\btotal\s+credits?\s+planned\s*:?\s*([0-9]+(?:\.[0-9]+)?)/i,
-  /\btotal\s+hours?\s*:?\s*([0-9]+(?:\.[0-9]+)?)/i,
-  /\btotal\s+credits?\s*:?\s*([0-9]+(?:\.[0-9]+)?)/i,
+  /\btotal\s+planned\s+(?:credits?|hours?)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i,
+  /\btotal\s+plan\s+(?:credits?|hours?)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i,
+  /\btotal\s+(?:credits?|hours?)\s+planned\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i,
+  /\btotal\s+hours?\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i,
+  /\btotal\s+credits?\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i,
 ];
 
 export function extractTotalPlannedCredits(text: string) {

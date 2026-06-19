@@ -1,0 +1,17 @@
+DEGREE WORKS WAIVER DETAIL - SYNTHETIC TEST DATA
+Total Planned Credits: 120
+Requirement Exception: Engineering orientation requirement waived by advisor review.
+ENGR 1100 Engineering Orientation | Waived Requirement | Credits: 0.0
+COMP 1210 Fundamentals of Computing I | Completed | Grade: A | Credits: 4.0
+COMP 2210 Fundamentals of Computing II | Completed | Grade: B | Credits: 4.0
+COMP 2710 Software Construction | Completed | Grade: A | Credits: 3.0
+COMP 3270 Introduction to Algorithms | Completed | Grade: B | Credits: 3.0
+COMP 3500 Introduction to Operating Systems | Completed | Grade: B | Credits: 3.0
+COMP 4300 Computer Architecture | Completed | Grade: C | Credits: 3.0
+MATH 1610 Calculus I | Completed | Grade: A | Credits: 4.0
+MATH 1620 Calculus II | Completed | Grade: B | Credits: 4.0
+ENGL 1100 English Composition I | Completed | Grade: A | Credits: 3.0
+ENGL 1120 English Composition II | Completed | Grade: B | Credits: 3.0
+COMM 1000 Public Speaking | Completed | Grade: A | Credits: 3.0
+Free Elective | Technical Elective
+A waiver is not proof of degree completion. This synthetic audit language must remain an advisor-review signal in every planning report.

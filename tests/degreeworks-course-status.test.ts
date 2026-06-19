@@ -91,3 +91,17 @@ test("counts all status categories", () => {
   assert.equal(counts.missing, 1);
   assert.equal(counts.unknown, 1);
 });
+
+test("does not bleed a status from an adjacent course line", () => {
+  const records = extractDegreeWorksCourseStatuses(
+    [
+      "COMP 1210 Fundamentals of Computing I",
+      "COMP 2210 In Progress Credits: 4.0",
+    ].join("\n"),
+  );
+
+  assert.equal(records[0].status, "unknown");
+  assert.equal(records[0].credits, null);
+  assert.equal(records[1].status, "in_progress");
+  assert.equal(records[1].credits, 4);
+});

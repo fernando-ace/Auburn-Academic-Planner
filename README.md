@@ -114,8 +114,24 @@ The MVP supports two complementary paths:
 - The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists and optionally accepts `startingTermLabel` for term-aware review.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
-- Local validation currently passes `115/115` deterministic tests.
+- Local validation currently passes `133/133` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
+
+## Degree Works compatibility fixtures
+
+The deterministic regression suite includes seven synthetic extracted-text fixtures under `tests/fixtures/degreeworks/`. They contain no real student data and cover:
+
+- clean planned-course text and term labels;
+- transfer, AP, IB, and AICE credit indicators;
+- in-progress and registered coursework;
+- substitutions, exceptions, petitions, and waived requirements;
+- low-quality or incomplete extracted text;
+- mixed Computer Science, Software Engineering, and AI certificate plans;
+- course-code, planned-credit, status, parser-confidence, requirement-block, gap-report, next-semester-suggestion, and draft-plan behavior.
+
+Fixture tests call the same pure combined-analysis pipeline used after PDF text extraction by the upload route. This keeps multipart/PDF handling separate while regression-testing the complete deterministic planning result without storing or uploading PDFs.
+
+The fixtures improve compatibility coverage but cannot model every Degree Works catalog, layout, OCR result, equivalency, hidden block, or institution-specific exception. Ambiguous statuses remain `unknown`, weak total-credit evidence remains `null`, and substitutions, waivers, transfer/AP credit, requirement applicability, and completion decisions require academic-advisor verification. The planner does not replace Degree Works or an academic advisor.
 
 ## Run Locally
 
@@ -268,7 +284,7 @@ npm run build
 
 Current validation coverage:
 
-- 115 deterministic tests through `npm test`
+- 133 deterministic tests through `npm test`, including the seven synthetic Degree Works compatibility fixtures
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`

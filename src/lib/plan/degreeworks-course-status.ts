@@ -59,7 +59,7 @@ export function extractDegreeWorksCourseStatuses(
     const rawEvidence = getEvidenceWindow(text, startIndex, code.length);
     const termLabel = findNearestTermLabel(text, startIndex);
     const credits = extractCredits(
-      text.slice(startIndex, Math.min(text.length, startIndex + evidenceRadius)),
+      getEvidenceAfterCourse(text, startIndex, code.length),
     );
     const status = detectStatus(rawEvidence, termLabel);
 
@@ -195,6 +195,20 @@ function getEvidenceWindow(text: string, courseIndex: number, codeLength: number
       Math.min(text.length, courseIndex + codeLength + evidenceRadius),
     ),
   );
+}
+
+function getEvidenceAfterCourse(
+  text: string,
+  courseIndex: number,
+  codeLength: number,
+) {
+  const lineEnd = text.indexOf("\n", courseIndex);
+  const boundedEnd = Math.min(
+    lineEnd === -1 ? text.length : lineEnd,
+    courseIndex + codeLength + evidenceRadius,
+  );
+
+  return text.slice(courseIndex, boundedEnd);
 }
 
 function normalizeEvidence(evidence: string) {

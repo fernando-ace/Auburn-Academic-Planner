@@ -1,17 +1,9 @@
 import { extractPdfText, hasPdfHeader } from "../../../../../lib/pdf/pdf-text.ts";
-import { analyzeDegreeWorksText } from "../../../../../lib/plan/degreeworks-analysis.ts";
-import { buildDraftSemesterPlan } from "../../../../../lib/plan/draft-semester-plan.ts";
-import { extractDegreeWorksSemesters } from "../../../../../lib/plan/degreeworks-semesters.ts";
-import { buildGapReport } from "../../../../../lib/plan/gap-report.ts";
-import { buildNextSemesterSuggestions } from "../../../../../lib/plan/next-semester-suggestions.ts";
+import { analyzeCombinedDegreeWorksText } from "../../../../../lib/plan/combined-degreeworks-analysis.ts";
 import {
   isPlanningTargetPathInput,
   type PlanningTargetPathInput,
 } from "../../../../../lib/plan/target-path.ts";
-import { checkAiEngineeringCertificate } from "../../../../../lib/rules/ai-certificate.ts";
-import { checkComputerScienceDegree } from "../../../../../lib/rules/computer-science-degree.ts";
-import { checkSoftwareEngineeringDegree } from "../../../../../lib/rules/software-engineering-degree.ts";
-import { checkSoftwareEngineeringPrerequisites } from "../../../../../lib/rules/software-engineering-prerequisites.ts";
 
 export const runtime = "nodejs";
 
@@ -64,81 +56,14 @@ export async function POST(request: Request) {
   }
 
   const pdfText = await extractPdfText(pdfData);
-  const degreeWorksAnalysis = analyzeDegreeWorksText(pdfText);
-  const semesterPlanAnalysis = extractDegreeWorksSemesters(pdfText);
-  const aiCertificateCheck =
-    checkAiEngineeringCertificate(degreeWorksAnalysis.parsedCourseCodes);
-  const softwareEngineeringCheck = checkSoftwareEngineeringDegree({
-    courseCodes: degreeWorksAnalysis.parsedCourseCodes,
-    totalPlannedCredits: degreeWorksAnalysis.totalPlannedCredits,
-  });
-  const computerScienceCheck = checkComputerScienceDegree({
-    courseCodes: degreeWorksAnalysis.parsedCourseCodes,
-    totalPlannedCredits: degreeWorksAnalysis.totalPlannedCredits,
-  });
-  const prerequisiteCheck = checkSoftwareEngineeringPrerequisites({
-    semesterPlanAnalysis,
-    courseCodes: degreeWorksAnalysis.parsedCourseCodes,
-  });
-  const nextSemesterSuggestions = buildNextSemesterSuggestions({
-    parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
-    aiCertificateCheck,
-    softwareEngineeringCheck,
-    computerScienceCheck,
-    prerequisiteCheck,
-    parserConfidence: degreeWorksAnalysis.confidence,
-    parserWarnings: degreeWorksAnalysis.parserWarnings,
-    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
-    targetPath,
-  });
-  const draftSemesterPlan = buildDraftSemesterPlan({
-    parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
-    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
-    softwareEngineeringCheck,
-    computerScienceCheck,
-    aiCertificateCheck,
-    prerequisiteCheck,
-    requirementBlockResults: {
-      softwareEngineering: softwareEngineeringCheck.requirementBlocks,
-      computerScience: computerScienceCheck.requirementBlocks,
-    },
-    nextSemesterSuggestions,
-    targetPath,
-  });
-  const gapReport = buildGapReport({
-    aiCertificateCheck,
-    softwareEngineeringCheck,
-    computerScienceCheck,
-    detectedSignals: degreeWorksAnalysis.detectedSignals,
-    parserWarnings: degreeWorksAnalysis.parserWarnings,
-    parserConfidence: degreeWorksAnalysis.confidence,
-    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
-    prerequisiteCheck,
-    draftSemesterPlanGenerated: true,
+  const combinedAnalysis = analyzeCombinedDegreeWorksText({
+    text: pdfText,
     targetPath,
   });
 
   return Response.json({
-    selectedTargetPath: targetPath,
     sourceFileName: uploadedFile.name,
-    parsedCourseCount: degreeWorksAnalysis.parsedCourseCount,
-    parsedCourseCodes: degreeWorksAnalysis.parsedCourseCodes,
-    totalPlannedCredits: degreeWorksAnalysis.totalPlannedCredits,
-    detectedSignals: degreeWorksAnalysis.detectedSignals,
-    detectedRequirementBlockLabels:
-      degreeWorksAnalysis.detectedRequirementBlockLabels,
-    courseStatusRecords: degreeWorksAnalysis.courseStatusRecords,
-    courseStatusCounts: degreeWorksAnalysis.courseStatusCounts,
-    parserWarnings: degreeWorksAnalysis.parserWarnings,
-    parserConfidence: degreeWorksAnalysis.confidence,
-    semesterPlanAnalysis,
-    prerequisiteCheck,
-    gapReport,
-    nextSemesterSuggestions,
-    draftSemesterPlan,
-    aiCertificateCheck,
-    softwareEngineeringCheck,
-    computerScienceCheck,
+    ...combinedAnalysis,
     notes: [
       "This combined Degree Works PDF analysis is not an official degree audit.",
       "Advisor verification is required before making registration, graduation, certificate, or degree-completion decisions.",

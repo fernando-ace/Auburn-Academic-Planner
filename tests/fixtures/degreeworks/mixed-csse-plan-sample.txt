@@ -1,0 +1,42 @@
+DEGREE WORKS MIXED CSSE PLAN - SYNTHETIC TEST DATA
+Catalog Year 2025-2026 | Total Planned Credits: 122
+Fall 2025 Credits: 15
+COMP 1210 Fundamentals of Computing I | Planned | Credits: 4.0
+MATH 1610 Calculus I | Planned | Credits: 4.0
+ENGL 1100 English Composition I | Planned | Credits: 3.0
+CHEM 1030 Fundamentals of Chemistry I | Planned | Credits: 3.0
+Spring 2026 Credits: 15
+COMP 2210 Fundamentals of Computing II | Planned | Credits: 4.0
+COMP 2710 Software Construction | Planned | Credits: 3.0
+MATH 1620 Calculus II | Planned | Credits: 4.0
+ENGL 1120 English Composition II | Planned | Credits: 3.0
+Fall 2026 Credits: 15
+COMP 3270 Introduction to Algorithms | Planned | Credits: 3.0
+COMP 3500 Introduction to Operating Systems | Planned | Credits: 3.0
+COMP 3700 Software Modeling and Design | Planned | Credits: 3.0
+COMP 4300 Computer Architecture | Planned | Credits: 3.0
+Spring 2027 Credits: 15
+COMP 5600 Artificial Intelligence | Planned | Credits: 3.0
+COMP 5630 Machine Learning | Planned | Credits: 3.0
+COMP 5130 Data Mining | Planned | Credits: 3.0
+COMP 5610 Evolutionary Computing | Planned | Credits: 3.0
+COMM 1000 Public Speaking | Planned | Credits: 3.0
+ENGR 1100 Engineering Orientation | Planned | Credits: 0.0
+ENGR 1110 Introduction to Engineering | Planned | Credits: 2.0
+MATH 2660 Topics in Linear Algebra | Planned | Credits: 3.0
+STAT 3010 Statistics for Engineers | Planned | Credits: 3.0
+ELEC 2200 Digital Logic Circuits | Planned | Credits: 3.0
+COMP 2240 Discrete Structures | Planned | Credits: 3.0
+COMP 2800 Professional Development I | Planned | Credits: 1.0
+COMP 3220 Principles of Programming Languages | Planned | Credits: 3.0
+COMP 3350 Computer Organization | Planned | Credits: 3.0
+COMP 4320 Introduction to Computer Networks | Planned | Credits: 3.0
+COMP 5120 Database Systems I | Planned | Credits: 3.0
+COMP 4800 Professional Development II | Planned | Credits: 1.0
+COMP 4710 Senior Design Project | Planned | Credits: 3.0
+COMP 4730 Computer Ethics | Planned | Credits: 2.0
+COMP 4810 Program Assessment | Planned | Credits: 0.0
+UNIV 4AA0 Graduation Requirement | Planned | Credits: 0.0
+PHIL 1020 Introduction to Ethics | Planned | Credits: 3.0
+Core Science | Technical Elective | Math Elective | Humanities
+This synthetic plan intentionally overlaps Computer Science, Software Engineering, and AI certificate coursework so explicit target-path filtering can be regression tested.

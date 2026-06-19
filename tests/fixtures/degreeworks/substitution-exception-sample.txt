@@ -1,0 +1,17 @@
+DEGREE WORKS EXCEPTIONS - SYNTHETIC TEST DATA
+Catalog Year 2025-2026 | Total Planned Hours: 122
+Exceptions Applied to Audit
+COMP 4730 Computer Ethics | Substitution Approved | Petition on File | Credits: 2.0
+PHIL 1020 Introduction to Ethics | Exception Entered | Credits: 3.0
+COMP 1210 Fundamentals of Computing I | Completed | Grade: A | Credits: 4.0
+COMP 2210 Fundamentals of Computing II | Completed | Grade: B | Credits: 4.0
+COMP 2710 Software Construction | Completed | Grade: A | Credits: 3.0
+COMP 3270 Introduction to Algorithms | Completed | Grade: B | Credits: 3.0
+COMP 3500 Introduction to Operating Systems | Completed | Grade: B | Credits: 3.0
+MATH 1610 Calculus I | Completed | Grade: A | Credits: 4.0
+MATH 1620 Calculus II | Completed | Grade: B | Credits: 4.0
+ENGL 1100 English Composition I | Completed | Grade: A | Credits: 3.0
+ENGL 1120 English Composition II | Completed | Grade: B | Credits: 3.0
+COMM 1000 Public Speaking | Completed | Grade: A | Credits: 3.0
+Core Science | Technical Elective | Humanities
+Substitutions, petitions, and exceptions shown in this synthetic fixture must be confirmed in official Degree Works records by an academic advisor.

@@ -1,0 +1,16 @@
+DEGREE WORKS TRANSFER CREDIT DETAIL - SYNTHETIC TEST DATA
+Catalog Year 2025-2026 | Total Hours: 122
+Transfer Institution Credit Accepted
+MATH 1610 Calculus I | Transfer Credit | Grade: TR | Credits: 4.0
+MATH 1620 Calculus II | Advanced Placement AP Credit | Credits: 4.0
+CHEM 1030 Fundamentals of Chemistry I | Transfer Equivalency | Credits: 3.0
+CHEM 1031 Chemistry Laboratory I | Transfer Credit | Credits: 1.0
+ENGL 1100 English Composition I | IB Credit Applied | Credits: 3.0
+ENGL 1120 English Composition II | AICE Credit Applied | Credits: 3.0
+COMP 1210 Fundamentals of Computing I | Completed | Grade: A | Credits: 4.0
+COMP 2210 Fundamentals of Computing II | Completed | Grade: B | Credits: 4.0
+COMP 2710 Software Construction | Completed | Grade: A | Credits: 3.0
+COMM 1000 Public Speaking | Completed | Grade: B | Credits: 3.0
+PHIL 1020 Introduction to Ethics | Completed | Grade: A | Credits: 3.0
+STAT 3600 Probability and Statistics I | Completed | Grade: B | Credits: 3.0
+Transfer and exam credit equivalencies in this synthetic audit require advisor verification and are not proof that an official requirement is complete.
