@@ -137,6 +137,9 @@ export function DegreeWorksWorkflowUploadSection({
               <p className="mt-2 text-[12px] leading-5 text-slate-600">
                 The PDF is processed server-side for this check and is not permanently stored.
               </p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-600">
+                This is not an official degree audit or a replacement for academic advisors; verify decisions in Degree Works and with your advisor.
+              </p>
             </details>
           </div>
           <div className="w-full rounded-lg border border-slate-200 bg-slate-50/80 p-4">
@@ -198,7 +201,7 @@ export function AiCertificateCheckSection({
 }) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="text-[22px] font-semibold leading-8 text-slate-950">AI Certificate Plan Check</h2>
+      <h2 className="text-[22px] font-semibold leading-8 text-slate-950">AI Certificate Manual Check</h2>
       <p className="mt-2 text-[14px] leading-6 text-slate-600">Checks entered courses against Auburn&apos;s AI Engineering certificate requirements using the local deterministic requirement rules.</p>
       <div className="mt-5">
         <label className="text-[13px] font-semibold leading-5 text-slate-700" htmlFor="planned-courses">Paste planned courses</label>

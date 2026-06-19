@@ -284,10 +284,10 @@ function PlanCheckCard() {
         </div>
         <div className="min-w-0">
           <h2 className="text-[13px] font-semibold leading-5 text-slate-950">
-            Plan Check
+            Planning Hub
           </h2>
           <p className="mt-0.5 text-[12px] leading-5 text-slate-500">
-            Deterministic sample plan review
+            Current audits and future plans
           </p>
         </div>
       </div>
@@ -314,7 +314,7 @@ function PlanCheckCard() {
           className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#dd550c] px-3 py-2 text-center text-[13px] font-semibold leading-5 text-white shadow-sm transition hover:bg-[#b84300]"
           href="/plan-check"
         >
-          Open full plan checker
+          Open Planning Hub
         </Link>
         <button
           className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-center text-[13px] font-semibold leading-5 text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
@@ -882,7 +882,7 @@ export function ChatWorkspace() {
             className="inline-flex h-9 items-center rounded-lg bg-[#dd550c] px-3 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#b84300]"
             href="/plan-check"
           >
-            Plan Check
+            Planning Hub
           </Link>
           <div className="hidden items-center gap-2 text-[13px] font-medium text-white/90 xl:flex">
             <MessageSquareText aria-hidden="true" size={18} />
@@ -942,9 +942,9 @@ export function ChatWorkspace() {
                     <p>
                       Chat provides source-grounded explanations. Use{" "}
                       <Link className="font-semibold text-[#b84300] underline underline-offset-2" href="/plan-check">
-                        Plan Check
+                        Planning Hub
                       </Link>{" "}
-                      for deterministic requirement logic and planning reports.
+                      for Current Progress audits, Planned Path validation, and deterministic requirement reports.
                     </p>
                   </div>
                 </section>

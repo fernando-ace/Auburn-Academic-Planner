@@ -1153,11 +1153,11 @@ export default function PlanCheckPage() {
                 Auburn Academic Planner
               </h1>
               <p className="hidden text-[13px] text-white/75 sm:block">
-                Plan Check · deterministic Auburn requirement review
+                Planning Hub: Current Progress and Planned Path
               </p>
             </div>
           </div>
-          <nav className="flex shrink-0 items-center gap-2" aria-label="Plan Check navigation">
+          <nav className="flex shrink-0 items-center gap-2" aria-label="Planning Hub navigation">
             <Link
               className="hidden h-10 items-center gap-2 rounded-lg border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10 sm:inline-flex"
               href="/rule-audit"

@@ -86,7 +86,7 @@ export default async function RuleAuditPage() {
               className="inline-flex h-10 items-center gap-2 rounded-md border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10"
               href="/plan-check"
             >
-              Plan Check
+              Planning Hub
               <ArrowRight aria-hidden="true" size={16} />
             </Link>
           </nav>
