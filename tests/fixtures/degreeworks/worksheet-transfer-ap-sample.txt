@@ -1,8 +1,8 @@
 Auburn University Degree Works Worksheet
-Student name Transfer Example
-Student ID ****2222
+Student name Synthetic Transfer Example
+Student ID REDACTED
 Degree Bachelor of Software Engr
-Audit date 03/10/2026 2:15 PM
+Audit date REDACTED
 Program BSWE Software Engineering
 Major Software Engineering - SENG
 Catalog year 2025-2026
@@ -12,8 +12,19 @@ Unmet conditions for this set of requirements: 48 Credits needed
 Bachelor of Software Engineering INCOMPLETE
 
 Complete See Core Mathematics Requirements Below
-Satisfied by: AP MATH 1610 Calculus I Grade AP Credits 4 Term Fall 2024
-Satisfied by: Transfer PHYS 1600 Engineering Physics I Grade TR Credits 4 Term Fall 2024
+STAT 2510 Statistics for Biological and Health Sciences Grade AP Credits 3 Term Fall 2024
+Satisfied by: AP9002 - Statistics - Advanced Placement Credit
+MATH 1610 Calculus I Grade AP Credits 4 Term Fall 2024
+Satisfied by: AP6802 - Math: Calculus BC - Advanced Placement Credit
+ENGL 1100 English Composition I Grade TR Credits 3 Term Fall 2024
+Satisfied by: ENG101 - Written Composition I - Jefferson State CC
+ENGL 1120 English Composition II Grade TR Credits 3 Term Spring 2025
+Satisfied by: ENG102 - Written Composition II - Jefferson State CC
+HIST 2010 United States History I Grade TR Credits 3 Term Fall 2024
+Satisfied by: HIS201 - United States History I - Jefferson State CC
+HIST 2020 United States History II Grade TR Credits 3 Term Spring 2025
+Satisfied by: HIS202 - United States History II - Jefferson State CC
+Satisfied by: AP3201 - Computer Science Principles - Advanced Placement Credit
 
 Incomplete See Major Requirements Below
 Still needed: 3 Credits in COMP 3220

@@ -80,9 +80,15 @@ export function buildCurrentStateGapReport({
     ...audit.inProgressCourseCodes.map(
       (code) => `${code} appears in progress; verify final completion before using it as completed coursework.`,
     ),
-    ...audit.transferOrApCourseCodes.map(
-      (code) => `${code} appears satisfied by AP or transfer evidence; confirm applicability with an advisor.`,
-    ),
+    ...(audit.externalCreditRecords.length > 0
+      ? audit.externalCreditRecords.map((record) =>
+          record.satisfiesCourseCode
+            ? `${record.displayName} appears to satisfy ${record.satisfiesCourseCode}; confirm applicability with an advisor.`
+            : `${record.displayName} appears in AP or transfer evidence; confirm applicability with an advisor.`,
+        )
+      : audit.transferOrApCourseCodes.map(
+          (code) => `${code} appears satisfied by AP or transfer evidence; confirm applicability with an advisor.`,
+        )),
     ...audit.nonDegreeApplicableCourseCodes.map(
       (code) => `${code} appears in Fall Through or non-degree-applicable evidence; ask whether it can apply to a requirement.`,
     ),
@@ -265,6 +271,24 @@ export function buildCurrentProgressAdvisorSummary({
     `Degree status: ${audit.degreeStatus ?? "unknown"}`,
     formatCreditSummary(audit),
   ];
+
+  if (audit.externalCreditRecords.length > 0) {
+    lines.push(
+      "AP/transfer credits were detected and should be verified in Degree Works with an advisor.",
+    );
+
+    if (audit.externalCreditRecords.length <= 3) {
+      lines.push(
+        "",
+        "AP/transfer credits to verify:",
+        ...audit.externalCreditRecords.map((record) =>
+          record.satisfiesCourseCode
+            ? `- ${record.displayName}: verify ${record.satisfiesCourseCode}`
+            : `- ${record.displayName}: verify applicability`,
+        ),
+      );
+    }
+  }
 
   if (audit.stillNeededCourseCodes.length > 0) {
     lines.push(

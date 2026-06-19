@@ -69,6 +69,45 @@ test("current-progress upload route warns when a planned-path PDF is uploaded", 
   assert.equal(result.currentStateGapReport.overallStatus, "insufficient_data");
 });
 
+test("current-progress upload route includes external AP and transfer records", async () => {
+  const worksheetText = await readFile(
+    path.join(fixtureDirectory, "worksheet-transfer-ap-sample.txt"),
+    "utf8",
+  );
+  const response = await currentPost(
+    formDataRequest(
+      "http://localhost/api/plan/analyze-degreeworks-current/upload",
+      await pdfFileFromText(worksheetText, "worksheet-external-credit.pdf"),
+    ),
+  );
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(result.currentProgressAnalysis.externalCreditCounts.advanced_placement, 3);
+  assert.equal(result.currentProgressAnalysis.externalCreditCounts.transfer, 4);
+  assert.ok(
+    result.currentProgressAnalysis.externalCreditRecords.some(
+      (record: { displayName: string; satisfiesCourseCode?: string }) =>
+        record.displayName === "AP Statistics" &&
+        record.satisfiesCourseCode === "STAT 2510",
+    ),
+  );
+  assert.ok(
+    result.currentProgressAnalysis.externalCreditRecords.some(
+      (record: { displayName: string; institution?: string }) =>
+        record.displayName === "ENG102 Written Composition II" &&
+        record.institution === "Jefferson State CC",
+    ),
+  );
+  assert.ok(
+    !result.currentProgressAnalysis.transferOrApCourseCodes.includes("AP 9002"),
+  );
+  assert.match(
+    result.advisorMeetingSummary,
+    /AP\/transfer credits were detected and should be verified in Degree Works with an advisor\./,
+  );
+});
+
 test("existing planned-path upload route still returns combined planned result", async () => {
   const response = await plannedPost(
     formDataRequest(

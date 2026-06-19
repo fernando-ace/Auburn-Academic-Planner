@@ -5,6 +5,7 @@ import type {
   CurrentDegreeAuditCourseStatus,
   CurrentDegreeAuditCourseStatusRecord,
 } from "@/lib/plan/current-degree-audit-analysis";
+import type { ExternalCreditRecord } from "@/lib/plan/degreeworks-external-credit";
 import type { CurrentDegreeWorksUploadResult } from "../types";
 import { ResultSection } from "./result-cards";
 
@@ -61,7 +62,7 @@ export function CurrentProgressResultDetails({
               <CourseCodeBucket title="Completed" codes={analysis.completedCourseCodes} />
               <CourseCodeBucket title="Preregistered" codes={analysis.preregisteredCourseCodes} />
               <CourseCodeBucket title="In progress" codes={analysis.inProgressCourseCodes} />
-              <CourseCodeBucket title="AP/transfer satisfied" codes={analysis.transferOrApCourseCodes} />
+              <ExternalCreditBucket records={analysis.externalCreditRecords} />
               <CourseCodeBucket title="Fall Through/non-degree" codes={analysis.nonDegreeApplicableCourseCodes} />
               <CourseCodeBucket title="Still needed" codes={analysis.stillNeededCourseCodes} />
             </div>
@@ -167,6 +168,10 @@ export function CurrentProgressResultDetails({
               <ParsedCurrentCourseStatuses records={analysis.courseStatusRecords} />
             </ResultSection>
 
+            <ResultSection title="External credit evidence">
+              <ExternalCreditEvidence records={analysis.externalCreditRecords} />
+            </ResultSection>
+
             <ResultSection title="Parser diagnostics and notes">
               <ul className="space-y-2 rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
                 {[...analysis.parserWarnings, ...result.notes].map((note) => (
@@ -207,6 +212,100 @@ function CourseCodeBucket({ title, codes }: { title: string; codes: string[] }) 
         </div>
       ) : null}
     </div>
+  );
+}
+
+function ExternalCreditBucket({ records }: { records: ExternalCreditRecord[] }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">AP/transfer satisfied</p>
+      <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">{records.length}</p>
+      {records.length > 0 ? (
+        <div className="mt-2 grid gap-1.5">
+          {records.slice(0, 5).map((record) => (
+            <div className="rounded-sm border border-slate-200 bg-white px-2 py-1.5" key={`${record.sourceCode}-${record.satisfiesCourseCode ?? record.displayName}`}>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <SourceTypeBadge record={record} />
+                <span className="text-[12px] font-semibold leading-5 text-slate-800">{record.displayName}</span>
+              </div>
+              {record.satisfiesCourseCode ? (
+                <p className="mt-0.5 text-[12px] leading-5 text-slate-500">
+                  satisfies {record.satisfiesCourseCode}
+                </p>
+              ) : null}
+            </div>
+          ))}
+          {records.length > 5 ? <span className="text-[12px] text-slate-500">+{records.length - 5} more</span> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ExternalCreditEvidence({ records }: { records: ExternalCreditRecord[] }) {
+  if (records.length === 0) {
+    return (
+      <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+        No AP or transfer credit records were parsed from Satisfied by evidence.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-2">
+      {records.map((record) => (
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${record.sourceCode}-${record.satisfiesCourseCode ?? record.displayName}`}>
+          <div className="flex flex-wrap items-center gap-2">
+            <SourceTypeBadge record={record} />
+            <span className="font-semibold text-slate-950">{record.displayName}</span>
+            <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-600">
+              {record.confidence} confidence
+            </span>
+          </div>
+          <div className="mt-2 grid gap-1 text-[12px] leading-5 text-slate-600">
+            {record.satisfiesCourseCode ? (
+              <p>
+                Auburn equivalent: <span className="font-semibold text-slate-800">{record.satisfiesCourseCode}</span>
+                {record.satisfiesCourseTitle ? ` ${record.satisfiesCourseTitle}` : ""}
+              </p>
+            ) : (
+              <p>Auburn equivalent was not confidently linked.</p>
+            )}
+            {record.institution ? <p>Institution: {record.institution}</p> : null}
+            <CollapsibleDetails
+              description="Raw Degree Works source code and Satisfied by evidence."
+              title="Raw source details"
+            >
+              <div className="rounded-md border border-slate-200 bg-white p-3 text-[12px] leading-5 text-slate-600">
+                <p><span className="font-semibold text-slate-800">Source code:</span> {record.sourceCode}</p>
+                <p className="mt-1 break-words"><span className="font-semibold text-slate-800">Evidence:</span> {record.rawEvidence}</p>
+              </div>
+            </CollapsibleDetails>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SourceTypeBadge({ record }: { record: ExternalCreditRecord }) {
+  const label =
+    record.sourceType === "advanced_placement"
+      ? "AP"
+      : record.sourceType === "transfer"
+        ? "Transfer"
+        : "Other";
+  const styles =
+    record.sourceType === "advanced_placement"
+      ? "border-violet-200 bg-violet-50 text-violet-800"
+      : record.sourceType === "transfer"
+        ? "border-sky-200 bg-sky-50 text-sky-800"
+        : "border-slate-200 bg-white text-slate-600";
+
+  return (
+    <span className={`rounded-sm border px-2 py-1 text-[11px] font-semibold uppercase ${styles}`}>
+      {label}
+    </span>
   );
 }
 

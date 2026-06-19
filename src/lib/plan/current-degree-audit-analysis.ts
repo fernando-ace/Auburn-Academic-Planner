@@ -1,4 +1,10 @@
 import { parseCourseCodes } from "../courses/course-code-parser.ts";
+import {
+  countExternalCreditRecords,
+  extractExternalCreditRecords,
+  type ExternalCreditCounts,
+  type ExternalCreditRecord,
+} from "./degreeworks-external-credit.ts";
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
 import type { DegreeWorksDocumentType } from "./degreeworks-document-type.ts";
 
@@ -50,6 +56,8 @@ export type CurrentDegreeAuditAnalysis = {
   degreeStatus?: "complete" | "incomplete" | "unknown";
   requirementBlocks: CurrentDegreeAuditRequirementBlock[];
   courseStatusRecords: CurrentDegreeAuditCourseStatusRecord[];
+  externalCreditRecords: ExternalCreditRecord[];
+  externalCreditCounts: ExternalCreditCounts;
   completedCourseCodes: string[];
   preregisteredCourseCodes: string[];
   inProgressCourseCodes: string[];
@@ -96,6 +104,8 @@ export function analyzeCurrentDegreeAuditText(
     "Blocks included in this block",
   ]);
   const satisfiedByTexts = extractSatisfiedByTexts(normalizedText);
+  const externalCreditRecords = extractExternalCreditRecords(normalizedText);
+  const externalCreditCounts = countExternalCreditRecords(externalCreditRecords);
   const inProgressText = extractSection(normalizedText, "In-progress", [
     "Preregistered",
     "Fall Through",
@@ -123,15 +133,7 @@ export function analyzeCurrentDegreeAuditText(
   );
   addRecords(
     recordsByCode,
-    satisfiedByTexts.flatMap((evidence) =>
-      buildSectionRecords({
-        text: evidence,
-        status: "transfer_or_ap",
-        confidence: /AP|Advanced Placement|AICE|IB|Transfer|TR/i.test(evidence)
-          ? "high"
-          : "medium",
-      }),
-    ),
+    buildExternalCreditCourseRecords(externalCreditRecords),
   );
   addRecords(
     recordsByCode,
@@ -155,7 +157,7 @@ export function analyzeCurrentDegreeAuditText(
   const parsedCourseCodes = dedupe([
     ...parseCourseCodes(normalizedText),
     ...extractCourseCodesFromText(normalizedText),
-  ]);
+  ]).filter((code) => !isExternalSourceCourseCode(code, satisfiedByTexts));
   for (const code of parsedCourseCodes) {
     if (!recordsByCode.has(code)) {
       recordsByCode.set(code, {
@@ -205,6 +207,8 @@ export function analyzeCurrentDegreeAuditText(
     degreeStatus,
     requirementBlocks,
     courseStatusRecords,
+    externalCreditRecords,
+    externalCreditCounts,
     completedCourseCodes: recordsWithStatus(courseStatusRecords, "completed"),
     preregisteredCourseCodes: recordsWithStatus(courseStatusRecords, "preregistered"),
     inProgressCourseCodes: recordsWithStatus(courseStatusRecords, "in_progress"),
@@ -234,6 +238,8 @@ export function emptyCurrentDegreeAuditAnalysis(
     degreeStatus: "unknown",
     requirementBlocks: [],
     courseStatusRecords: [],
+    externalCreditRecords: [],
+    externalCreditCounts: { advanced_placement: 0, transfer: 0, other: 0 },
     completedCourseCodes: [],
     preregisteredCourseCodes: [],
     inProgressCourseCodes: [],
@@ -248,12 +254,33 @@ export function emptyCurrentDegreeAuditAnalysis(
   };
 }
 
+function buildExternalCreditCourseRecords(
+  records: ExternalCreditRecord[],
+): CurrentDegreeAuditCourseStatusRecord[] {
+  return records
+    .filter(
+      (record): record is ExternalCreditRecord & { satisfiesCourseCode: string } =>
+        Boolean(record.satisfiesCourseCode),
+    )
+    .map((record) => ({
+      code: record.satisfiesCourseCode,
+      title: record.satisfiesCourseTitle,
+      status: "transfer_or_ap",
+      rawEvidence: record.rawEvidence,
+      confidence: record.confidence,
+    }));
+}
+
 function buildCompletedRows(text: string): CurrentDegreeAuditCourseStatusRecord[] {
   const records: CurrentDegreeAuditCourseStatusRecord[] = [];
   const matches = Array.from(text.matchAll(courseCodePattern));
 
   for (const [index, match] of matches.entries()) {
     const code = `${match[1]} ${match[2]}`;
+    if (/^AP\s+\d{4}$/i.test(code)) {
+      continue;
+    }
+
     const courseIndex = match.index ?? 0;
     const nextCourseIndex = matches[index + 1]?.index;
     const evidence = normalizeWhitespace(
@@ -581,6 +608,18 @@ function extractCourseCodesFromText(text: string) {
     Array.from(text.matchAll(courseCodePattern)).map(
       (match) => `${match[1]} ${match[2]}`,
     ),
+  );
+}
+
+function isExternalSourceCourseCode(code: string, satisfiedByTexts: string[]) {
+  const compactCode = code.replace(/\s+/g, "").toUpperCase();
+
+  if (!/^AP\d{4}$/.test(compactCode)) {
+    return false;
+  }
+
+  return satisfiedByTexts.some((text) =>
+    text.replace(/\s+/g, "").toUpperCase().includes(compactCode),
   );
 }
 

@@ -123,7 +123,7 @@ Upload the saved PDF, not a screenshot. The PDF is processed server-side for thi
 - All PDF upload routes reject files larger than 10 MiB, files without a PDF signature, unreadable or empty PDFs, and documents with more than 1,000,000 extracted characters. Validation errors are returned with user-friendly `400`, `413`, or `422` responses.
 - Uploaded PDF checks are deterministic and do not call Gemini.
 - The target selector changes only focused planning outputs. It does not skip or hide the detailed AI certificate, Software Engineering, or Computer Science checks.
-- Current Progress uses Degree Works Worksheet/Audit PDFs and preserves status-aware current standing. Completed, preregistered, in-progress, AP/transfer satisfied, Fall Through/non-degree-applicable, still-needed, and unknown course evidence is kept separate.
+- Current Progress uses Degree Works Worksheet/Audit PDFs and preserves status-aware current standing. Completed, preregistered, in-progress, AP/transfer satisfied, Fall Through/non-degree-applicable, still-needed, and unknown course evidence is kept separate. AP and transfer credits are also detected from Degree Works `Satisfied by:` lines when the worksheet provides readable evidence.
 - Current Progress suggestions prioritize Degree Works `Still needed` lines and incomplete blocks, but completed courses are not suggested again. Preregistered and in-progress courses appear as verification items instead of new recommendations.
 - Planned Path uses Degree Works Plan PDFs to validate a proposed future multi-semester graduation path. It focuses on timeline feasibility, semester load, prerequisites, unresolved blocks, parser evidence, and advisor-review items.
 - Degree Works PDF results include parser confidence, parser warnings, and detected AP, transfer, substitution, exception, in-progress, or insufficient-text signals when the extracted text suggests extra advisor review is needed.
@@ -151,7 +151,7 @@ Upload the saved PDF, not a screenshot. The PDF is processed server-side for thi
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
 - `/plan-check` is the Planning Hub. It defaults to `Current Progress`, the recommended path for most students, which analyzes a Worksheet/Audit PDF for current standing and next-semester advisor discussion without calling Gemini or permanently storing the PDF.
-- `Current Progress` results lead with worksheet credits, degree status, status buckets, still-needed courses, current-state suggestions, verification items, parser diagnostics, and a copyable Advisor Meeting Summary.
+- `Current Progress` results lead with worksheet credits, degree status, status buckets, friendly AP/transfer credit labels, still-needed courses, current-state suggestions, verification items, parser diagnostics, and a copyable Advisor Meeting Summary.
 - `Planned Path` keeps the existing combined Degree Works Plan PDF behavior for proposed future graduation plans: it analyzes one uploaded plan PDF once, focuses planning reports on the selected target, shows shared parser and course-status details, and still runs all three detailed checkers.
 - Planned Path results lead with the Gap Report, next-semester suggestions, draft semester timeline, and copyable Advisor Meeting Summary; parser evidence, program audits, and manual checks remain available in secondary expandable sections.
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, structured requirement blocks, parser diagnostics, and advisor verification status.
@@ -169,7 +169,7 @@ The deterministic regression suite includes synthetic extracted-text fixtures un
 - clean planned-course text and term labels;
 - Worksheet current-progress audits with credits required/applied/needed, complete and incomplete blocks, and Still needed lines;
 - preregistered Worksheet courses that should be verified rather than suggested again;
-- Worksheet AP/transfer and Fall Through/non-degree-applicable evidence;
+- Worksheet AP/transfer `Satisfied by:` evidence and Fall Through/non-degree-applicable evidence;
 - low-confidence Worksheet text;
 - transfer, AP, IB, and AICE credit indicators;
 - in-progress and registered coursework;
@@ -180,7 +180,7 @@ The deterministic regression suite includes synthetic extracted-text fixtures un
 
 Fixture tests call the same pure combined-analysis pipeline used after PDF text extraction by the upload route. This keeps multipart/PDF handling separate while regression-testing the complete deterministic planning result without storing or uploading PDFs.
 
-The fixtures improve compatibility coverage but cannot model every Degree Works catalog, layout, OCR result, equivalency, hidden block, or institution-specific exception. Ambiguous statuses remain `unknown`, weak total-credit evidence remains `null`, and substitutions, waivers, transfer/AP credit, requirement applicability, and completion decisions require academic-advisor verification. The planner does not replace Degree Works or an academic advisor.
+The fixtures improve compatibility coverage but cannot model every Degree Works catalog, layout, OCR result, equivalency, hidden block, or institution-specific exception. Ambiguous statuses remain `unknown`, weak total-credit evidence remains `null`, and substitutions, waivers, transfer/AP credit, AP/transfer equivalencies from `Satisfied by:` lines, requirement applicability, and completion decisions require Degree Works and academic-advisor verification. The planner does not replace Degree Works or an academic advisor.
 
 ## Run Locally
 

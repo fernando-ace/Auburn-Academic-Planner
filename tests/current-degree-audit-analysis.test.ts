@@ -85,8 +85,31 @@ test("extracts AP/transfer and fall-through status evidence", async () => {
   const analysis = await analyzeFixture("worksheet-transfer-ap-sample.txt");
   const gapReport = buildCurrentStateGapReport({ audit: analysis });
 
+  assert.equal(analysis.externalCreditCounts.advanced_placement, 3);
+  assert.equal(analysis.externalCreditCounts.transfer, 4);
+  assert.ok(
+    analysis.externalCreditRecords.some(
+      (record) =>
+        record.displayName === "AP Statistics" &&
+        record.sourceCode === "AP9002" &&
+        record.satisfiesCourseCode === "STAT 2510",
+    ),
+  );
+  assert.ok(
+    analysis.externalCreditRecords.some(
+      (record) =>
+        record.displayName === "ENG101 Written Composition I" &&
+        record.institution === "Jefferson State CC" &&
+        record.satisfiesCourseCode === "ENGL 1100",
+    ),
+  );
   assert.ok(analysis.transferOrApCourseCodes.includes("MATH 1610"));
-  assert.ok(analysis.transferOrApCourseCodes.includes("PHYS 1600"));
+  assert.ok(analysis.transferOrApCourseCodes.includes("STAT 2510"));
+  assert.ok(analysis.transferOrApCourseCodes.includes("ENGL 1100"));
+  assert.ok(analysis.transferOrApCourseCodes.includes("ENGL 1120"));
+  assert.ok(analysis.transferOrApCourseCodes.includes("HIST 2010"));
+  assert.ok(analysis.transferOrApCourseCodes.includes("HIST 2020"));
+  assert.ok(!analysis.transferOrApCourseCodes.includes("AP 9002"));
   assert.ok(analysis.nonDegreeApplicableCourseCodes.includes("HIST 1010"));
   assert.ok(analysis.nonDegreeApplicableCourseCodes.includes("MUSI 2000"));
   assert.ok(
