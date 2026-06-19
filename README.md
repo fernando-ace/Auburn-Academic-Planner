@@ -12,6 +12,7 @@ The MVP supports two complementary paths:
 - Deterministic requirement checkers for quota-free progress review.
 - `/plan-check` supports a combined Degree Works PDF upload with an Auto, Software Engineering, Computer Science, or AI Engineering certificate planning target. The selected target focuses the Gap Report, Next Semester Suggestions, Draft Semester Plan, and concise copyable Advisor Meeting Summary while all three detailed deterministic checks still run and remain visible.
 - `/rule-audit` shows which checked-in program rules are source-backed, locally modeled, or intentionally left for advisor review, including requirement-block and supporting-model limitations.
+- `npm run check:sources` validates checked-in source metadata and guards source-backed rules against local bulletin drift without fetching live Auburn pages.
 
 ## Demo flow
 
@@ -73,6 +74,7 @@ The MVP supports two complementary paths:
    - Run the Computer Science manual, sample, or separate Degree Works PDF checker.
    - Use `Generate draft plan` beside any manual course entry to call the standalone deterministic planner for that target path.
 16. Open `http://localhost:3000/rule-audit` and confirm:
+   - the compact Source integrity summary reports the local checked-in source status, warning count, and runtime check time;
    - AI Engineering certificate, Software Engineering, and Computer Science program cards render;
    - exact-course, source-backed, local-model, and advisor-review counts are visible;
    - advisor-review-only requirement blocks are clearly labeled and are not treated as fully verified;
@@ -88,6 +90,7 @@ The MVP supports two complementary paths:
 - `source_backed` means the rule is transcribed from the checked-in Auburn bulletin source; `local_model` means conservative locally maintained prerequisite or availability logic; `advisor_review_required` means the app intentionally cannot resolve the requirement authoritatively.
 - Provenance improves trust by making the origin and limits of each check visible without implying that local rules replace the official bulletin, Degree Works, or an advisor.
 - The Rule Coverage and Trust Audit makes those boundaries comparable across all three supported programs. It counts exact course rules separately from requirement blocks, exposes prerequisite and planning metadata as supporting local models, and identifies concrete gaps before the planner can be considered closer to complete.
+- Source integrity checks compare local provenance and manifest metadata, verify referenced files and public bulletin URLs, and conservatively flag exact-course drift. They do not query live Auburn pages or prove that checked-in material is currently official.
 - The audit is a deterministic transparency tool, not an official Auburn audit. Its advisor-review-only blocks are never treated as fully verified.
 - Software Engineering and Computer Science core/elective requirement blocks are deterministic, conservative checks. Exact blocks can be satisfied by matched courses, candidate-only elective blocks remain advisor review unless the local approved-course data is strong enough, and insufficient source data is labeled for advisor review instead of being overclaimed.
 - Uploaded PDFs are processed server-side for course extraction.
@@ -122,9 +125,9 @@ The MVP supports two complementary paths:
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists and optionally accepts `startingTermLabel` for term-aware review.
-- The `/rule-audit` page and `GET /api/rules/coverage-audit` route expose a deterministic audit of exact rule coverage, requirement-block confidence, supporting models, known limitations, and recommended improvements.
+- The `/rule-audit` page and `GET /api/rules/coverage-audit` route expose a deterministic audit of exact rule coverage, requirement-block confidence, source integrity, supporting models, known limitations, and recommended improvements.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
-- Local validation currently passes `140/140` deterministic tests.
+- Local validation currently passes `146/146` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Degree Works compatibility fixtures
@@ -262,6 +265,18 @@ The fixtures improve compatibility coverage but cannot model every Degree Works 
 
 Do not add unofficial or stale material unless you clearly label it. The assistant is designed to answer degree-requirement questions only from retrieved Auburn sources.
 
+### Check local source integrity
+
+Run the deterministic local source audit with:
+
+```bash
+npm run check:sources
+```
+
+The command parses `sources/manifest.json`, validates rule source IDs and catalog years, checks that every provenance file exists, requires Auburn bulletin URLs for public program sources, and compares exact required courses with the matching checked-in bulletin HTML. The AI certificate guard also checks for COMP 5600, COMP 5630, COMP 5130, and evidence of the 12-credit-hour requirement.
+
+Missing or inconsistent metadata and missing source-backed course evidence fail the command. A valid `lastChecked` date older than 180 days produces a review warning without failing. These checks use only local checked-in files; they never fetch live Auburn pages. The guard helps expose possible rule drift, but the Auburn bulletin, Degree Works, and an academic advisor remain authoritative.
+
 ## Model Configuration
 
 `GEMINI_MODEL` is optional. If it is missing, the app uses `gemini-2.5-flash` through `getGeminiModel()`.
@@ -287,6 +302,7 @@ Run:
 
 ```bash
 npm test
+npm run check:sources
 npm run lint
 npx tsc --noEmit
 npm run build
@@ -294,7 +310,8 @@ npm run build
 
 Current validation coverage:
 
-- 140 deterministic tests through `npm test`, including rule coverage audit tests and the seven synthetic Degree Works compatibility fixtures
+- 146 deterministic tests through `npm test`, including source integrity, rule coverage audit, and the seven synthetic Degree Works compatibility fixtures
+- `npm run check:sources`
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`
@@ -307,3 +324,5 @@ Manual checks:
 - Desktop shows the left program rail and right Sources panel.
 - Mobile collapses both panels into drawers.
 - The UI never claims to replace advisors and does not offer registration automation.
+- `/rule-audit` shows the local source integrity status, warning count, and runtime check timestamp.
+- `/plan-check` continues to render after the source audit integration.

@@ -9,6 +9,7 @@ import type {
   RuleProvenanceOverride,
 } from "./rule-provenance.ts";
 import { softwareEngineeringDegreeRule } from "./software-engineering-degree.ts";
+import { checkSourceIntegrity } from "../sources/source-integrity.ts";
 
 export type RuleCoverageProgramKey =
   | "ai_certificate"
@@ -65,6 +66,12 @@ export type RuleCoverageProgram = {
 export type RuleCoverageAudit = {
   generatedAt: string;
   catalogYear: string;
+  sourceIntegrity: {
+    status: "pass" | "fail";
+    warningsCount: number;
+    lastCheckedAt: string;
+    note: string;
+  };
   programs: RuleCoverageProgram[];
   supportingModels: RuleCoverageSupportingModel[];
   globalLimitations: string[];
@@ -92,10 +99,17 @@ export function buildRuleCoverageAudit(
   generatedAt = new Date().toISOString(),
 ): RuleCoverageAudit {
   const supportingModels = buildSupportingModels();
+  const sourceIntegrity = checkSourceIntegrity({ checkedAt: generatedAt });
 
   return {
     generatedAt,
     catalogYear: aiEngineeringCertificateRule.catalogYear,
+    sourceIntegrity: {
+      status: sourceIntegrity.status,
+      warningsCount: sourceIntegrity.warnings.length,
+      lastCheckedAt: sourceIntegrity.checkedAt,
+      note: "Uses local checked-in source files and does not query live Auburn pages.",
+    },
     programs: [
       buildAiCertificateCoverage(),
       buildDegreeCoverage({

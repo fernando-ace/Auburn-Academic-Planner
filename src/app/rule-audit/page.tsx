@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import {
   ArrowLeft,
   ArrowRight,
@@ -42,7 +43,8 @@ const statusDetails: Record<
   },
 };
 
-export default function RuleAuditPage() {
+export default async function RuleAuditPage() {
+  await connection();
   const audit = buildRuleCoverageAudit();
   const totalExactRules = audit.programs.reduce(
     (sum, program) => sum + program.totalExactRules,
@@ -135,6 +137,31 @@ export default function RuleAuditPage() {
               This is a transparency tool, not an official Auburn audit.
             </p>
           </div>
+        </section>
+
+        <section
+          className="mt-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6"
+          aria-labelledby="source-integrity-heading"
+        >
+          <div>
+            <div className="flex items-center gap-2">
+              {audit.sourceIntegrity.status === "pass" ? (
+                <CheckCircle2 aria-hidden="true" className="text-emerald-700" size={18} />
+              ) : (
+                <TriangleAlert aria-hidden="true" className="text-amber-700" size={18} />
+              )}
+              <h2 id="source-integrity-heading" className="text-[15px] font-semibold text-slate-950">
+                Source integrity {audit.sourceIntegrity.status === "pass" ? "passed" : "needs review"}
+              </h2>
+            </div>
+            <p className="mt-1 text-[13px] leading-5 text-slate-600">
+              {audit.sourceIntegrity.note}
+            </p>
+          </div>
+          <p className="shrink-0 text-[12px] leading-5 text-slate-500 sm:text-right">
+            {audit.sourceIntegrity.warningsCount} warnings<br />
+            Checked {formatTimestamp(audit.sourceIntegrity.lastCheckedAt)}
+          </p>
         </section>
 
         <section className="mt-8" aria-labelledby="program-coverage-heading">

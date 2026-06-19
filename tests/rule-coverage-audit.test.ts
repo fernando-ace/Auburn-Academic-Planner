@@ -10,6 +10,12 @@ test("returns all three audited programs with a stable timestamp", () => {
 
   assert.equal(audit.generatedAt, fixedTimestamp);
   assert.equal(audit.catalogYear, "2025-2026");
+  assert.deepEqual(audit.sourceIntegrity, {
+    status: "pass",
+    warningsCount: 0,
+    lastCheckedAt: fixedTimestamp,
+    note: "Uses local checked-in source files and does not query live Auburn pages.",
+  });
   assert.deepEqual(
     audit.programs.map((program) => program.programKey),
     ["ai_certificate", "software_engineering", "computer_science"],
