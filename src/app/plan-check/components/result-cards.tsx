@@ -402,7 +402,7 @@ export function ResultCard({
       typeof result.parsedCourseCount === "number");
 
   return (
-    <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
@@ -546,7 +546,7 @@ export function DegreeProgressResultCard({
   );
 
   return (
-    <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">

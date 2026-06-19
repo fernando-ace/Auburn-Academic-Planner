@@ -14,6 +14,7 @@ import { parseCourseCodes } from "@/lib/courses/course-code-parser";
 import { buildAdvisorMeetingSummary } from "@/lib/plan/advisor-meeting-summary";
 import type { DraftSemesterPlan } from "@/lib/plan/draft-semester-plan";
 import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
+import { CollapsibleDetails, EmptyState } from "@/components/ui-primitives";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
 import { CombinedDegreeWorksParsedDetails } from "./components/combined-analysis-details";
 import { DegreeProgressCheckSection } from "./components/degree-progress-check-section";
@@ -1032,6 +1033,21 @@ export default function PlanCheckPage() {
     );
   }
 
+  const hasResultOrStatus = Boolean(
+    combinedDegreeWorksResult ||
+      result ||
+      softwareEngineeringResult ||
+      computerScienceResult ||
+      combinedDegreeWorksError ||
+      error ||
+      softwareEngineeringError ||
+      computerScienceError ||
+      isCombinedDegreeWorksLoading ||
+      isLoading ||
+      isSoftwareEngineeringLoading ||
+      isComputerScienceLoading,
+  );
+
   return (
     <main className="min-h-dvh bg-slate-100 text-slate-950">
       <header className="bg-[#03244d] px-4 py-4 text-white shadow-sm sm:px-6">
@@ -1042,20 +1058,29 @@ export default function PlanCheckPage() {
             </div>
             <div className="min-w-0">
               <h1 className="truncate text-[18px] font-semibold leading-6 sm:text-[20px]">
-                AI Certificate Plan Check
+                Auburn Academic Planner
               </h1>
               <p className="hidden text-[13px] text-white/75 sm:block">
-                Deterministic Auburn requirement review
+                Plan Check · deterministic Auburn requirement review
               </p>
             </div>
           </div>
-          <Link
-            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10"
-            href="/chat"
-          >
-            <ArrowLeft aria-hidden="true" size={16} />
-            Back to Chat
-          </Link>
+          <nav className="flex shrink-0 items-center gap-2" aria-label="Plan Check navigation">
+            <Link
+              className="hidden h-10 items-center gap-2 rounded-lg border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10 sm:inline-flex"
+              href="/rule-audit"
+            >
+              <ShieldCheck aria-hidden="true" size={16} />
+              Rule Audit
+            </Link>
+            <Link
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10"
+              href="/chat"
+            >
+              <ArrowLeft aria-hidden="true" size={16} />
+              Chat
+            </Link>
+          </nav>
         </div>
       </header>
 
@@ -1084,8 +1109,14 @@ export default function PlanCheckPage() {
         validationError={combinedDegreeWorksUploadValidationError}
       />
 
-      <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:py-7">
-        <div className="grid gap-5">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:py-7">
+        <CollapsibleDetails
+          description="Paste courses, run samples, or use the separate program-specific PDF checks. The combined upload above remains the primary flow."
+          key={combinedDegreeWorksResult ? "combined-result" : "manual-inputs"}
+          open={!combinedDegreeWorksResult}
+          title="Advanced and manual checks"
+        >
+          <div className="grid gap-5 lg:grid-cols-3">
           <AiCertificateCheckSection
             enteredCourses={enteredCourses}
             isDraftLoading={isDraftSemesterPlanLoading}
@@ -1155,10 +1186,11 @@ export default function PlanCheckPage() {
             selectedPdfFile={selectedComputerSciencePdfFile}
             uploadValidationError={computerScienceUploadValidationError}
           />
-        </div>
+          </div>
+        </CollapsibleDetails>
 
-        <section className="min-w-0">
-          {advisorMeetingSummary ? (
+        <section className={`min-w-0 ${hasResultOrStatus ? "order-first" : "order-last"}`}>
+          {advisorMeetingSummary && !combinedDegreeWorksResult ? (
             <AdvisorMeetingSummary
               copyStatus={advisorSummaryCopyStatus}
               onCopySummary={copyAdvisorMeetingSummary}
@@ -1236,6 +1268,13 @@ export default function PlanCheckPage() {
                 plan={combinedDegreeWorksResult.draftSemesterPlan}
                 selectedTargetPath={combinedDegreeWorksResult.selectedTargetPath}
               />
+              {advisorMeetingSummary ? (
+                <AdvisorMeetingSummary
+                  copyStatus={advisorSummaryCopyStatus}
+                  onCopySummary={copyAdvisorMeetingSummary}
+                  summary={advisorMeetingSummary}
+                />
+              ) : null}
               <CombinedDegreeWorksParsedDetails
                 result={combinedDegreeWorksResult}
               />
@@ -1275,17 +1314,23 @@ export default function PlanCheckPage() {
           ) : null}
 
           {result ? (
-            <ResultCard
-              result={result}
-              showUploadedPdfDetails={!combinedDegreeWorksResult}
-            />
+            combinedDegreeWorksResult ? (
+              <CollapsibleDetails
+                description="Certificate requirements, course status, provenance, and advisor-review evidence."
+                title="AI Engineering certificate details"
+              >
+                <ResultCard result={result} showUploadedPdfDetails={false} />
+              </CollapsibleDetails>
+            ) : (
+              <ResultCard result={result} showUploadedPdfDetails />
+            )
           ) : (
-            <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-[14px] leading-6 text-slate-500 shadow-sm">
+            <EmptyState>
               Upload one Degree Works PDF, paste planned courses, or run the
               sample Degree Works plan to see required courses satisfied,
               missing requirements, elective candidates, completion status,
               advisor verification, and notes.
-            </div>
+            </EmptyState>
           )}
 
           <div className="mt-5">
@@ -1322,19 +1367,25 @@ export default function PlanCheckPage() {
             ) : null}
 
             {softwareEngineeringResult ? (
-              <DegreeProgressResultCard
-                degreeName="Software Engineering"
-                result={softwareEngineeringResult}
-                showUploadedPdfDetails={!combinedDegreeWorksResult}
-              />
-            ) : (
-              <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-[14px] leading-6 text-slate-500 shadow-sm">
-                Run the Software Engineering sample check to review credit
-                totals, exact required courses, alternative course groups,
-                advisor-verified blocks, notes, and whether the extracted plan
-                proves likely completion.
-              </div>
-            )}
+              combinedDegreeWorksResult ? (
+                <CollapsibleDetails
+                  description="Degree requirements, requirement blocks, prerequisites, provenance, and advisor-review evidence."
+                  title="Software Engineering degree details"
+                >
+                  <DegreeProgressResultCard
+                    degreeName="Software Engineering"
+                    result={softwareEngineeringResult}
+                    showUploadedPdfDetails={false}
+                  />
+                </CollapsibleDetails>
+              ) : (
+                <DegreeProgressResultCard
+                  degreeName="Software Engineering"
+                  result={softwareEngineeringResult}
+                  showUploadedPdfDetails
+                />
+              )
+            ) : null}
           </div>
 
           <div className="mt-5">
@@ -1371,19 +1422,25 @@ export default function PlanCheckPage() {
             ) : null}
 
             {computerScienceResult ? (
-              <DegreeProgressResultCard
-                degreeName="Computer Science"
-                result={computerScienceResult}
-                showUploadedPdfDetails={!combinedDegreeWorksResult}
-              />
-            ) : (
-              <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-[14px] leading-6 text-slate-500 shadow-sm">
-                Run the Computer Science sample check to review credit totals,
-                exact required courses, alternative course groups,
-                advisor-verified blocks, notes, and whether the extracted plan
-                proves likely completion.
-              </div>
-            )}
+              combinedDegreeWorksResult ? (
+                <CollapsibleDetails
+                  description="Degree requirements, requirement blocks, prerequisites, provenance, and advisor-review evidence."
+                  title="Computer Science degree details"
+                >
+                  <DegreeProgressResultCard
+                    degreeName="Computer Science"
+                    result={computerScienceResult}
+                    showUploadedPdfDetails={false}
+                  />
+                </CollapsibleDetails>
+              ) : (
+                <DegreeProgressResultCard
+                  degreeName="Computer Science"
+                  result={computerScienceResult}
+                  showUploadedPdfDetails
+                />
+              )
+            ) : null}
           </div>
         </section>
       </div>

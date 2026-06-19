@@ -12,6 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 
+import { StatusPill } from "@/components/ui-primitives";
 import {
   buildRuleCoverageAudit,
   type RuleCoverageProgram,
@@ -27,19 +28,19 @@ export const metadata: Metadata = {
 
 const statusDetails: Record<
   RuleCoverageStatus,
-  { label: string; className: string }
+  { label: string; tone: "success" | "info" | "warning" }
 > = {
   source_backed: {
     label: "Source-backed",
-    className: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    tone: "success",
   },
   local_model: {
     label: "Local model",
-    className: "border-sky-200 bg-sky-50 text-sky-800",
+    tone: "info",
   },
   advisor_review_required: {
     label: "Advisor review required",
-    className: "border-amber-200 bg-amber-50 text-amber-900",
+    tone: "warning",
   },
 };
 
@@ -57,7 +58,7 @@ export default async function RuleAuditPage() {
   );
 
   return (
-    <main className="min-h-dvh bg-slate-100 text-slate-950">
+    <main className="min-h-dvh bg-[#f3f6f9] text-slate-950">
       <header className="bg-[#03244d] px-4 py-4 text-white shadow-sm sm:px-6">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -92,8 +93,8 @@ export default async function RuleAuditPage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 sm:py-9">
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05),0_14px_36px_rgba(15,23,42,0.05)]">
           <div className="border-b border-slate-200 px-5 py-6 sm:px-7 sm:py-8">
             <div className="max-w-3xl">
               <h2 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
@@ -140,7 +141,7 @@ export default async function RuleAuditPage() {
         </section>
 
         <section
-          className="mt-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6"
+          className="mt-5 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between sm:px-6"
           aria-labelledby="source-integrity-heading"
         >
           <div>
@@ -242,7 +243,7 @@ function SummaryMetric({
 
 function ProgramCoverageCard({ program }: { program: RuleCoverageProgram }) {
   return (
-    <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_10px_28px_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-5 border-b border-slate-200 px-5 py-5 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-2xl">
           <div className="flex items-start gap-3">
@@ -284,8 +285,24 @@ function ProgramCoverageCard({ program }: { program: RuleCoverageProgram }) {
               {program.coverageSummary.deterministicExactCourseCoverage}% exact-course coverage
             </p>
           </div>
-          <div className="overflow-x-auto rounded-md border border-slate-200">
-            <table className="w-full min-w-[650px] border-collapse text-left text-[13px]">
+          <div className="space-y-2 md:hidden">
+            {program.requirementBlocks.map((block) => (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3" key={block.name}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p className="text-[13px] font-semibold leading-5 text-slate-900">{block.name}</p>
+                  <StatusLabel status={block.status} />
+                </div>
+                <p className="mt-2 text-[12px] font-medium text-slate-500">
+                  {block.modeledCredits ?? "—"} / {block.requiredCredits ?? "—"} credits modeled
+                </p>
+                <p className="mt-2 text-[13px] leading-5 text-slate-600">
+                  {block.notes[0] ?? "No additional local note."}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-hidden rounded-lg border border-slate-200 md:block">
+            <table className="w-full border-collapse text-left text-[13px]">
               <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.06em] text-slate-500">
                 <tr>
                   <th className="px-3 py-3 font-semibold">Block</th>
@@ -339,15 +356,15 @@ function CompactMetric({ label, value }: { label: string; value: number }) {
 function StatusLabel({ status }: { status: RuleCoverageStatus }) {
   const detail = statusDetails[status];
   return (
-    <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold ${detail.className}`}>
+    <StatusPill tone={detail.tone}>
       {detail.label}
-    </span>
+    </StatusPill>
   );
 }
 
 function SupportingModelCard({ model }: { model: RuleCoverageSupportingModel }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.04)] sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-[16px] font-semibold leading-6 text-slate-950">{model.modelName}</h3>

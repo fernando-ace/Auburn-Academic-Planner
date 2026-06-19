@@ -3,6 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
+  --auburn-navy: #03244d;
+  --auburn-orange: #dd550c;
+  --app-canvas: #f3f6f9;
 }
 
 @theme inline {
@@ -19,8 +22,19 @@ body {
 }
 
 button,
+input,
+select,
 textarea {
   font: inherit;
+}
+
+:where(a, button, input, select, summary, textarea):focus-visible {
+  outline: 2px solid var(--auburn-orange);
+  outline-offset: 2px;
+}
+
+summary::-webkit-details-marker {
+  display: none;
 }
 
 ::selection {

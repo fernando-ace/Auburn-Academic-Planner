@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
+import { CollapsibleDetails } from "@/components/ui-primitives";
 import type { DegreeWorksCourseStatus, DegreeWorksCourseStatusCounts, DegreeWorksCourseStatusRecord } from "@/lib/plan/degreeworks-course-status";
 import type { CombinedDegreeWorksUploadResult, DegreeWorksSemesterAnalysis, SoftwareEngineeringPrerequisiteCheck } from "../types";
 import { BooleanPill, ParserNotes, ProvenanceDetails, ResultSection } from "./result-cards";
@@ -372,7 +373,11 @@ export function CombinedDegreeWorksParsedDetails({
   result: CombinedDegreeWorksUploadResult;
 }) {
   return (
-    <section className="mb-5 rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <CollapsibleDetails
+      description="Parsed courses, course statuses, parser confidence, warnings, semesters, prerequisites, and advisor-safe notes."
+      title="Parser and planning evidence"
+    >
+    <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
@@ -482,5 +487,6 @@ export function CombinedDegreeWorksParsedDetails({
         </ResultSection>
       </div>
     </section>
+    </CollapsibleDetails>
   );
 }

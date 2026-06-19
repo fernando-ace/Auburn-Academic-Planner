@@ -211,7 +211,7 @@ function PlanCheckCard() {
   }
 
   return (
-    <section className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+    <section className="rounded-xl border border-[#dd550c]/30 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_8px_22px_rgba(15,23,42,0.04)]">
       <div className="flex items-start gap-3">
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#dd550c]/25 bg-[#fff7f1] text-[#b84300]">
           <ClipboardCheck aria-hidden="true" size={17} />
@@ -245,7 +245,7 @@ function PlanCheckCard() {
 
       <div className="mt-3 grid gap-2">
         <Link
-          className="inline-flex min-h-10 w-full items-center justify-center rounded-md border border-[#dd550c]/30 bg-[#fff7f1] px-3 py-2 text-center text-[13px] font-semibold leading-5 text-[#9b3900] transition hover:border-[#dd550c] hover:text-[#03244d]"
+          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#dd550c] px-3 py-2 text-center text-[13px] font-semibold leading-5 text-white shadow-sm transition hover:bg-[#b84300]"
           href="/plan-check"
         >
           Open full plan checker
@@ -791,7 +791,7 @@ export function ChatWorkspace() {
             Rule Audit
           </Link>
           <Link
-            className="inline-flex h-9 items-center rounded-md border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10"
+            className="inline-flex h-9 items-center rounded-lg bg-[#dd550c] px-3 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#b84300]"
             href="/plan-check"
           >
             Plan Check
@@ -836,23 +836,28 @@ export function ChatWorkspace() {
           <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5">
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
               {messages.length === 0 ? (
-                <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-[#03244d] text-white">
-                      <MessageSquareText aria-hidden="true" size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="text-[17px] font-semibold leading-6 text-slate-950 sm:text-[18px]">
-                        Plan advisor conversations with retrieved Auburn
-                        sources.
-                      </h2>
-                      <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
-                        Ask about Auburn Software Engineering, Computer Science,
-                        or the Artificial Intelligence Engineering certificate.
-                        Answers include sources, confidence, and advisor
-                        verification guidance.
-                      </p>
-                    </div>
+                <section className="rounded-xl border border-slate-200 bg-white p-5 text-center shadow-[0_1px_2px_rgba(15,23,42,0.05),0_12px_32px_rgba(15,23,42,0.04)] sm:p-8">
+                  <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-[#03244d] text-white">
+                    <MessageSquareText aria-hidden="true" size={23} />
+                  </div>
+                  <h2 className="mt-4 text-[20px] font-semibold leading-7 text-slate-950 sm:text-[22px]">
+                    Source-grounded advising conversations
+                  </h2>
+                  <p className="mx-auto mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
+                    Ask about Auburn Software Engineering, Computer Science, or
+                    the Artificial Intelligence Engineering certificate.
+                    Answers include retrieved sources, confidence, and advisor
+                    verification guidance.
+                  </p>
+                  <div className="mx-auto mt-5 flex max-w-xl gap-3 rounded-lg border border-[#03244d]/15 bg-[#eef4fa] p-3 text-left text-[13px] leading-5 text-[#03244d]">
+                    <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
+                    <p>
+                      Chat provides source-grounded explanations. Use{" "}
+                      <Link className="font-semibold text-[#b84300] underline underline-offset-2" href="/plan-check">
+                        Plan Check
+                      </Link>{" "}
+                      for deterministic requirement logic and planning reports.
+                    </p>
                   </div>
                 </section>
               ) : (

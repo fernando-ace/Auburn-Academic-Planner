@@ -72,7 +72,7 @@ export function DegreeProgressCheckSection({
   const content = degreeContent[degreeKind];
 
   return (
-    <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <h2 className="text-[22px] font-semibold leading-8 text-slate-950">
         {content.title}
       </h2>

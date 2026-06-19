@@ -21,10 +21,11 @@ export function CombinedDegreeWorksUploadSection({
   validationError: string | null;
 }) {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 pt-5 sm:px-6 lg:pt-7">
-      <div className="rounded-md border border-[#dd550c]/30 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl">
+    <section className="mx-auto w-full max-w-7xl px-4 pt-5 sm:px-6 lg:pt-7">
+      <div className="overflow-hidden rounded-xl border border-[#dd550c]/30 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06),0_18px_45px_rgba(15,23,42,0.06)]">
+        <div className="h-1 bg-[#dd550c]" />
+        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-8 lg:p-6">
+          <div className="max-w-3xl lg:py-1">
             <div className="flex items-center gap-2">
               <FileUp aria-hidden="true" className="text-[#dd550c]" size={20} />
               <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">Combined PDF analysis</p>
@@ -37,7 +38,7 @@ export function CombinedDegreeWorksUploadSection({
               This is not an official degree audit. Advisor verification is required. AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may require advisor review.
             </p>
           </div>
-          <div className="w-full rounded-md border border-slate-200 bg-slate-50 p-3 lg:w-[24rem]">
+          <div className="w-full rounded-lg border border-slate-200 bg-slate-50/80 p-4">
             <label className="text-[13px] font-semibold leading-5 text-slate-700" htmlFor="combined-degreeworks-target-path">Planning target</label>
             <select className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15" disabled={isLoading} id="combined-degreeworks-target-path" onChange={(event) => onTargetPathChange(event.target.value as PlanningTargetPathInput)} value={selectedTargetPath}>
               <option value="auto">Auto</option>
@@ -48,9 +49,9 @@ export function CombinedDegreeWorksUploadSection({
             <p className="mt-2 text-[12px] leading-5 text-slate-500">Focuses the planning reports; all three detailed checks still run.</p>
             <label className="mt-3 block text-[13px] font-semibold leading-5 text-slate-700" htmlFor="combined-degreeworks-pdf">Degree Works PDF</label>
             <input accept="application/pdf" className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15" disabled={isLoading} id="combined-degreeworks-pdf" onChange={onFileChange} type="file" />
-            {selectedFile ? <p className="mt-2 text-[12px] leading-5 text-slate-500">Selected: {selectedFile.name}</p> : null}
-            {validationError ? <p className="mt-2 text-[13px] leading-5 text-orange-700">{validationError}</p> : null}
-            <button className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#dd550c] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white transition hover:bg-[#b84300] disabled:cursor-not-allowed disabled:bg-slate-300" disabled={isLoading} onClick={onAnalyze} type="button">
+            {selectedFile ? <p className="mt-2 break-all text-[12px] font-medium leading-5 text-emerald-700">Selected: {selectedFile.name}</p> : null}
+            {validationError ? <p className="mt-2 text-[13px] font-medium leading-5 text-orange-700" role="alert">{validationError}</p> : null}
+            <button className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#dd550c] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white shadow-sm transition hover:bg-[#b84300] disabled:cursor-not-allowed disabled:bg-slate-300" disabled={isLoading} onClick={onAnalyze} type="button">
               {isLoading ? <Loader2 aria-hidden="true" className="animate-spin" size={17} /> : null}
               Analyze Degree Works PDF
             </button>
@@ -89,7 +90,7 @@ export function AiCertificateCheckSection({
   uploadValidationError: string | null;
 }) {
   return (
-    <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <h2 className="text-[22px] font-semibold leading-8 text-slate-950">AI Certificate Plan Check</h2>
       <p className="mt-2 text-[14px] leading-6 text-slate-600">Checks entered courses against Auburn&apos;s AI Engineering certificate requirements using the local deterministic requirement rules.</p>
       <div className="mt-5">

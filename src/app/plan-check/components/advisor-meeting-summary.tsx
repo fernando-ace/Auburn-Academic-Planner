@@ -1,4 +1,4 @@
-import { ClipboardCheck } from "lucide-react";
+import { Check, ClipboardCheck } from "lucide-react";
 
 export function AdvisorMeetingSummary({
   summary,
@@ -10,7 +10,12 @@ export function AdvisorMeetingSummary({
   onCopySummary: () => void;
 }) {
   return (
-    <section className="mb-5 rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <section className="mb-5 overflow-hidden rounded-xl border border-[#03244d]/20 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05),0_10px_28px_rgba(15,23,42,0.04)]">
+      <div className="flex items-center gap-2 border-b border-[#03244d]/10 bg-[#eef4fa] px-4 py-2.5 text-[12px] font-semibold text-[#03244d] sm:px-5">
+        <ClipboardCheck aria-hidden="true" size={15} />
+        Copyable meeting notes
+      </div>
+      <div className="p-4 sm:p-5">
       <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-[18px] font-semibold leading-7 text-slate-950">
@@ -26,8 +31,8 @@ export function AdvisorMeetingSummary({
           onClick={onCopySummary}
           type="button"
         >
-          <ClipboardCheck aria-hidden="true" size={16} />
-          Copy summary
+          {copyStatus === "Summary copied." ? <Check aria-hidden="true" size={16} /> : <ClipboardCheck aria-hidden="true" size={16} />}
+          {copyStatus === "Summary copied." ? "Copied" : "Copy summary"}
         </button>
       </div>
       <textarea
@@ -37,10 +42,11 @@ export function AdvisorMeetingSummary({
         value={summary}
       />
       {copyStatus ? (
-        <p className="mt-2 text-[13px] leading-5 text-slate-600">
+        <p className="mt-2 text-[13px] leading-5 text-slate-600" role="status">
           {copyStatus}
         </p>
       ) : null}
+      </div>
     </section>
   );
 }

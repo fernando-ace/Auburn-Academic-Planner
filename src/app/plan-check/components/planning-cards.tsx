@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
+import { CollapsibleDetails, MetricCard, StatusPill } from "@/components/ui-primitives";
 import type { DegreeWorksParserConfidence } from "@/lib/plan/degreeworks-analysis";
 import type { DraftSemesterPlan } from "@/lib/plan/draft-semester-plan";
 import type { GapReport, GapReportBestFitPath, GapReportStatus } from "@/lib/plan/gap-report";
@@ -15,8 +16,9 @@ export function GapReportCard({
   selectedTargetPath?: PlanningTargetPathInput;
 }) {
   return (
-    <section className="mb-5 rounded-md border border-[#dd550c]/35 bg-white p-4 shadow-sm sm:p-5">
-      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+    <section className="mb-5 overflow-hidden rounded-xl border border-[#dd550c]/30 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05),0_14px_35px_rgba(15,23,42,0.05)]">
+      <div className="h-1 bg-[#dd550c]" />
+      <div className="flex flex-col gap-4 border-b border-slate-200 p-4 sm:p-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
             Unified advising report
@@ -29,32 +31,32 @@ export function GapReportCard({
             to prepare for an academic advisor meeting.
           </p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:w-[30rem]">
-          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-              Overall status
-            </p>
-            <span
-              className={`mt-2 inline-flex rounded-sm border px-2.5 py-1 text-[13px] font-semibold ${getGapStatusClassName(
-                gapReport.overallStatus,
-              )}`}
-            >
-              {formatGapStatus(gapReport.overallStatus)}
-            </span>
-          </div>
-          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-              Target path
-            </p>
-            <p className="mt-2 text-[14px] font-semibold leading-5 text-slate-800">
-              {formatSelectedPlanningTarget(selectedTargetPath, gapReport.bestFitPath)}
-            </p>
-          </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:w-[31rem]">
+          <MetricCard
+            label="Overall status"
+            value={
+              <StatusPill tone={getGapStatusTone(gapReport.overallStatus)}>
+                {formatGapStatus(gapReport.overallStatus)}
+              </StatusPill>
+            }
+          />
+          <MetricCard
+            label="Target path"
+            value={formatSelectedPlanningTarget(selectedTargetPath, gapReport.bestFitPath)}
+          />
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4">
-        <GapReportList items={gapReport.summaryBullets} title="Summary" />
+      <div className="grid gap-4 p-4 sm:p-5">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <GapReportList items={gapReport.summaryBullets} title="Summary" />
+          <GapReportList items={gapReport.nextActions} title="Next actions" />
+        </div>
+        <CollapsibleDetails
+          description="Missing requirements, satisfied highlights, trust notes, advisor-review items, and questions."
+          title="Review detailed gap evidence"
+        >
+        <div className="grid gap-4">
         <GapReportList
           emptyText="No satisfied highlights were identified."
           items={gapReport.satisfiedHighlights}
@@ -131,11 +133,12 @@ export function GapReportCard({
             </div>
           </ResultSection>
         ) : null}
-        <GapReportList items={gapReport.nextActions} title="Next actions" />
         <GapReportList
           items={gapReport.advisorQuestions}
           title="Advisor questions"
         />
+        </div>
+        </CollapsibleDetails>
       </div>
     </section>
   );
@@ -149,7 +152,7 @@ export function NextSemesterSuggestionsCard({
   selectedTargetPath?: PlanningTargetPathInput;
 }) {
   return (
-    <section className="mb-5 rounded-md border border-[#03244d]/25 bg-white p-4 shadow-sm sm:p-5">
+    <section className="mb-5 rounded-xl border border-[#03244d]/20 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_10px_28px_rgba(15,23,42,0.04)] sm:p-5">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
@@ -186,13 +189,11 @@ export function NextSemesterSuggestionsCard({
             <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
               Confidence
             </p>
-            <span
-              className={`mt-2 inline-flex rounded-sm border px-2.5 py-1 text-[13px] font-semibold ${getSuggestionConfidenceClassName(
-                suggestions.confidence,
-              )}`}
-            >
-              {suggestions.confidence}
-            </span>
+            <div className="mt-2">
+              <StatusPill tone={getConfidenceTone(suggestions.confidence)}>
+                {suggestions.confidence}
+              </StatusPill>
+            </div>
           </div>
         </div>
       </div>
@@ -200,10 +201,10 @@ export function NextSemesterSuggestionsCard({
       <div className="mt-4 grid gap-4">
         <ResultSection title="Suggested courses to discuss">
           {suggestions.suggestedCourses.length > 0 ? (
-            <ul className="grid gap-3 md:grid-cols-2">
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {suggestions.suggestedCourses.map((course) => (
                 <li
-                  className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                  className="flex min-w-0 flex-col rounded-lg border border-slate-200 bg-slate-50/70 p-3 transition hover:border-[#03244d]/25 hover:bg-white hover:shadow-sm"
                   key={course.code}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -329,7 +330,7 @@ export function DraftSemesterPlanCard({
   selectedTargetPath?: PlanningTargetPathInput;
 }) {
   return (
-    <section className="mb-5 rounded-md border border-[#dd550c]/30 bg-white p-4 shadow-sm sm:p-5">
+    <section className="mb-5 rounded-xl border border-[#dd550c]/25 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_10px_28px_rgba(15,23,42,0.04)] sm:p-5">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
@@ -362,13 +363,11 @@ export function DraftSemesterPlanCard({
             <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
               Confidence
             </p>
-            <span
-              className={`mt-2 inline-flex rounded-sm border px-2.5 py-1 text-[13px] font-semibold ${getSuggestionConfidenceClassName(
-                plan.confidence,
-              )}`}
-            >
-              {plan.confidence}
-            </span>
+            <div className="mt-2">
+              <StatusPill tone={getConfidenceTone(plan.confidence)}>
+                {plan.confidence}
+              </StatusPill>
+            </div>
           </div>
         </div>
       </div>
@@ -376,12 +375,13 @@ export function DraftSemesterPlanCard({
       <div className="mt-4 grid gap-4">
         <ResultSection title="Semester cards">
           {plan.semesters.length > 0 ? (
-            <div className="grid gap-3 xl:grid-cols-2">
-              {plan.semesters.map((semester) => (
+            <div className="relative space-y-0 before:absolute before:bottom-5 before:left-[6px] before:top-5 before:w-px before:bg-slate-300 sm:before:left-[7px]">
+              {plan.semesters.map((semester, index) => (
                 <article
-                  className="rounded-md border border-slate-200 bg-slate-50 p-4"
+                  className="relative ml-7 border-b border-slate-200 py-4 last:border-b-0 sm:ml-10"
                   key={semester.label}
                 >
+                  <span className={`absolute -left-[27px] top-[22px] h-3 w-3 rounded-full border-2 bg-white sm:-left-[39px] sm:h-4 sm:w-4 ${index === 0 ? "border-[#dd550c]" : "border-slate-300"}`} />
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-[16px] font-semibold leading-6 text-slate-950">
                       {semester.label}
@@ -390,10 +390,10 @@ export function DraftSemesterPlanCard({
                       {semester.estimatedCredits} estimated credits
                     </span>
                   </div>
-                  <ul className="mt-3 space-y-3">
+                  <ul className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
                     {semester.plannedCourses.map((course) => (
                       <li
-                        className="rounded-md border border-slate-200 bg-white p-3"
+                        className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"
                         key={course.code}
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -513,29 +513,29 @@ function formatGapStatus(status: GapReportStatus) {
   }
 }
 
-function getGapStatusClassName(status: GapReportStatus) {
+function getGapStatusTone(status: GapReportStatus): "success" | "info" | "orange" | "neutral" {
   switch (status) {
     case "strong_progress":
-      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+      return "success";
     case "needs_review":
-      return "border-sky-200 bg-sky-50 text-sky-800";
+      return "info";
     case "missing_requirements":
-      return "border-orange-200 bg-orange-50 text-orange-800";
+      return "orange";
     case "insufficient_data":
-      return "border-slate-300 bg-slate-100 text-slate-700";
+      return "neutral";
   }
 }
 
-function getSuggestionConfidenceClassName(
+function getConfidenceTone(
   confidence: DegreeWorksParserConfidence,
-) {
+): "success" | "info" | "neutral" {
   switch (confidence) {
     case "high":
-      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+      return "success";
     case "medium":
-      return "border-sky-200 bg-sky-50 text-sky-800";
+      return "info";
     case "low":
-      return "border-slate-300 bg-slate-100 text-slate-700";
+      return "neutral";
   }
 }
 
