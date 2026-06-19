@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ClipboardCheck,
   Loader2,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
@@ -1057,6 +1058,21 @@ export default function PlanCheckPage() {
           </Link>
         </div>
       </header>
+
+      <div className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 text-[13px]">
+          <p className="hidden text-slate-600 sm:block">
+            Review which local rules are source-backed, modeled, or advisor-review-only.
+          </p>
+          <Link
+            className="inline-flex items-center gap-2 font-semibold text-[#b84300] hover:underline"
+            href="/rule-audit"
+          >
+            <ShieldCheck aria-hidden="true" size={16} />
+            View rule coverage audit
+          </Link>
+        </div>
+      </div>
 
       <CombinedDegreeWorksUploadSection
         isLoading={isCombinedDegreeWorksLoading}

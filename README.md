@@ -11,6 +11,7 @@ The MVP supports two complementary paths:
 - Gemini RAG chat for Auburn source-grounded advising questions.
 - Deterministic requirement checkers for quota-free progress review.
 - `/plan-check` supports a combined Degree Works PDF upload with an Auto, Software Engineering, Computer Science, or AI Engineering certificate planning target. The selected target focuses the Gap Report, Next Semester Suggestions, Draft Semester Plan, and concise copyable Advisor Meeting Summary while all three detailed deterministic checks still run and remain visible.
+- `/rule-audit` shows which checked-in program rules are source-backed, locally modeled, or intentionally left for advisor review, including requirement-block and supporting-model limitations.
 
 ## Demo flow
 
@@ -71,6 +72,12 @@ The MVP supports two complementary paths:
    - Run the Software Engineering manual, sample, or separate Degree Works PDF checker.
    - Run the Computer Science manual, sample, or separate Degree Works PDF checker.
    - Use `Generate draft plan` beside any manual course entry to call the standalone deterministic planner for that target path.
+16. Open `http://localhost:3000/rule-audit` and confirm:
+   - AI Engineering certificate, Software Engineering, and Computer Science program cards render;
+   - exact-course, source-backed, local-model, and advisor-review counts are visible;
+   - advisor-review-only requirement blocks are clearly labeled and are not treated as fully verified;
+   - prerequisite and course-planning metadata appear as conservative supporting models;
+   - global limitations and recommended next improvements are visible.
 
 ## Trust and safety
 
@@ -80,6 +87,8 @@ The MVP supports two complementary paths:
 - Deterministic rule results include inspectable provenance: catalog year, source ID/title, checked-in source file or Auburn bulletin URL when available, an evidence label, and a confidence classification.
 - `source_backed` means the rule is transcribed from the checked-in Auburn bulletin source; `local_model` means conservative locally maintained prerequisite or availability logic; `advisor_review_required` means the app intentionally cannot resolve the requirement authoritatively.
 - Provenance improves trust by making the origin and limits of each check visible without implying that local rules replace the official bulletin, Degree Works, or an advisor.
+- The Rule Coverage and Trust Audit makes those boundaries comparable across all three supported programs. It counts exact course rules separately from requirement blocks, exposes prerequisite and planning metadata as supporting local models, and identifies concrete gaps before the planner can be considered closer to complete.
+- The audit is a deterministic transparency tool, not an official Auburn audit. Its advisor-review-only blocks are never treated as fully verified.
 - Software Engineering and Computer Science core/elective requirement blocks are deterministic, conservative checks. Exact blocks can be satisfied by matched courses, candidate-only elective blocks remain advisor review unless the local approved-course data is strong enough, and insufficient source data is labeled for advisor review instead of being overclaimed.
 - Uploaded PDFs are processed server-side for course extraction.
 - Uploaded PDFs are not permanently stored.
@@ -113,8 +122,9 @@ The MVP supports two complementary paths:
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists and optionally accepts `startingTermLabel` for term-aware review.
+- The `/rule-audit` page and `GET /api/rules/coverage-audit` route expose a deterministic audit of exact rule coverage, requirement-block confidence, supporting models, known limitations, and recommended improvements.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
-- Local validation currently passes `133/133` deterministic tests.
+- Local validation currently passes `140/140` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Degree Works compatibility fixtures
@@ -284,7 +294,7 @@ npm run build
 
 Current validation coverage:
 
-- 133 deterministic tests through `npm test`, including the seven synthetic Degree Works compatibility fixtures
+- 140 deterministic tests through `npm test`, including rule coverage audit tests and the seven synthetic Degree Works compatibility fixtures
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`
