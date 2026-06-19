@@ -18,7 +18,14 @@ import {
   X,
 } from "lucide-react";
 import { FormEvent, MouseEvent, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
+import {
+  cleanSourcePreview,
+  formatProgramLabel,
+  formatSourceTypeLabel,
+  sanitizeAssistantMarkdown,
+} from "@/lib/chat-presentation";
 import { parseCourseCodes } from "@/lib/courses/course-code-parser";
 
 type Role = "user" | "assistant";
@@ -33,6 +40,7 @@ type Source = {
   fileName?: string;
   score?: number;
   snippet?: string;
+  relevanceNote?: string;
 };
 
 type ChatMessage = {
@@ -101,7 +109,65 @@ function confidenceClass(confidence?: ChatMessage["confidence"]) {
 }
 
 function sourceLabel(source: Source) {
-  return [source.program, source.catalogYear].filter(Boolean).join(" | ");
+  return [formatProgramLabel(source.program), source.catalogYear]
+    .filter(Boolean)
+    .join(" / ");
+}
+
+const assistantMarkdownElements = [
+  "p",
+  "strong",
+  "ul",
+  "ol",
+  "li",
+  "br",
+  "code",
+  "h2",
+  "h3",
+  "h4",
+];
+
+function AssistantMarkdown({ children }: { children: string }) {
+  return (
+    <ReactMarkdown
+      allowedElements={assistantMarkdownElements}
+      components={{
+        h2: ({ children: heading }) => (
+          <h2 className="mt-4 text-[16px] font-semibold leading-6 text-slate-950 first:mt-0">
+            {heading}
+          </h2>
+        ),
+        h3: ({ children: heading }) => (
+          <h3 className="mt-4 text-[15px] font-semibold leading-6 text-slate-950 first:mt-0">
+            {heading}
+          </h3>
+        ),
+        h4: ({ children: heading }) => (
+          <h4 className="mt-3 text-[14px] font-semibold leading-6 text-slate-950 first:mt-0">
+            {heading}
+          </h4>
+        ),
+        p: ({ children: paragraph }) => (
+          <p className="mt-3 whitespace-pre-wrap first:mt-0">{paragraph}</p>
+        ),
+        ul: ({ children: items }) => (
+          <ul className="mt-3 list-disc space-y-1 pl-5 first:mt-0">{items}</ul>
+        ),
+        ol: ({ children: items }) => (
+          <ol className="mt-3 list-decimal space-y-1 pl-5 first:mt-0">{items}</ol>
+        ),
+        code: ({ children: code }) => (
+          <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.92em] text-slate-900">
+            {code}
+          </code>
+        ),
+      }}
+      skipHtml
+      unwrapDisallowed
+    >
+      {sanitizeAssistantMarkdown(children)}
+    </ReactMarkdown>
+  );
 }
 
 function BooleanPill({ value }: { value: boolean }) {
@@ -535,6 +601,11 @@ function SourcesPanel({ message }: { message?: ChatMessage }) {
                     </span>
                   ) : null}
                 </div>
+                {source.sourceType ? (
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#03244d]">
+                    {formatSourceTypeLabel(source.sourceType)}
+                  </p>
+                ) : null}
                 {sourceLabel(source) ? (
                   <p className="mt-1 text-[12px] font-medium text-slate-500">
                     {sourceLabel(source)}
@@ -542,12 +613,25 @@ function SourcesPanel({ message }: { message?: ChatMessage }) {
                 ) : null}
                 {source.fileName ? (
                   <p className="mt-2 break-all text-[12px] text-slate-500">
-                    {source.fileName}
+                    Local source: {source.fileName}
                   </p>
                 ) : null}
-                {source.snippet ? (
-                  <p className="mt-3 line-clamp-5 text-[12px] leading-5 text-slate-600">
-                    {source.snippet}
+                {source.url ? (
+                  <a
+                    className="mt-2 inline-flex text-[12px] font-semibold text-[#03244d] hover:text-[#dd550c]"
+                    href={source.url}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Open public source
+                  </a>
+                ) : null}
+                <p className="mt-3 line-clamp-5 text-[12px] leading-5 text-slate-600">
+                  {cleanSourcePreview(source.snippet)}
+                </p>
+                {source.relevanceNote ? (
+                  <p className="mt-3 rounded-sm border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] leading-4 text-amber-800">
+                    {source.relevanceNote}
                   </p>
                 ) : null}
                 {source.lastCheckedDate ? (
@@ -582,7 +666,11 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             Auburn Academic Planner
           </div>
         ) : null}
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        {isUser ? (
+          <p className="whitespace-pre-wrap">{message.content}</p>
+        ) : (
+          <AssistantMarkdown>{message.content}</AssistantMarkdown>
+        )}
 
         {!isUser ? (
           <div className="mt-4 space-y-3 border-t border-slate-200 pt-3">

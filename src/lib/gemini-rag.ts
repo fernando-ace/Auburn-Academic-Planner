@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 
 import { GoogleGenAI, type Content, type GroundingChunk } from "@google/genai";
 
+import { selectDisplaySources } from "./chat-presentation.ts";
 import { getGeminiModel } from "./gemini-config.ts";
 
 const require = createRequire(import.meta.url);
@@ -33,6 +34,7 @@ export type AuburnSource = {
   fileName?: string;
   score?: number;
   snippet?: string;
+  relevanceNote?: string;
 };
 
 export type ModelAnswer = {
@@ -71,7 +73,8 @@ Product boundaries:
 - Do not claim to register students, change schedules, approve plans, or make official determinations.
 - Use language like academic planning assistant, advisor prep, and verify with your advisor.
 
-Return a concise normal text answer for the student. Do not return JSON, markdown tables, or any strict structured data.
+Return a concise, readable Markdown answer for the student. Use short headings only when useful and bullets or numbered lists for requirements. Do not return JSON, markdown tables, raw HTML, model-written citations, or raw source excerpts.
+End the answer with a brief reminder to verify degree requirements and planning decisions with an Auburn academic advisor.
 The server will attach retrieved sources, confidence, and advisor verification metadata separately.
 `;
 
@@ -396,11 +399,16 @@ function buildModelAnswer(
     };
   }
 
+  const displaySources = selectDisplaySources(
+    retrievalContext.userQuestion,
+    retrievedSources,
+  );
+
   return {
     answer:
       answer ||
       "The retrieved Auburn sources did not provide enough information to answer this question confidently.",
-    sources: retrievedSources,
+    sources: displaySources,
     confidence: "Medium",
     advisorVerificationNote: FALLBACK_ADVISOR_NOTE,
   };
