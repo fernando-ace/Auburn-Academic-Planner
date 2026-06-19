@@ -6,6 +6,7 @@ import {
   type SoftwareEngineeringPrerequisiteCheckResult,
 } from "../rules/software-engineering-prerequisites.ts";
 import type { SoftwareEngineeringDegreeCheckResult } from "../rules/software-engineering-degree.ts";
+import type { RuleProvenance } from "../rules/rule-provenance.ts";
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
 import type { DegreeWorksCourseStatusRecord } from "./degreeworks-course-status.ts";
 import {
@@ -41,6 +42,7 @@ export type DraftSemesterPlanCourse = {
   availabilityConfidence: AvailabilityConfidence;
   availabilityNotes: string[];
   planningNotes: string[];
+  provenance?: RuleProvenance[];
 };
 
 export type DraftSemesterPlanSemester = {
@@ -79,6 +81,7 @@ export type DraftSemesterPlanInput = DraftSemesterPlanSettings & {
 type CandidateCourse = CourseRule & {
   reason: string;
   priority: number;
+  provenance: RuleProvenance[];
 };
 
 const defaultMaxCreditsPerSemester = 15;
@@ -224,6 +227,13 @@ export function buildDraftSemesterPlan({
         availabilityConfidence: constraints.availabilityConfidence,
         availabilityNotes: constraints.availabilityNotes,
         planningNotes: constraints.metadata?.planningNotes ?? [],
+        provenance: dedupeProvenance([
+          ...candidate.provenance,
+          ...(constraints.metadata?.provenance
+            ? [constraints.metadata.provenance]
+            : []),
+          prerequisiteCheck.provenance,
+        ]),
       });
       advisorReviewItems.push(...constraints.advisorReviewItems);
       estimatedCredits += candidate.creditHours;
@@ -316,7 +326,7 @@ function collectCandidates({
   const suggestionByCode = new Map(
     nextSemesterSuggestions.suggestedCourses.map((course, index) => [
       normalizeCourseCode(course.code),
-      { reason: course.reason, priority: index },
+      { reason: course.reason, priority: index, provenance: course.provenance ?? [] },
     ]),
   );
   const selectedCourses =
@@ -337,6 +347,22 @@ function collectCandidates({
     .map((course, originalIndex) => {
       const code = normalizeCourseCode(course.code);
       const suggestion = suggestionByCode.get(code);
+      const fallbackProvenance =
+        resolvedTargetPath === "software_engineering"
+          ? softwareEngineeringCheck.provenance
+          : resolvedTargetPath === "computer_science"
+            ? computerScienceCheck.provenance
+            : resolvedTargetPath === "ai_certificate"
+              ? aiCertificateCheck.provenance
+              : softwareEngineeringCheck.exactRequiredCoursesMissing.some(
+                    (item) => normalizeCourseCode(item.code) === code,
+                  )
+                ? softwareEngineeringCheck.provenance
+                : computerScienceCheck.exactRequiredCoursesMissing.some(
+                      (item) => normalizeCourseCode(item.code) === code,
+                    )
+                  ? computerScienceCheck.provenance
+                  : aiCertificateCheck.provenance;
 
       return {
         ...course,
@@ -345,6 +371,7 @@ function collectCandidates({
           suggestion?.reason ??
           `${code} is an exact missing requirement in the selected deterministic path check.`,
         priority: suggestion?.priority ?? 1000 + originalIndex,
+        provenance: suggestion?.provenance ?? [fallbackProvenance],
       };
     })
     .filter((course) => {
@@ -459,6 +486,16 @@ function formatStatus(status: DegreeWorksCourseStatusRecord["status"]) {
 
 function dedupeStrings(items: string[]) {
   return Array.from(new Set(items));
+}
+
+function dedupeProvenance(items: RuleProvenance[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = `${item.sourceId}:${item.evidenceLabel}:${item.confidence}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function dedupeByCode(items: DraftSemesterPlan["unplacedCourses"]) {

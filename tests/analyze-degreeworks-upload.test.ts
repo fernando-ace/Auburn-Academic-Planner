@@ -38,6 +38,14 @@ test("POST runs both deterministic Degree Works checks from one uploaded PDF", a
   assert.ok(result.parsedCourseCodes.includes("COMP 5600"));
   assert.equal(result.aiCertificateCheck.isLikelyComplete, true);
   assert.equal(result.aiCertificateCheck.advisorVerificationRequired, true);
+  assert.equal(result.aiCertificateCheck.provenance.confidence, "source_backed");
+  assert.equal(
+    result.softwareEngineeringCheck.provenance.sourceId,
+    "auburn-software-engineering-bulletin",
+  );
+  assert.equal(result.prerequisiteCheck.provenance.confidence, "local_model");
+  assert.ok(Array.isArray(result.nextSemesterSuggestions.advisorMilestones));
+  assert.ok(result.gapReport.trustNotes.localModel.length > 0);
   assert.equal(result.gapReport.bestFitPath, "ai_certificate");
   assert.equal(result.gapReport.overallStatus, "missing_requirements");
   assert.ok(

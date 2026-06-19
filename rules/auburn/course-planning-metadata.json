@@ -1,0 +1,48 @@
+{
+  "catalogYear": "2025-2026",
+  "provenance": {
+    "sourceId": "local-course-planning-metadata",
+    "sourceTitle": "Local course planning metadata model",
+    "catalogYear": "2025-2026",
+    "sourceFile": "rules/auburn/course-planning-metadata.json",
+    "evidenceLabel": "Local availability and planning constraints",
+    "confidence": "local_model",
+    "notes": [
+      "Term hints come from checked-in curriculum grids and do not prove live course availability.",
+      "Verify target-term offerings, restrictions, and approvals with Auburn or an advisor."
+    ]
+  },
+  "courses": {
+    "COMP 4710": {
+      "typicalTerms": ["spring"],
+      "planningNotes": ["Verify senior standing and any department approval requirements for Senior Design Project."]
+    },
+    "COMP 4810": {
+      "typicalTerms": ["spring"],
+      "planningNotes": ["Treat Program Assessment as a zero-credit graduation milestone, not a credit-bearing course load item."]
+    },
+    "UNIV 4AA0": {
+      "typicalTerms": ["spring"],
+      "planningNotes": ["Treat the university graduation requirement as a zero-credit milestone and verify completion steps with an advisor."]
+    },
+    "ENGR 1100": {
+      "typicalTerms": [],
+      "planningNotes": ["Treat Engineering Orientation as a zero-credit milestone and verify how it applies with an advisor."]
+    },
+    "APPROVED AI ELECTIVE": {
+      "typicalTerms": [],
+      "planningNotes": ["Confirm the course is an approved AI elective and is offered in the target term before registration."]
+    }
+  },
+  "requirementBlocks": {
+    "CORE SCIENCE SEQUENCE": "Confirm the approved core science sequence and whether its courses are offered in the intended terms.",
+    "CORE HISTORY SEQUENCE": "Confirm the approved core history sequence and target-term offerings with an advisor.",
+    "CORE LITERATURE": "Choose a qualifying core literature course only after Degree Works and target-term offering review.",
+    "CORE SOCIAL SCIENCE ELECTIVE": "Choose a qualifying core social science elective only after Degree Works and target-term offering review.",
+    "CORE FINE ARTS": "Choose a qualifying core fine arts course only after Degree Works and target-term offering review.",
+    "MATH ELECTIVE": "Verify the approved math elective list, prerequisites, and target-term offering before selection.",
+    "MATH ELECTIVES": "Verify the approved math elective list, prerequisites, and target-term offering before selection.",
+    "TECHNICAL ELECTIVES": "Verify CSSE approval, prerequisites, and target-term offerings before choosing technical electives.",
+    "FREE ELECTIVE": "Confirm how a proposed free elective applies in Degree Works and whether it is offered in the target term."
+  }
+}

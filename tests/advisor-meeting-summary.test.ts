@@ -27,6 +27,10 @@ test("builds advisor summary for AI certificate result only", () => {
     summary,
     /This is a preparation summary, not an official degree audit/,
   );
+  assert.match(
+    summary,
+    /Deterministic checks use Auburn bulletin\/local rule data for catalog year 2025-2026/,
+  );
 });
 
 test("builds advisor summary for Software Engineering result only", () => {

@@ -5,6 +5,7 @@ import {
   type SoftwareEngineeringPrerequisiteCheckResult,
 } from "../rules/software-engineering-prerequisites.ts";
 import type { SoftwareEngineeringDegreeCheckResult } from "../rules/software-engineering-degree.ts";
+import type { RuleProvenance } from "../rules/rule-provenance.ts";
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
 import type {
   DegreeWorksCourseStatus,
@@ -41,6 +42,14 @@ export type NextSemesterSuggestedCourse = {
   availabilityConfidence?: AvailabilityConfidence;
   availabilityNotes?: string[];
   planningNotes?: string[];
+  provenance?: RuleProvenance[];
+};
+
+export type NextSemesterAdvisorMilestone = {
+  code: string;
+  title?: string;
+  reason: string;
+  provenance: RuleProvenance[];
 };
 
 export type NextSemesterNotYetRecommendedCourse = {
@@ -52,6 +61,7 @@ export type NextSemesterSuggestions = {
   targetPath: NextSemesterTargetPath;
   confidence: DegreeWorksParserConfidence;
   suggestedCourses: NextSemesterSuggestedCourse[];
+  advisorMilestones?: NextSemesterAdvisorMilestone[];
   notYetRecommended: NextSemesterNotYetRecommendedCourse[];
   advisorQuestions: string[];
   notes: string[];
@@ -99,8 +109,18 @@ export function buildNextSemesterSuggestions({
     targetPath: resolvedTargetPath,
     courseStatuses,
   });
-  const suggestedCourses = dedupeSuggestedCourses(collected.suggestedCourses)
-    .map(attachSuggestionMetadata)
+  const enrichedSuggestions = dedupeSuggestedCourses(collected.suggestedCourses)
+    .map(attachSuggestionMetadata);
+  const advisorMilestones = enrichedSuggestions
+    .filter((course) => course.creditHours === 0)
+    .map((course) => ({
+      code: course.code,
+      title: course.title,
+      reason: `${course.code} is a zero-credit requirement; keep it visible as a milestone to verify rather than a normal course-load recommendation.`,
+      provenance: course.provenance ?? [],
+    }));
+  const suggestedCourses = enrichedSuggestions
+    .filter((course) => course.creditHours !== 0)
     .slice(0, maxSuggestedCourses);
   const notYetRecommended = dedupeNotYetRecommended(
     collected.notYetRecommended,
@@ -132,6 +152,7 @@ export function buildNextSemesterSuggestions({
           ? "medium"
           : parserConfidence,
     suggestedCourses,
+    advisorMilestones,
     notYetRecommended,
     advisorQuestions: [
       "Which suggested courses are actually offered in the target term, and are any restricted by standing, approvals, or department scheduling?",
@@ -167,6 +188,12 @@ function attachSuggestionMetadata(
     availabilityConfidence: constraints.availabilityConfidence,
     availabilityNotes: constraints.availabilityNotes,
     planningNotes: constraints.metadata?.planningNotes ?? [],
+    provenance: dedupeProvenance([
+      ...(suggestion.provenance ?? []),
+      ...(constraints.metadata?.provenance
+        ? [constraints.metadata.provenance]
+        : []),
+    ]),
   };
 }
 
@@ -296,6 +323,7 @@ function collectSuggestionsForTarget({
       missingCourses: softwareEngineeringCheck?.exactRequiredCoursesMissing ?? [],
       parsedCourseCodes,
       courseStatuses,
+      provenance: softwareEngineeringCheck?.provenance,
     });
   }
 
@@ -305,6 +333,7 @@ function collectSuggestionsForTarget({
       missingCourses: computerScienceCheck?.exactRequiredCoursesMissing ?? [],
       parsedCourseCodes,
       courseStatuses,
+      provenance: computerScienceCheck?.provenance,
     });
   }
 
@@ -317,12 +346,14 @@ function collectSuggestionsForTarget({
     missingCourses: softwareEngineeringCheck?.exactRequiredCoursesMissing ?? [],
     parsedCourseCodes,
     courseStatuses,
+    provenance: softwareEngineeringCheck?.provenance,
   });
   const computerScienceSuggestions = collectDegreeSuggestions({
     degreeName: "Computer Science",
     missingCourses: computerScienceCheck?.exactRequiredCoursesMissing ?? [],
     parsedCourseCodes,
     courseStatuses,
+    provenance: computerScienceCheck?.provenance,
   });
 
   return {
@@ -357,6 +388,7 @@ function collectAiCertificateSuggestions(
         category: "certificate_requirement" as const,
         priority: "high" as const,
         advisorVerificationRequired: true,
+        provenance: [aiCertificateCheck.provenance],
       })),
       courseStatuses,
     );
@@ -372,6 +404,7 @@ function collectAiCertificateSuggestions(
           category: "advisor_review" as const,
           priority: "medium" as const,
           advisorVerificationRequired: true,
+          provenance: [aiCertificateCheck.provenance],
         },
       ],
       notYetRecommended: [],
@@ -386,11 +419,13 @@ function collectDegreeSuggestions({
   missingCourses,
   parsedCourseCodes,
   courseStatuses,
+  provenance,
 }: {
   degreeName: string;
   missingCourses: CourseRule[];
   parsedCourseCodes: string[];
   courseStatuses: Map<string, DegreeWorksCourseStatusRecord>;
+  provenance?: RuleProvenance;
 }) {
   const suggestedCourses: NextSemesterSuggestedCourse[] = [];
   const notYetRecommended: NextSemesterNotYetRecommendedCourse[] = [];
@@ -443,6 +478,7 @@ function collectDegreeSuggestions({
         : "missing_required",
       priority: "high",
       advisorVerificationRequired: true,
+      provenance: provenance ? [provenance] : [],
     });
   }
 
@@ -605,6 +641,17 @@ function dedupeNotYetRecommended(
 
 function dedupeStrings(items: string[]) {
   return Array.from(new Set(items));
+}
+
+function dedupeProvenance(items: RuleProvenance[]) {
+  const seen = new Set<string>();
+
+  return items.filter((item) => {
+    const key = `${item.sourceId}:${item.evidenceLabel}:${item.confidence}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function getCourseStatusMap(records: DegreeWorksCourseStatusRecord[]) {

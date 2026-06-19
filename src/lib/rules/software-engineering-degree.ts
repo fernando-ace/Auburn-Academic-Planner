@@ -4,6 +4,12 @@ import {
   type RequirementBlockDefinition,
   type RequirementBlockResult,
 } from "./requirement-blocks.ts";
+import {
+  createRuleProvenance,
+  inheritRuleProvenance,
+  type RuleProvenance,
+  type RuleProvenanceOverride,
+} from "./rule-provenance.ts";
 
 export type CourseRule = {
   code: string;
@@ -15,6 +21,7 @@ export type AlternativeCourseGroupRule = {
   name: string;
   minimumCoursesRequired: number;
   courses: CourseRule[];
+  provenance?: RuleProvenanceOverride;
 };
 
 export type AdvisorVerifiedRequirementRule = {
@@ -28,6 +35,7 @@ export type SoftwareEngineeringDegreeRule = {
   catalogYear: string;
   totalHoursRequired: number;
   sourceId: string;
+  provenance: RuleProvenance;
   exactRequiredCourses: CourseRule[];
   alternativeCourseGroups: AlternativeCourseGroupRule[];
   advisorVerifiedRequirements: AdvisorVerifiedRequirementRule[];
@@ -35,12 +43,14 @@ export type SoftwareEngineeringDegreeRule = {
 };
 
 export type AlternativeCourseGroupCheck = AlternativeCourseGroupRule & {
+  provenance: RuleProvenance;
   satisfiedCourses: CourseRule[];
   missingCourseOptions: CourseRule[];
   isSatisfied: boolean;
 };
 
 export type SoftwareEngineeringDegreeCheckResult = {
+  provenance: RuleProvenance;
   exactRequiredCoursesSatisfied: CourseRule[];
   exactRequiredCoursesMissing: CourseRule[];
   alternativeCourseGroups: AlternativeCourseGroupCheck[];
@@ -56,6 +66,10 @@ export type SoftwareEngineeringDegreeCheckResult = {
 
 export const softwareEngineeringDegreeRule =
   softwareEngineeringDegreeRuleJson as SoftwareEngineeringDegreeRule;
+
+export const softwareEngineeringDegreeProvenance = createRuleProvenance(
+  softwareEngineeringDegreeRule.provenance,
+);
 
 function normalizeCourseCode(courseCode: string) {
   return courseCode.trim().toUpperCase().replace(/\s+/g, " ");
@@ -88,6 +102,10 @@ export function checkSoftwareEngineeringDegree({
 
       return {
         ...group,
+        provenance: inheritRuleProvenance(
+          softwareEngineeringDegreeProvenance,
+          group.provenance,
+        ),
         satisfiedCourses,
         missingCourseOptions: group.courses.filter(
           (course) => !plannedCourses.has(normalizeCourseCode(course.code)),
@@ -104,6 +122,7 @@ export function checkSoftwareEngineeringDegree({
   const requirementBlocks = evaluateRequirementBlocks({
     blocks: softwareEngineeringDegreeRule.requirementBlocks,
     courseCodes: courseCodes,
+    provenance: softwareEngineeringDegreeProvenance,
   });
   const hasEnoughTotalCredits =
     totalPlannedCredits === null
@@ -116,6 +135,7 @@ export function checkSoftwareEngineeringDegree({
     hasEnoughTotalCredits === true;
 
   return {
+    provenance: softwareEngineeringDegreeProvenance,
     exactRequiredCoursesSatisfied,
     exactRequiredCoursesMissing,
     alternativeCourseGroups,

@@ -25,6 +25,10 @@ import type {
 import type { DraftSemesterPlan } from "@/lib/plan/draft-semester-plan";
 import type { GapReport, GapReportBestFitPath, GapReportStatus } from "@/lib/plan/gap-report";
 import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
+import type {
+  RuleConfidence,
+  RuleProvenance,
+} from "@/lib/rules/rule-provenance";
 
 type PlanCheckCourse = {
   code: string;
@@ -34,6 +38,7 @@ type PlanCheckCourse = {
 };
 
 type PlanCheckResult = {
+  provenance: RuleProvenance;
   planDescription?: string;
   major?: string;
   totalPlannedCredits?: number | null;
@@ -60,6 +65,7 @@ type SoftwareEngineeringAlternativeCourseGroup = {
   satisfiedCourses: PlanCheckCourse[];
   missingCourseOptions: PlanCheckCourse[];
   isSatisfied: boolean;
+  provenance: RuleProvenance;
 };
 
 type AdvisorVerifiedRequirement = {
@@ -83,9 +89,11 @@ type RequirementBlockResult = {
   requiredCredits?: number;
   matchedCredits?: number;
   notes: string[];
+  provenance: RuleProvenance;
 };
 
 type SoftwareEngineeringPlanCheckResult = {
+  provenance: RuleProvenance;
   planDescription?: string;
   major?: string;
   program?: string;
@@ -131,9 +139,11 @@ type PrerequisiteIssue = {
   missingPrerequisites: string[];
   severity: "warning" | "blocking" | "advisor_review";
   message: string;
+  provenance: RuleProvenance;
 };
 
 type SoftwareEngineeringPrerequisiteCheck = {
+  provenance: RuleProvenance;
   checkedCourseCount: number;
   prerequisiteIssues: PrerequisiteIssue[];
   advisorReviewItems: string[];
@@ -159,6 +169,14 @@ type NextSemesterSuggestedCourse = {
     | "unknown_requires_advisor_review";
   availabilityNotes?: string[];
   planningNotes?: string[];
+  provenance?: RuleProvenance[];
+};
+
+type NextSemesterAdvisorMilestone = {
+  code: string;
+  title?: string;
+  reason: string;
+  provenance: RuleProvenance[];
 };
 
 type NextSemesterNotYetRecommendedCourse = {
@@ -174,6 +192,7 @@ type NextSemesterSuggestions = {
     | "mixed_or_unclear";
   confidence: DegreeWorksParserConfidence;
   suggestedCourses: NextSemesterSuggestedCourse[];
+  advisorMilestones?: NextSemesterAdvisorMilestone[];
   notYetRecommended: NextSemesterNotYetRecommendedCourse[];
   advisorQuestions: string[];
   notes: string[];
@@ -461,6 +480,69 @@ function RequirementBlockStatusPill({
   );
 }
 
+function ProvenanceConfidencePill({
+  confidence,
+}: {
+  confidence: RuleConfidence;
+}) {
+  const labels: Record<RuleConfidence, string> = {
+    source_backed: "Source-backed",
+    local_model: "Local conservative model",
+    advisor_review_required: "Advisor review required",
+  };
+  const styles: Record<RuleConfidence, string> = {
+    source_backed: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    local_model: "border-amber-200 bg-amber-50 text-amber-800",
+    advisor_review_required:
+      "border-[#dd550c]/25 bg-[#fff7f1] text-[#9b3900]",
+  };
+
+  return (
+    <span
+      className={`rounded-sm border px-2 py-1 text-[12px] font-semibold ${styles[confidence]}`}
+    >
+      {labels[confidence]}
+    </span>
+  );
+}
+
+function ProvenanceDetails({ provenance }: { provenance: RuleProvenance }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[12px] font-semibold text-slate-700">
+          Catalog {provenance.catalogYear}
+        </span>
+        <ProvenanceConfidencePill confidence={provenance.confidence} />
+      </div>
+      <p className="mt-2 text-[13px] font-semibold text-slate-900">
+        {provenance.sourceTitle}
+      </p>
+      <details className="mt-2 text-[12px] leading-5 text-slate-600">
+        <summary className="cursor-pointer font-semibold text-[#9b3900]">
+          View source details
+        </summary>
+        <div className="mt-2 space-y-1">
+          <p>Source ID: {provenance.sourceId}</p>
+          <p>Evidence: {provenance.evidenceLabel}</p>
+          {provenance.sourceFile ? <p>Local source: {provenance.sourceFile}</p> : null}
+          {provenance.sourceUrl ? (
+            <a
+              className="inline-flex font-semibold text-[#9b3900] underline"
+              href={provenance.sourceUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Open Auburn source
+            </a>
+          ) : null}
+          {provenance.notes.map((note) => <p key={note}>{note}</p>)}
+        </div>
+      </details>
+    </div>
+  );
+}
+
 function RequirementBlockList({
   blocks,
 }: {
@@ -495,6 +577,9 @@ function RequirementBlockList({
                 ) : null}
               </div>
               <RequirementBlockStatusPill status={block.status} />
+              <ProvenanceConfidencePill
+                confidence={block.provenance.confidence}
+              />
             </div>
           </summary>
 
@@ -528,6 +613,7 @@ function RequirementBlockList({
                 ))}
               </ul>
             ) : null}
+            <ProvenanceDetails provenance={block.provenance} />
           </div>
         </details>
       ))}
@@ -574,6 +660,9 @@ function ResultCard({
           <h2 className="mt-2 text-[21px] font-semibold leading-7 text-slate-950">
             {result.planDescription ?? "Uploaded Degree Works PDF"}
           </h2>
+          <div className="mt-3 max-w-xl">
+            <ProvenanceDetails provenance={result.provenance} />
+          </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[24rem]">
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -722,6 +811,9 @@ function DegreeProgressResultCard({
               ? "This extracted plan does not prove final degree completion. AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may affect this result."
               : "This extracted plan does not prove final degree completion. AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may affect this result."}
           </p>
+          <div className="mt-3 max-w-xl">
+            <ProvenanceDetails provenance={result.provenance} />
+          </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[28rem]">
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -1082,6 +1174,17 @@ function SemesterPrerequisiteCheck({
 
   return (
     <div className="grid gap-4">
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+        <p className="text-[13px] font-semibold text-amber-900">
+          Local conservative model
+        </p>
+        <p className="mt-1 text-[12px] leading-5 text-amber-800">
+          Verify with Auburn bulletin/advisor before relying on prerequisite eligibility.
+        </p>
+        <div className="mt-2">
+          <ProvenanceDetails provenance={prerequisiteCheck.provenance} />
+        </div>
+      </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
           <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
@@ -1331,6 +1434,30 @@ function GapReportCard({
           items={gapReport.advisorReviewItems}
           title="Advisor review items"
         />
+        {gapReport.trustNotes ? (
+          <ResultSection title="Trust notes">
+            <div className="grid gap-3 lg:grid-cols-3">
+              {([
+                ["Source-backed checks", gapReport.trustNotes.sourceBacked],
+                ["Local model checks", gapReport.trustNotes.localModel],
+                [
+                  "Advisor-review checks",
+                  gapReport.trustNotes.advisorReviewRequired,
+                ],
+              ] as const).map(([title, items]) => (
+                <div
+                  className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                  key={title}
+                >
+                  <p className="text-[13px] font-semibold text-slate-900">{title}</p>
+                  <ul className="mt-2 space-y-1 text-[12px] leading-5 text-slate-600">
+                    {items.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </ResultSection>
+        ) : null}
         <GapReportList items={gapReport.nextActions} title="Next actions" />
         <GapReportList
           items={gapReport.advisorQuestions}
@@ -1367,6 +1494,9 @@ function NextSemesterSuggestionsCard({
             <p>
               Course availability, prerequisites, AP/transfer credit,
               substitutions, and advisor approval may change these suggestions.
+            </p>
+            <p className="font-semibold text-amber-800">
+              Availability and prerequisite checks use a local conservative model. Verify with Auburn bulletin/advisor.
             </p>
           </div>
         </div>
@@ -1439,6 +1569,11 @@ function NextSemesterSuggestionsCard({
                       {course.availabilityNotes[0]}
                     </p>
                   ) : null}
+                  {course.provenance?.map((provenance) => (
+                    <div className="mt-2" key={`${course.code}-${provenance.sourceId}`}>
+                      <ProvenanceDetails provenance={provenance} />
+                    </div>
+                  ))}
                 </li>
               ))}
             </ul>
@@ -1446,6 +1581,30 @@ function NextSemesterSuggestionsCard({
             <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
               No specific next-semester course suggestions were produced from
               the current deterministic rules.
+            </p>
+          )}
+        </ResultSection>
+
+        <ResultSection title="Advisor milestones">
+          {(suggestions.advisorMilestones?.length ?? 0) > 0 ? (
+            <ul className="grid gap-3 md:grid-cols-2">
+              {suggestions.advisorMilestones?.map((milestone) => (
+                <li
+                  className="rounded-md border border-amber-200 bg-amber-50 p-3"
+                  key={milestone.code}
+                >
+                  <p className="text-[14px] font-semibold text-amber-950">
+                    {milestone.code}{milestone.title ? ` — ${milestone.title}` : ""}
+                  </p>
+                  <p className="mt-2 text-[13px] leading-5 text-amber-900">
+                    {milestone.reason}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+              No zero-credit milestones were identified for this result.
             </p>
           )}
         </ResultSection>
@@ -1511,6 +1670,9 @@ function DraftSemesterPlanCard({
             <p>
               Confirm course availability, prerequisites, substitutions,
               AP/transfer credit, and semester load with an advisor.
+            </p>
+            <p className="font-semibold text-amber-800">
+              Availability and prerequisites are local conservative models; verify with Auburn bulletin/advisor.
             </p>
           </div>
         </div>

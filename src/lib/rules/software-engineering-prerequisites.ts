@@ -4,6 +4,12 @@ import type {
   DegreeWorksSemesterTerm,
 } from "../plan/degreeworks-semesters.ts";
 import type { DegreeWorksParserConfidence } from "../plan/degreeworks-analysis.ts";
+import {
+  createRuleProvenance,
+  inheritRuleProvenance,
+  type RuleProvenance,
+  type RuleProvenanceOverride,
+} from "./rule-provenance.ts";
 
 export type PrerequisiteIssueSeverity =
   | "warning"
@@ -16,9 +22,11 @@ export type SoftwareEngineeringPrerequisiteIssue = {
   missingPrerequisites: string[];
   severity: PrerequisiteIssueSeverity;
   message: string;
+  provenance: RuleProvenance;
 };
 
 export type SoftwareEngineeringPrerequisiteCheckResult = {
+  provenance: RuleProvenance;
   checkedCourseCount: number;
   prerequisiteIssues: SoftwareEngineeringPrerequisiteIssue[];
   advisorReviewItems: string[];
@@ -32,12 +40,14 @@ type SoftwareEngineeringPrerequisiteRule = {
   prerequisites: string[];
   verification: "modeled" | "advisor_review";
   advisorReviewNote?: string;
+  provenance?: RuleProvenanceOverride;
 };
 
 type SoftwareEngineeringPrerequisiteRuleSet = {
   modelName: string;
   catalogYear: string;
   sourceId: string;
+  provenance: RuleProvenance;
   rules: SoftwareEngineeringPrerequisiteRule[];
   excludedHardFailureCourses: string[];
   notes: string[];
@@ -45,6 +55,10 @@ type SoftwareEngineeringPrerequisiteRuleSet = {
 
 const softwareEngineeringPrerequisiteRule =
   softwareEngineeringPrerequisiteRuleJson as SoftwareEngineeringPrerequisiteRuleSet;
+
+export const softwareEngineeringPrerequisiteProvenance = createRuleProvenance(
+  softwareEngineeringPrerequisiteRule.provenance,
+);
 
 export function checkSoftwareEngineeringPrerequisites({
   semesterPlanAnalysis,
@@ -88,6 +102,14 @@ export function checkSoftwareEngineeringPrerequisites({
         message:
           rule.advisorReviewNote ??
           `${courseCode} requires advisor or catalog verification.`,
+        provenance: inheritRuleProvenance(
+          softwareEngineeringPrerequisiteProvenance,
+          {
+            ...rule.provenance,
+            confidence: "advisor_review_required",
+            evidenceLabel: `${courseCode} prerequisite eligibility`,
+          },
+        ),
       });
       continue;
     }
@@ -105,6 +127,10 @@ export function checkSoftwareEngineeringPrerequisites({
         message: `${courseCode} is planned, but ${missingPrerequisites.join(
           ", ",
         )} was not found in the plan.`,
+        provenance: inheritRuleProvenance(
+          softwareEngineeringPrerequisiteProvenance,
+          rule.provenance,
+        ),
       });
       continue;
     }
@@ -135,6 +161,10 @@ export function checkSoftwareEngineeringPrerequisites({
         message: `${courseCode} appears before or in the same term as modeled prerequisite ${outOfOrderPrerequisites.join(
           ", ",
         )}.`,
+        provenance: inheritRuleProvenance(
+          softwareEngineeringPrerequisiteProvenance,
+          rule.provenance,
+        ),
       });
     }
   }
@@ -144,6 +174,7 @@ export function checkSoftwareEngineeringPrerequisites({
   );
 
   return {
+    provenance: softwareEngineeringPrerequisiteProvenance,
     checkedCourseCount: plannedCourseSet.size,
     prerequisiteIssues,
     advisorReviewItems,

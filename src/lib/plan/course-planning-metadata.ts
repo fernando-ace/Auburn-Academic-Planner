@@ -1,7 +1,12 @@
+import planningMetadataJson from "../../../rules/auburn/course-planning-metadata.json" with { type: "json" };
 import { aiEngineeringCertificateRule } from "../rules/ai-certificate.ts";
 import { computerScienceDegreeRule } from "../rules/computer-science-degree.ts";
 import { getModeledMissingPrerequisites } from "../rules/software-engineering-prerequisites.ts";
 import { softwareEngineeringDegreeRule } from "../rules/software-engineering-degree.ts";
+import {
+  createRuleProvenance,
+  type RuleProvenance,
+} from "../rules/rule-provenance.ts";
 
 export type PlanningTerm = "spring" | "summer" | "fall" | "winter";
 
@@ -16,6 +21,7 @@ export type CoursePlanningMetadata = {
   typicalTerms: PlanningTerm[];
   availabilityConfidence: AvailabilityConfidence;
   planningNotes: string[];
+  provenance?: RuleProvenance;
 };
 
 type MetadataSeed = {
@@ -24,47 +30,20 @@ type MetadataSeed = {
   creditHours?: number;
 };
 
-const curriculumTermHints: Partial<Record<string, PlanningTerm[]>> = {
-  "COMP 4710": ["spring"],
-  "COMP 4810": ["spring"],
-  "UNIV 4AA0": ["spring"],
+type PlanningMetadataRule = {
+  catalogYear: string;
+  provenance: RuleProvenance;
+  courses: Record<
+    string,
+    { typicalTerms: PlanningTerm[]; planningNotes: string[] }
+  >;
+  requirementBlocks: Record<string, string>;
 };
 
-const specialPlanningNotes: Partial<Record<string, string[]>> = {
-  "COMP 4710": [
-    "Verify senior standing and any department approval requirements for Senior Design Project.",
-  ],
-  "COMP 4810": [
-    "Treat Program Assessment as a zero-credit graduation milestone, not a credit-bearing course load item.",
-  ],
-  "UNIV 4AA0": [
-    "Treat the university graduation requirement as a zero-credit milestone and verify completion steps with an advisor.",
-  ],
-  "APPROVED AI ELECTIVE": [
-    "Confirm the course is an approved AI elective and is offered in the target term before registration.",
-  ],
-};
-
-const requirementBlockPlanningNotes: Partial<Record<string, string>> = {
-  "CORE SCIENCE SEQUENCE":
-    "Confirm the approved core science sequence and whether its courses are offered in the intended terms.",
-  "CORE HISTORY SEQUENCE":
-    "Confirm the approved core history sequence and target-term offerings with an advisor.",
-  "CORE LITERATURE":
-    "Choose a qualifying core literature course only after Degree Works and target-term offering review.",
-  "CORE SOCIAL SCIENCE ELECTIVE":
-    "Choose a qualifying core social science elective only after Degree Works and target-term offering review.",
-  "CORE FINE ARTS":
-    "Choose a qualifying core fine arts course only after Degree Works and target-term offering review.",
-  "MATH ELECTIVE":
-    "Verify the approved math elective list, prerequisites, and target-term offering before selection.",
-  "MATH ELECTIVES":
-    "Verify the approved math elective list, prerequisites, and target-term offering before selection.",
-  "TECHNICAL ELECTIVES":
-    "Verify CSSE approval, prerequisites, and target-term offerings before choosing technical electives.",
-  "FREE ELECTIVE":
-    "Confirm how a proposed free elective applies in Degree Works and whether it is offered in the target term.",
-};
+const planningMetadataRule = planningMetadataJson as PlanningMetadataRule;
+export const coursePlanningMetadataProvenance = createRuleProvenance(
+  planningMetadataRule.provenance,
+);
 
 const coursePlanningMetadataByCode = buildMetadataMap();
 
@@ -79,7 +58,7 @@ export function getAllCoursePlanningMetadata() {
 }
 
 export function getRequirementBlockPlanningNote(blockName: string) {
-  return requirementBlockPlanningNotes[blockName.trim().toUpperCase()] ?? null;
+  return planningMetadataRule.requirementBlocks[blockName.trim().toUpperCase()] ?? null;
 }
 
 function buildMetadataMap() {
@@ -111,9 +90,10 @@ function buildMetadataMap() {
       code: seed.code === "Approved AI elective" ? seed.code : code,
       title: existing?.title ?? seed.title,
       creditHours: existing?.creditHours ?? seed.creditHours,
-      typicalTerms: [],
+      typicalTerms: planningMetadataRule.courses[code]?.typicalTerms ?? [],
       availabilityConfidence: "unknown_requires_advisor_review",
       planningNotes: buildPlanningNotes(code),
+      provenance: coursePlanningMetadataProvenance,
     });
   }
 
@@ -121,7 +101,8 @@ function buildMetadataMap() {
 }
 
 function buildPlanningNotes(code: string) {
-  const notes = [...(specialPlanningNotes[code] ?? [])];
+  const courseRule = planningMetadataRule.courses[code];
+  const notes = [...(courseRule?.planningNotes ?? [])];
   const modeledPrerequisites = getModeledMissingPrerequisites(code, []);
 
   if (modeledPrerequisites.length > 0) {
@@ -130,7 +111,7 @@ function buildPlanningNotes(code: string) {
     );
   }
 
-  const curriculumTerms = curriculumTermHints[code];
+  const curriculumTerms = courseRule?.typicalTerms;
   if (curriculumTerms?.length) {
     notes.push(
       `The checked-in bulletin plan grid places this item in ${formatTerms(curriculumTerms)}, but that is a curriculum hint, not proof of live availability.`,

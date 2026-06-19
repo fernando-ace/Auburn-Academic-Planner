@@ -29,9 +29,11 @@ The MVP supports two complementary paths:
    - selected target path (or Auto with its inferred path)
    - missing requirements focused on that target
    - next actions and advisor questions
+   - Trust notes grouped as source-backed, local model, and advisor review required
 7. Confirm the Next Semester Suggestions card appears after the Gap Report and shows:
    - target path and confidence
    - suggested courses with reasons, priorities, known credits, and compact availability notes
+   - zero-credit requirements under Advisor milestones rather than the normal course load
    - courses not yet recommended because modeled prerequisites need review
    - advisor questions and advisor-safe notes
 8. Confirm the shared parsed details show:
@@ -44,6 +46,7 @@ The MVP supports two complementary paths:
    - parser confidence
    - PDF parsing notes when parser warnings or signals are present
 9. Confirm the Semester and prerequisite check appears with detected terms, confidence, advisor-review items, and sequence validity.
+   - The prerequisite and availability sections are labeled as local conservative models that require Auburn bulletin/advisor verification.
 10. Confirm the AI Engineering certificate result shows likely complete: `Yes`.
 11. Confirm the Software Engineering degree progress result shows:
    - likely complete: `No`
@@ -74,6 +77,9 @@ The MVP supports two complementary paths:
 - The assistant is designed around official Auburn sources.
 - Sources are shown when RAG retrieves material.
 - Certificate, Software Engineering degree progress, and Computer Science degree progress logic are checked by deterministic local rules.
+- Deterministic rule results include inspectable provenance: catalog year, source ID/title, checked-in source file or Auburn bulletin URL when available, an evidence label, and a confidence classification.
+- `source_backed` means the rule is transcribed from the checked-in Auburn bulletin source; `local_model` means conservative locally maintained prerequisite or availability logic; `advisor_review_required` means the app intentionally cannot resolve the requirement authoritatively.
+- Provenance improves trust by making the origin and limits of each check visible without implying that local rules replace the official bulletin, Degree Works, or an advisor.
 - Software Engineering and Computer Science core/elective requirement blocks are deterministic, conservative checks. Exact blocks can be satisfied by matched courses, candidate-only elective blocks remain advisor review unless the local approved-course data is strong enough, and insufficient source data is labeled for advisor review instead of being overclaimed.
 - Uploaded PDFs are processed server-side for course extraction.
 - Uploaded PDFs are not permanently stored.
@@ -88,7 +94,7 @@ The MVP supports two complementary paths:
 - Course planning metadata reuses titles and credit hours from checked-in Auburn rules. Live offerings are not available locally, so unknown availability is labeled for advisor or department verification rather than presented as fact.
 - Fall/Spring placement in checked-in bulletin plan grids is treated only as a curriculum hint. It does not prove that a course will be offered in a future target term and does not block draft placement.
 - Draft Semester Plans are conservative, deterministic advising aids. They only place exact locally modeled requirements with known credit hours, never invent unresolved elective choices, and cap the draft at 15 credits per semester and six semesters by default.
-- Zero-credit program assessment and graduation requirements are advisor-review milestones and are not counted as ordinary semester courses or credit load.
+- Zero-credit orientation, program assessment, and graduation requirements—including ENGR 1100, COMP 4810, and UNIV 4AA0—remain visible as advisor milestones/review items and are not counted as ordinary suggestions, semester courses, or credit load.
 - Draft Semester Plans are not official academic plans. Course availability, prerequisites, substitutions, AP/transfer credit, catalog applicability, and semester load must be confirmed with an academic advisor.
 - The combined Degree Works PDF flow includes deterministic semester extraction when term labels are present and a conservative local Software Engineering prerequisite sequence check.
 - The prerequisite sequence model is preliminary and intentionally limited to a conservative subset of COMP prerequisite chains. It reports warnings and advisor-review items, not official registration decisions.
@@ -108,7 +114,7 @@ The MVP supports two complementary paths:
 - The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists and optionally accepts `startingTermLabel` for term-aware review.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
-- Local validation currently passes `109/109` deterministic tests.
+- Local validation currently passes `115/115` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels.
 
 ## Run Locally
@@ -262,7 +268,7 @@ npm run build
 
 Current validation coverage:
 
-- 109 deterministic tests through `npm test`
+- 115 deterministic tests through `npm test`
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`

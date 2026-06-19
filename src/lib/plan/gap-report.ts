@@ -3,6 +3,11 @@ import type { ComputerScienceDegreeCheckResult } from "../rules/computer-science
 import type { RequirementBlockResult } from "../rules/requirement-blocks.ts";
 import type { SoftwareEngineeringDegreeCheckResult } from "../rules/software-engineering-degree.ts";
 import type { SoftwareEngineeringPrerequisiteCheckResult } from "../rules/software-engineering-prerequisites.ts";
+import {
+  groupRuleTrustNotes,
+  type RuleTrustNotes,
+} from "../rules/rule-provenance.ts";
+import { coursePlanningMetadataProvenance } from "./course-planning-metadata.ts";
 import type {
   DegreeWorksDetectedSignals,
   DegreeWorksParserConfidence,
@@ -38,6 +43,7 @@ export type GapReport = {
   satisfiedHighlights: string[];
   missingRequirements: GapReportMissingRequirement[];
   advisorReviewItems: string[];
+  trustNotes?: RuleTrustNotes;
   nextActions: string[];
   advisorQuestions: string[];
 };
@@ -117,6 +123,29 @@ export function buildGapReport({
     satisfiedHighlights,
     missingRequirements,
     advisorReviewItems,
+    trustNotes: groupRuleTrustNotes([
+      ...(targetPath === "auto" || targetPath === "ai_certificate"
+        ? [aiCertificateCheck.provenance]
+        : []),
+      ...(targetPath === "auto" || targetPath === "software_engineering"
+        ? [
+            softwareEngineeringCheck.provenance,
+            ...softwareEngineeringCheck.requirementBlocks.map(
+              (block) => block.provenance,
+            ),
+          ]
+        : []),
+      ...(targetPath === "auto" || targetPath === "computer_science"
+        ? [
+            computerScienceCheck.provenance,
+            ...computerScienceCheck.requirementBlocks.map(
+              (block) => block.provenance,
+            ),
+          ]
+        : []),
+      prerequisiteCheck.provenance,
+      coursePlanningMetadataProvenance,
+    ]),
     nextActions: buildNextActions({
       overallStatus,
       bestFitPath,

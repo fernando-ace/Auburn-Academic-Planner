@@ -1,4 +1,10 @@
 import aiCertificateRule from "../../../rules/auburn/ai-engineering-certificate.json" with { type: "json" };
+import {
+  createRuleProvenance,
+  inheritRuleProvenance,
+  type RuleProvenance,
+  type RuleProvenanceOverride,
+} from "./rule-provenance.ts";
 
 export type CourseRule = {
   code: string;
@@ -11,6 +17,7 @@ export type ElectiveCandidateRule = CourseRule & {
 };
 
 export type AiCertificateCheckResult = {
+  provenance: RuleProvenance;
   requiredCoursesSatisfied: CourseRule[];
   requiredCoursesMissing: CourseRule[];
   electiveCandidatesFound: ElectiveCandidateRule[];
@@ -24,17 +31,23 @@ type AiCertificateRule = {
   catalogYear: string;
   totalHoursRequired: number;
   sourceId: string;
+  provenance: RuleProvenance;
   requiredCourses: CourseRule[];
   electiveRequirement: {
     description: string;
     creditHoursRequired: number;
     approvalRequired: boolean;
+    provenance: RuleProvenanceOverride;
     candidateCourses: ElectiveCandidateRule[];
   };
 };
 
 export const aiEngineeringCertificateRule =
   aiCertificateRule as AiCertificateRule;
+
+export const aiEngineeringCertificateProvenance = createRuleProvenance(
+  aiEngineeringCertificateRule.provenance,
+);
 
 function normalizeCourseCode(courseCode: string) {
   return courseCode.trim().toUpperCase().replace(/\s+/g, " ");
@@ -60,9 +73,16 @@ export function checkAiEngineeringCertificate(
   const hasElectiveCandidate = electiveCandidatesFound.length > 0;
 
   return {
+    provenance: aiEngineeringCertificateProvenance,
     requiredCoursesSatisfied,
     requiredCoursesMissing,
-    electiveCandidatesFound,
+    electiveCandidatesFound: electiveCandidatesFound.map((course) => ({
+      ...course,
+      provenance: inheritRuleProvenance(
+        aiEngineeringCertificateProvenance,
+        aiEngineeringCertificateRule.electiveRequirement.provenance,
+      ),
+    })),
     isLikelyComplete: hasRequiredCourses && hasElectiveCandidate,
     advisorVerificationRequired:
       aiEngineeringCertificateRule.electiveRequirement.approvalRequired,

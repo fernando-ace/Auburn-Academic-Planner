@@ -37,6 +37,9 @@ test("reports AI certificate progress while degree paths have missing courses", 
 
   assert.equal(report.overallStatus, "missing_requirements");
   assert.equal(report.bestFitPath, "ai_certificate");
+  assert.ok((report.trustNotes?.sourceBacked.length ?? 0) > 0);
+  assert.ok((report.trustNotes?.localModel.length ?? 0) > 0);
+  assert.ok((report.trustNotes?.advisorReviewRequired.length ?? 0) > 0);
   assert.ok(
     report.satisfiedHighlights.some((highlight) =>
       highlight.includes("AI Engineering certificate looks likely complete"),

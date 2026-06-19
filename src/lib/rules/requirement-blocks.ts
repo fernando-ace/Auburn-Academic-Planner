@@ -14,6 +14,7 @@ export type RequirementBlockResult = {
   requiredCredits?: number;
   matchedCredits?: number;
   notes: string[];
+  provenance: RuleProvenance;
 };
 
 export type RequirementBlockCourse = {
@@ -26,6 +27,7 @@ type BaseRequirementBlockDefinition = {
   blockName: string;
   requiredCredits?: number;
   notes?: string[];
+  provenance?: RuleProvenanceOverride;
 };
 
 export type ExactCourseRequirementBlockDefinition =
@@ -83,28 +85,42 @@ export type RequirementBlockDefinition =
 export function evaluateRequirementBlocks({
   blocks,
   courseCodes,
+  provenance,
 }: {
   blocks: RequirementBlockDefinition[];
   courseCodes: string[];
+  provenance?: RuleProvenance;
 }): RequirementBlockResult[] {
   const plannedCourses = Array.from(new Set(courseCodes.map(normalizeCourseCode)));
 
-  return blocks.map((block) => evaluateRequirementBlock(block, plannedCourses));
+  const parentProvenance =
+    provenance ??
+    createFallbackProvenance();
+
+  return blocks.map((block) =>
+    evaluateRequirementBlock(block, plannedCourses, parentProvenance),
+  );
 }
 
 function evaluateRequirementBlock(
   block: RequirementBlockDefinition,
   plannedCourses: string[],
+  parentProvenance: RuleProvenance,
 ): RequirementBlockResult {
+  const provenance = inheritRuleProvenance(
+    parentProvenance,
+    block.provenance,
+  );
+
   switch (block.type) {
     case "exact_course":
-      return evaluateExactCourseBlock(block, plannedCourses);
+      return evaluateExactCourseBlock(block, plannedCourses, provenance);
     case "one_of_many":
-      return evaluateOneOfManyBlock(block, plannedCourses);
+      return evaluateOneOfManyBlock(block, plannedCourses, provenance);
     case "minimum_credits_from_list":
-      return evaluateMinimumCreditsBlock(block, plannedCourses);
+      return evaluateMinimumCreditsBlock(block, plannedCourses, provenance);
     case "prefix_level_candidate":
-      return evaluatePrefixLevelBlock(block, plannedCourses);
+      return evaluatePrefixLevelBlock(block, plannedCourses, provenance);
     case "advisor_verified":
       return {
         blockName: block.blockName,
@@ -117,6 +133,7 @@ function evaluateRequirementBlock(
           ...readNotes(block),
           "This block requires advisor or official Degree Works verification before it can be marked satisfied.",
         ],
+        provenance,
       };
     case "unknown_or_insufficient_data":
       return {
@@ -130,6 +147,7 @@ function evaluateRequirementBlock(
           ...readNotes(block),
           "The local rules do not contain enough approved-course data to validate this block deterministically.",
         ],
+        provenance,
       };
   }
 }
@@ -137,6 +155,7 @@ function evaluateRequirementBlock(
 function evaluateExactCourseBlock(
   block: ExactCourseRequirementBlockDefinition,
   plannedCourses: string[],
+  provenance: RuleProvenance,
 ): RequirementBlockResult {
   const courseCode = normalizeCourseCode(block.course.code);
   const isSatisfied = plannedCourses.includes(courseCode);
@@ -150,12 +169,14 @@ function evaluateExactCourseBlock(
     requiredCredits: block.requiredCredits ?? block.course.creditHours,
     matchedCredits: isSatisfied ? block.course.creditHours : 0,
     notes: readNotes(block),
+    provenance,
   };
 }
 
 function evaluateOneOfManyBlock(
   block: OneOfManyRequirementBlockDefinition,
   plannedCourses: string[],
+  provenance: RuleProvenance,
 ): RequirementBlockResult {
   const minimumCoursesRequired = block.minimumCoursesRequired ?? 1;
   const candidateCodes = block.courses.map((course) =>
@@ -180,12 +201,14 @@ function evaluateOneOfManyBlock(
     requiredCredits: block.requiredCredits,
     matchedCredits,
     notes: readNotes(block),
+    provenance,
   };
 }
 
 function evaluateMinimumCreditsBlock(
   block: MinimumCreditsRequirementBlockDefinition,
   plannedCourses: string[],
+  provenance: RuleProvenance,
 ): RequirementBlockResult {
   const candidateCodes = block.courses.map((course) =>
     normalizeCourseCode(course.code),
@@ -211,12 +234,14 @@ function evaluateMinimumCreditsBlock(
             "Candidate courses were found, but this block still requires advisor approval before it can be marked satisfied.",
           ]
         : readNotes(block),
+    provenance,
   };
 }
 
 function evaluatePrefixLevelBlock(
   block: PrefixLevelRequirementBlockDefinition,
   plannedCourses: string[],
+  provenance: RuleProvenance,
 ): RequirementBlockResult {
   const excludedCourses = new Set(
     (block.excludedCourses ?? []).map(normalizeCourseCode),
@@ -253,6 +278,7 @@ function evaluatePrefixLevelBlock(
             ...readNotes(block),
             "These are prefix/level candidates only; the approved elective list and Degree Works block must be verified by an advisor.",
           ],
+    provenance,
   };
 }
 
@@ -302,3 +328,20 @@ function readNotes(block: BaseRequirementBlockDefinition) {
 export function normalizeCourseCode(courseCode: string) {
   return courseCode.trim().toUpperCase().replace(/\s+/g, " ");
 }
+
+function createFallbackProvenance(): RuleProvenance {
+  return {
+    sourceId: "local-requirement-block-test-model",
+    sourceTitle: "Local requirement block model",
+    catalogYear: "unknown",
+    sourceFile: "src/lib/rules/requirement-blocks.ts",
+    evidenceLabel: "Locally evaluated requirement block",
+    confidence: "local_model",
+    notes: ["No parent rule provenance was supplied."],
+  };
+}
+import {
+  inheritRuleProvenance,
+  type RuleProvenance,
+  type RuleProvenanceOverride,
+} from "./rule-provenance.ts";

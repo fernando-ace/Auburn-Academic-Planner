@@ -51,7 +51,17 @@ test("suggests missing Software Engineering required courses when eligible", () 
 
   assert.deepEqual(
     suggestions.suggestedCourses.map((course) => course.code),
-    ["ENGL 1100", "ENGL 1120", "ENGR 1100", "ELEC 2200"],
+    ["ENGL 1100", "ENGL 1120", "ELEC 2200"],
+  );
+  assert.ok(
+    suggestions.advisorMilestones?.some(
+      (milestone) => milestone.code === "ENGR 1100",
+    ),
+  );
+  assert.ok(
+    suggestions.suggestedCourses.every(
+      (course) => course.creditHours !== 0,
+    ),
   );
   assert.ok(
     suggestions.suggestedCourses.every(

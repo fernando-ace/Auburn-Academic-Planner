@@ -2,6 +2,15 @@
   "modelName": "Software Engineering preliminary prerequisite sequence check",
   "catalogYear": "2025-2026",
   "sourceId": "local-preliminary-software-engineering-prerequisites",
+  "provenance": {
+    "sourceId": "local-preliminary-software-engineering-prerequisites",
+    "sourceTitle": "Local preliminary prerequisite model",
+    "catalogYear": "2025-2026",
+    "sourceFile": "rules/auburn/software-engineering-prerequisites.json",
+    "evidenceLabel": "Modeled prerequisite sequence",
+    "confidence": "local_model",
+    "notes": ["This conservative local model is not a live Auburn catalog prerequisite check.", "Verify prerequisites and registration eligibility with the Auburn bulletin or an advisor."]
+  },
   "rules": [
     {
       "courseCode": "COMP 2210",

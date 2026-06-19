@@ -4,6 +4,16 @@
   "catalogYear": "2025-2026",
   "totalHoursRequired": 122,
   "sourceId": "auburn-software-engineering-bulletin",
+  "provenance": {
+    "sourceId": "auburn-software-engineering-bulletin",
+    "sourceTitle": "Software Engineering B.S. Bulletin",
+    "catalogYear": "2025-2026",
+    "sourceFile": "sources/auburn/software-engineering-bulletin.html",
+    "sourceUrl": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/departmentofcomputerscienceandsoftwareengineering/softwareengineering_major/",
+    "evidenceLabel": "Published degree requirements",
+    "confidence": "source_backed",
+    "notes": ["Exact courses and published requirement headings are transcribed from the checked-in Auburn bulletin source."]
+  },
   "exactRequiredCourses": [
     { "code": "ENGL 1100", "title": "English Composition I", "creditHours": 3 },
     { "code": "ENGL 1120", "title": "English Composition II", "creditHours": 3 },
@@ -60,6 +70,7 @@
     {
       "blockName": "Core Science Sequence",
       "type": "advisor_verified",
+      "provenance": { "evidenceLabel": "Core Science Sequence block", "confidence": "advisor_review_required" },
       "requiredCredits": 8,
       "notes": [
         "Bulletin lists Core Science Sequence (Series B, D, H) and says selections must follow approved listings."
@@ -68,6 +79,7 @@
     {
       "blockName": "Core History Sequence",
       "type": "advisor_verified",
+      "provenance": { "evidenceLabel": "Core History Sequence block", "confidence": "advisor_review_required" },
       "requiredCredits": 6,
       "notes": [
         "Bulletin identifies this as a core sequence, but the local rule does not include the approved sequence list."
@@ -76,6 +88,7 @@
     {
       "blockName": "Core Literature",
       "type": "advisor_verified",
+      "provenance": { "evidenceLabel": "Core Literature block", "confidence": "advisor_review_required" },
       "requiredCredits": 3,
       "notes": [
         "Core literature credit must be verified against Auburn Core and Degree Works."
@@ -84,6 +97,7 @@
     {
       "blockName": "Core Social Science Elective",
       "type": "advisor_verified",
+      "provenance": { "evidenceLabel": "Core Social Science Elective block", "confidence": "advisor_review_required" },
       "requiredCredits": 3,
       "notes": [
         "Core social science elective credit must be verified against Auburn Core and Degree Works."
@@ -92,6 +106,7 @@
     {
       "blockName": "Core Fine Arts",
       "type": "advisor_verified",
+      "provenance": { "evidenceLabel": "Core Fine Arts block", "confidence": "advisor_review_required" },
       "requiredCredits": 3,
       "notes": [
         "Core fine arts credit must be verified against Auburn Core and Degree Works."
@@ -100,6 +115,7 @@
     {
       "blockName": "Math Electives",
       "type": "prefix_level_candidate",
+      "provenance": { "evidenceLabel": "Locally modeled Math Electives candidates", "confidence": "local_model" },
       "requiredCredits": 6,
       "prefixes": ["MATH", "STAT"],
       "minimumLevel": 3000,
@@ -112,6 +128,7 @@
     {
       "blockName": "Technical Electives",
       "type": "prefix_level_candidate",
+      "provenance": { "evidenceLabel": "Locally modeled Technical Electives candidates", "confidence": "local_model" },
       "requiredCredits": 9,
       "prefixes": ["COMP"],
       "minimumLevel": 5000,
@@ -124,6 +141,7 @@
     {
       "blockName": "Free Elective",
       "type": "advisor_verified",
+      "provenance": { "evidenceLabel": "Free Elective applicability", "confidence": "advisor_review_required" },
       "requiredCredits": 3,
       "notes": [
         "Free elective credit can be affected by transfer, duplicate, repeated, or excess-credit handling in Degree Works."

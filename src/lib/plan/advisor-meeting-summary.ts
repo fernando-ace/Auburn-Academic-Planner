@@ -150,6 +150,7 @@ export function buildAdvisorMeetingSummary({
     "Advisor Meeting Summary",
     "",
     "This is a preparation summary, not an official degree audit; advisor verification is required.",
+    "Deterministic checks use Auburn bulletin/local rule data for catalog year 2025-2026; unresolved blocks and local prerequisite/availability models require advisor verification.",
     `Selected target path: ${formatSelectedTarget(selectedTargetPath, resolvedPath)}`,
   ];
 
