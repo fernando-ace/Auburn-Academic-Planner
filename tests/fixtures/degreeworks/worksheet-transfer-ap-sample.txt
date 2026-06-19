@@ -24,12 +24,13 @@ HIST 2010 United States History I Grade TR Credits 3 Term Fall 2024
 Satisfied by: HIS201 - United States History I - Jefferson State CC
 HIST 2020 United States History II Grade TR Credits 3 Term Spring 2025
 Satisfied by: HIS202 - United States History II - Jefferson State CC
-Satisfied by: AP3201 - Computer Science Principles - Advanced Placement Credit
 
 Incomplete See Major Requirements Below
 Still needed: 3 Credits in COMP 3220
 
 Fall Through
+COMP 2000 Computer Science Free Elective Grade AP Credits 3 Term Fall 2024
+Satisfied by: AP3201 - Computer Science Principles - Advanced Placement Credit
 HIST 1010 World History Grade A Credits 3 Term Fall 2024
 MUSI 2000 Music Appreciation Grade B Credits 3 Term Spring 2025
 

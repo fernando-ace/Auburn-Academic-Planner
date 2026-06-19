@@ -103,6 +103,14 @@ test("extracts AP/transfer and fall-through status evidence", async () => {
         record.satisfiesCourseCode === "ENGL 1100",
     ),
   );
+  assert.ok(
+    analysis.externalCreditRecords.some(
+      (record) =>
+        record.sourceCode === "AP3201" &&
+        record.displayName === "AP Computer Science Principles" &&
+        record.satisfiesCourseCode === "COMP 2000",
+    ),
+  );
   assert.ok(analysis.transferOrApCourseCodes.includes("MATH 1610"));
   assert.ok(analysis.transferOrApCourseCodes.includes("STAT 2510"));
   assert.ok(analysis.transferOrApCourseCodes.includes("ENGL 1100"));
@@ -110,11 +118,13 @@ test("extracts AP/transfer and fall-through status evidence", async () => {
   assert.ok(analysis.transferOrApCourseCodes.includes("HIST 2010"));
   assert.ok(analysis.transferOrApCourseCodes.includes("HIST 2020"));
   assert.ok(!analysis.transferOrApCourseCodes.includes("AP 9002"));
+  assert.ok(analysis.nonDegreeApplicableCourseCodes.includes("COMP 2000"));
+  assert.ok(analysis.nonDegreeApplicableCourseCodes.includes("AP 3201"));
   assert.ok(analysis.nonDegreeApplicableCourseCodes.includes("HIST 1010"));
   assert.ok(analysis.nonDegreeApplicableCourseCodes.includes("MUSI 2000"));
   assert.ok(
     gapReport.advisorReviewItems.some((item) =>
-      item.includes("AP or transfer evidence"),
+      item.includes("AP Computer Science Principles appears in Fall Through"),
     ),
   );
   assert.ok(

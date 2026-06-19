@@ -57,7 +57,9 @@ test("keeps unlinked external credits visible without claiming equivalency", () 
   );
 
   assert.equal(records.length, 1);
+  assert.equal(records[0].sourceCode, "AP3201");
   assert.equal(records[0].displayName, "AP Computer Science Principles");
+  assert.equal(records[0].sourceType, "advanced_placement");
   assert.equal(records[0].satisfiesCourseCode, undefined);
   assert.equal(records[0].confidence, "medium");
 });

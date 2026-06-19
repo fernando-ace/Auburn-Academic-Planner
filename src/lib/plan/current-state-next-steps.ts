@@ -10,6 +10,7 @@ import type {
   CurrentDegreeAuditRequirementBlock,
 } from "./current-degree-audit-analysis.ts";
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
+import { formatExternalCreditAwareCode } from "./external-credit-display.ts";
 
 export type CurrentStateGapReport = {
   overallStatus:
@@ -90,7 +91,11 @@ export function buildCurrentStateGapReport({
           (code) => `${code} appears satisfied by AP or transfer evidence; confirm applicability with an advisor.`,
         )),
     ...audit.nonDegreeApplicableCourseCodes.map(
-      (code) => `${code} appears in Fall Through or non-degree-applicable evidence; ask whether it can apply to a requirement.`,
+      (code) =>
+        `${formatExternalCreditAwareCode({
+          code,
+          externalCreditRecords: audit.externalCreditRecords,
+        })} appears in Fall Through or non-degree-applicable evidence; ask whether it can apply to a requirement.`,
     ),
   ];
   const overallStatus =
@@ -158,7 +163,10 @@ export function buildCurrentStateNextSteps({
   const notYetRecommended: { code: string; reason: string }[] = [];
 
   for (const record of audit.courseStatusRecords) {
-    const item = verificationItemForRecord(record);
+    const item = verificationItemForRecord({
+      record,
+      audit,
+    });
     if (item) {
       verifyInstead.set(record.code, item);
     }
@@ -411,9 +419,13 @@ function enrichSuggestion(
   };
 }
 
-function verificationItemForRecord(
-  record: CurrentDegreeAuditCourseStatusRecord,
-): CurrentStateVerificationItem | null {
+function verificationItemForRecord({
+  record,
+  audit,
+}: {
+  record: CurrentDegreeAuditCourseStatusRecord;
+  audit: CurrentDegreeAuditAnalysis;
+}): CurrentStateVerificationItem | null {
   if (
     ![
       "preregistered",
@@ -426,19 +438,24 @@ function verificationItemForRecord(
     return null;
   }
 
+  const displayCode = formatExternalCreditAwareCode({
+    code: record.code,
+    externalCreditRecords: audit.externalCreditRecords,
+  });
+
   return {
     code: record.code,
     status: record.status as CurrentStateVerificationItem["status"],
     reason:
       record.status === "preregistered"
-        ? `${record.code} is preregistered; verify registration/completion before adding it again.`
+        ? `${displayCode} is preregistered; verify registration/completion before adding it again.`
         : record.status === "in_progress"
-          ? `${record.code} appears in progress; verify final completion timing.`
+          ? `${displayCode} appears in progress; verify final completion timing.`
           : record.status === "transfer_or_ap"
-            ? `${record.code} appears satisfied by AP or transfer evidence; verify applicability.`
+            ? `${displayCode} appears satisfied by AP or transfer evidence; verify applicability.`
             : record.status === "non_degree_applicable"
-              ? `${record.code} appears non-degree-applicable or in Fall Through evidence; ask whether it can apply.`
-              : `${record.code} has unknown worksheet status; verify it against Degree Works.`,
+              ? `${displayCode} appears non-degree-applicable or in Fall Through evidence; ask whether it can apply.`
+              : `${displayCode} has unknown worksheet status; verify it against Degree Works.`,
   };
 }
 
