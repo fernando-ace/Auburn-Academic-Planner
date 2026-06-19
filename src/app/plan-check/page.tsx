@@ -17,13 +17,19 @@ import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
 import { CollapsibleDetails, EmptyState } from "@/components/ui-primitives";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
 import { CombinedDegreeWorksParsedDetails } from "./components/combined-analysis-details";
+import { CurrentProgressResultDetails } from "./components/current-progress-details";
 import { DegreeProgressCheckSection } from "./components/degree-progress-check-section";
-import { AiCertificateCheckSection, CombinedDegreeWorksUploadSection } from "./components/plan-check-input-sections";
+import {
+  AiCertificateCheckSection,
+  DegreeWorksWorkflowUploadSection,
+  type PlanCheckWorkflowMode,
+} from "./components/plan-check-input-sections";
 import { DraftSemesterPlanCard, GapReportCard, NextSemesterSuggestionsCard } from "./components/planning-cards";
 import { DegreeProgressResultCard, ResultCard } from "./components/result-cards";
 import type {
   CombinedDegreeWorksUploadResult,
   ComputerSciencePlanCheckResult,
+  CurrentDegreeWorksUploadResult,
   PlanCheckResult,
   SoftwareEngineeringPlanCheckResult,
 } from "./types";
@@ -32,6 +38,8 @@ const planCheckEndpoint = "/api/plan/check-ai-certificate";
 const planCheckUploadEndpoint = "/api/plan/check-ai-certificate/upload";
 const combinedDegreeWorksUploadEndpoint =
   "/api/plan/analyze-degreeworks/upload";
+const currentDegreeWorksUploadEndpoint =
+  "/api/plan/analyze-degreeworks-current/upload";
 const draftSemesterPlanEndpoint = "/api/plan/draft-semester-plan";
 const softwareEngineeringPlanCheckEndpoint =
   "/api/plan/check-software-engineering";
@@ -62,6 +70,8 @@ export default function PlanCheckPage() {
   const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
   const [selectedCombinedDegreeWorksPdfFile, setSelectedCombinedDegreeWorksPdfFile] =
     useState<File | null>(null);
+  const [selectedWorkflowMode, setSelectedWorkflowMode] =
+    useState<PlanCheckWorkflowMode>("current_progress");
   const [selectedPlanningTargetPath, setSelectedPlanningTargetPath] =
     useState<PlanningTargetPathInput>("auto");
   const [
@@ -79,6 +89,8 @@ export default function PlanCheckPage() {
     useState<ComputerSciencePlanCheckResult | null>(null);
   const [combinedDegreeWorksResult, setCombinedDegreeWorksResult] =
     useState<CombinedDegreeWorksUploadResult | null>(null);
+  const [currentDegreeWorksResult, setCurrentDegreeWorksResult] =
+    useState<CurrentDegreeWorksUploadResult | null>(null);
   const [manualDraftSemesterPlan, setManualDraftSemesterPlan] =
     useState<DraftSemesterPlan | null>(null);
   const [draftSemesterPlanError, setDraftSemesterPlanError] = useState<
@@ -153,6 +165,7 @@ export default function PlanCheckPage() {
     combinedDegreeWorksResult?.draftSemesterPlan ?? manualDraftSemesterPlan;
   const advisorMeetingSummary = useMemo(
     () =>
+      currentDegreeWorksResult?.advisorMeetingSummary ??
       buildAdvisorMeetingSummary({
         aiResult: result,
         softwareEngineeringResult,
@@ -171,6 +184,7 @@ export default function PlanCheckPage() {
       combinedDegreeWorksResult?.prerequisiteCheck,
       combinedDegreeWorksResult?.selectedTargetPath,
       computerScienceResult,
+      currentDegreeWorksResult?.advisorMeetingSummary,
       result,
       softwareEngineeringResult,
     ],
@@ -192,6 +206,7 @@ export default function PlanCheckPage() {
     setIsLoading(true);
     setError(null);
     setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
     setCombinedDegreeWorksError(null);
     setLoadingMessage(message);
 
@@ -228,6 +243,7 @@ export default function PlanCheckPage() {
 
     setIsCombinedDegreeWorksLoading(true);
     setCombinedDegreeWorksError(null);
+    setCurrentDegreeWorksResult(null);
     setError(null);
     setSoftwareEngineeringError(null);
     setComputerScienceError(null);
@@ -267,6 +283,7 @@ export default function PlanCheckPage() {
       };
 
       setCombinedDegreeWorksResult(combinedPayload);
+      setCurrentDegreeWorksResult(null);
       setManualDraftSemesterPlan(null);
       setDraftSemesterPlanError(null);
       setResult({
@@ -289,6 +306,7 @@ export default function PlanCheckPage() {
       });
     } catch (fetchError) {
       setCombinedDegreeWorksResult(null);
+      setCurrentDegreeWorksResult(null);
       setResult(null);
       setSoftwareEngineeringResult(null);
       setComputerScienceResult(null);
@@ -296,6 +314,61 @@ export default function PlanCheckPage() {
         fetchError instanceof Error
           ? fetchError.message
           : "The combined Degree Works PDF analysis could not run.",
+      );
+    } finally {
+      setIsCombinedDegreeWorksLoading(false);
+    }
+  }
+
+  async function runCurrentDegreeWorksUploadPlanCheck(
+    file: File,
+    targetPath: PlanningTargetPathInput,
+  ) {
+    if (isCombinedDegreeWorksLoading) {
+      return;
+    }
+
+    setIsCombinedDegreeWorksLoading(true);
+    setCombinedDegreeWorksError(null);
+    setError(null);
+    setSoftwareEngineeringError(null);
+    setComputerScienceError(null);
+    setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
+    setResult(null);
+    setSoftwareEngineeringResult(null);
+    setComputerScienceResult(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("targetPath", targetPath);
+
+    try {
+      const response = await fetch(currentDegreeWorksUploadEndpoint, {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as
+        | CurrentDegreeWorksUploadResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The current-progress Degree Works analysis could not run.",
+        );
+      }
+
+      setCurrentDegreeWorksResult(payload as CurrentDegreeWorksUploadResult);
+      setManualDraftSemesterPlan(null);
+      setDraftSemesterPlanError(null);
+    } catch (fetchError) {
+      setCurrentDegreeWorksResult(null);
+      setCombinedDegreeWorksError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The current-progress Degree Works analysis could not run.",
       );
     } finally {
       setIsCombinedDegreeWorksLoading(false);
@@ -363,6 +436,7 @@ export default function PlanCheckPage() {
       }
 
       setCombinedDegreeWorksResult(null);
+      setCurrentDegreeWorksResult(null);
       setManualDraftSemesterPlan(payload as DraftSemesterPlan);
     } catch (fetchError) {
       setManualDraftSemesterPlan(null);
@@ -384,6 +458,7 @@ export default function PlanCheckPage() {
     setIsSoftwareEngineeringLoading(true);
     setSoftwareEngineeringError(null);
     setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
     setCombinedDegreeWorksError(null);
     setSoftwareEngineeringLoadingMessage(
       "Checking the sample Degree Works plan against Software Engineering degree rules...",
@@ -430,6 +505,7 @@ export default function PlanCheckPage() {
     setIsSoftwareEngineeringLoading(true);
     setSoftwareEngineeringError(null);
     setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
     setCombinedDegreeWorksError(null);
     setSoftwareEngineeringLoadingMessage(
       "Checking pasted plan against Software Engineering degree rules...",
@@ -479,6 +555,7 @@ export default function PlanCheckPage() {
     setIsSoftwareEngineeringLoading(true);
     setSoftwareEngineeringError(null);
     setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
     setCombinedDegreeWorksError(null);
     setSoftwareEngineeringLoadingMessage(
       "Checking uploaded Degree Works PDF against Software Engineering degree rules...",
@@ -525,6 +602,7 @@ export default function PlanCheckPage() {
     setIsComputerScienceLoading(true);
     setComputerScienceError(null);
     setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
     setCombinedDegreeWorksError(null);
     setComputerScienceLoadingMessage(
       "Checking the sample Degree Works plan against Computer Science degree rules...",
@@ -571,6 +649,7 @@ export default function PlanCheckPage() {
     setIsComputerScienceLoading(true);
     setComputerScienceError(null);
     setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
     setCombinedDegreeWorksError(null);
     setComputerScienceLoadingMessage(
       "Checking pasted plan against Computer Science degree rules...",
@@ -620,6 +699,7 @@ export default function PlanCheckPage() {
     setIsComputerScienceLoading(true);
     setComputerScienceError(null);
     setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
     setCombinedDegreeWorksError(null);
     setComputerScienceLoadingMessage(
       "Checking uploaded Degree Works PDF against Computer Science degree rules...",
@@ -896,24 +976,35 @@ export default function PlanCheckPage() {
 
     if (!selectedCombinedDegreeWorksPdfFile) {
       setCombinedDegreeWorksResult(null);
+      setCurrentDegreeWorksResult(null);
       setCombinedDegreeWorksUploadValidationError(
-        "Choose a Degree Works PDF before running the combined analysis.",
+        selectedWorkflowMode === "current_progress"
+          ? "Choose a Degree Works Worksheet/Audit PDF before checking Current Progress."
+          : "Choose a Degree Works Plan PDF before checking Planned Path.",
       );
       return;
     }
 
     if (!isPdfFile(selectedCombinedDegreeWorksPdfFile)) {
       setCombinedDegreeWorksResult(null);
+      setCurrentDegreeWorksResult(null);
       setCombinedDegreeWorksUploadValidationError(
-        "Choose a PDF file before running the combined Degree Works analysis.",
+        "Choose a PDF file before running the Degree Works workflow.",
       );
       return;
     }
 
-    void runCombinedDegreeWorksUploadPlanCheck(
-      selectedCombinedDegreeWorksPdfFile,
-      selectedPlanningTargetPath,
-    );
+    if (selectedWorkflowMode === "current_progress") {
+      void runCurrentDegreeWorksUploadPlanCheck(
+        selectedCombinedDegreeWorksPdfFile,
+        selectedPlanningTargetPath,
+      );
+    } else {
+      void runCombinedDegreeWorksUploadPlanCheck(
+        selectedCombinedDegreeWorksPdfFile,
+        selectedPlanningTargetPath,
+      );
+    }
   }
 
   function checkSoftwareEngineeringUploadedPdf(
@@ -1035,6 +1126,7 @@ export default function PlanCheckPage() {
 
   const hasResultOrStatus = Boolean(
     combinedDegreeWorksResult ||
+      currentDegreeWorksResult ||
       result ||
       softwareEngineeringResult ||
       computerScienceResult ||
@@ -1099,10 +1191,15 @@ export default function PlanCheckPage() {
         </div>
       </div>
 
-      <CombinedDegreeWorksUploadSection
+      <DegreeWorksWorkflowUploadSection
+        mode={selectedWorkflowMode}
         isLoading={isCombinedDegreeWorksLoading}
         onAnalyze={checkCombinedDegreeWorksUploadedPdf}
         onFileChange={handleCombinedDegreeWorksPdfFileChange}
+        onModeChange={(mode) => {
+          setSelectedWorkflowMode(mode);
+          setCombinedDegreeWorksUploadValidationError(null);
+        }}
         onTargetPathChange={setSelectedPlanningTargetPath}
         selectedFile={selectedCombinedDegreeWorksPdfFile}
         selectedTargetPath={selectedPlanningTargetPath}
@@ -1111,9 +1208,9 @@ export default function PlanCheckPage() {
 
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:py-7">
         <CollapsibleDetails
-          description="Paste courses, run samples, or use the separate program-specific PDF checks. The combined upload above remains the primary flow."
-          key={combinedDegreeWorksResult ? "combined-result" : "manual-inputs"}
-          open={!combinedDegreeWorksResult}
+          description="Paste courses, run samples, or use the separate program-specific PDF checks. The Current Progress and Planned Path workflows above remain the primary flows."
+          key={combinedDegreeWorksResult || currentDegreeWorksResult ? "workflow-result" : "manual-inputs"}
+          open={!combinedDegreeWorksResult && !currentDegreeWorksResult}
           title="Advanced and manual checks"
         >
           <div className="grid gap-5 lg:grid-cols-3">
@@ -1190,7 +1287,7 @@ export default function PlanCheckPage() {
         </CollapsibleDetails>
 
         <section className={`min-w-0 ${hasResultOrStatus ? "order-first" : "order-last"}`}>
-          {advisorMeetingSummary && !combinedDegreeWorksResult ? (
+          {advisorMeetingSummary && !combinedDegreeWorksResult && !currentDegreeWorksResult ? (
             <AdvisorMeetingSummary
               copyStatus={advisorSummaryCopyStatus}
               onCopySummary={copyAdvisorMeetingSummary}
@@ -1252,6 +1349,19 @@ export default function PlanCheckPage() {
               />
               Analyzing Degree Works PDF against deterministic checks...
             </div>
+          ) : null}
+
+          {currentDegreeWorksResult ? (
+            <>
+              <CurrentProgressResultDetails result={currentDegreeWorksResult} />
+              {advisorMeetingSummary ? (
+                <AdvisorMeetingSummary
+                  copyStatus={advisorSummaryCopyStatus}
+                  onCopySummary={copyAdvisorMeetingSummary}
+                  summary={advisorMeetingSummary}
+                />
+              ) : null}
+            </>
           ) : null}
 
           {combinedDegreeWorksResult ? (
@@ -1324,14 +1434,13 @@ export default function PlanCheckPage() {
             ) : (
               <ResultCard result={result} showUploadedPdfDetails />
             )
-          ) : (
+          ) : !currentDegreeWorksResult ? (
             <EmptyState>
-              Upload one Degree Works PDF, paste planned courses, or run the
-              sample Degree Works plan to see required courses satisfied,
-              missing requirements, elective candidates, completion status,
-              advisor verification, and notes.
+              Upload a Degree Works Worksheet audit for Current Progress, upload
+              a Degree Works Plan PDF for Planned Path, paste planned courses,
+              or run the sample plan to see deterministic advisor-safe results.
             </EmptyState>
-          )}
+          ) : null}
 
           <div className="mt-5">
             {softwareEngineeringError ? (

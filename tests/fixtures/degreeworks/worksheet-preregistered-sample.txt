@@ -1,0 +1,27 @@
+Auburn University Degree Works Worksheet
+Student name Example Student
+Student ID ****1111
+Degree Bachelor of Software Engr
+Audit date 02/01/2026 10:30 AM
+Program BSWE Software Engineering
+Major Software Engineering - SENG
+Catalog year 2025-2026
+Credits required 122
+Credits applied 83
+Unmet conditions for this set of requirements: 39 Credits needed
+Bachelor of Software Engineering INCOMPLETE
+
+Complete See Computing Foundation Requirements Below
+Satisfied by: COMP 1210 Fundamentals of Computing I Grade A Credits 3 Term Fall 2024
+Satisfied by: COMP 2210 Fundamentals of Computing II Grade B Credits 3 Term Spring 2025
+Satisfied by: COMP 2710 Software Construction Grade B Credits 3 Term Fall 2025
+
+Incomplete See Major Requirements Below
+Still needed: 3 Credits in COMP 3220
+Still needed: 3 Credits in COMP 3270
+
+Preregistered
+COMP 3220 Principles of Programming Languages Credits 3 Term Fall 2026
+MATH 2630 Calculus III Credits 4 Term Fall 2026
+
+Disclaimer: This audit is a guide and is not official graduation certification.

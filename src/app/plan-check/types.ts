@@ -1,4 +1,15 @@
 import type { DegreeWorksDetectedSignals, DegreeWorksParserConfidence } from "@/lib/plan/degreeworks-analysis";
+import type {
+  CurrentDegreeAuditAnalysis,
+} from "@/lib/plan/current-degree-audit-analysis";
+import type {
+  CurrentStateGapReport,
+  CurrentStateNextSteps,
+} from "@/lib/plan/current-state-next-steps";
+import type {
+  DegreeWorksDocumentType,
+  DegreeWorksDocumentTypeDetection,
+} from "@/lib/plan/degreeworks-document-type";
 import type { DegreeWorksCourseStatusCounts, DegreeWorksCourseStatusRecord } from "@/lib/plan/degreeworks-course-status";
 import type { DraftSemesterPlan } from "@/lib/plan/draft-semester-plan";
 import type { DegreeWorksSemesterExtraction } from "@/lib/plan/degreeworks-semesters";
@@ -96,6 +107,7 @@ export type NextSemesterSuggestedCourse = SharedNextSemesterSuggestedCourse;
 export type NextSemesterSuggestions = SharedNextSemesterSuggestions;
 
 export type CombinedDegreeWorksUploadResult = {
+  documentType?: "planned_path";
   selectedTargetPath: PlanningTargetPathInput;
   sourceFileName: string;
   parsedCourseCount: number;
@@ -138,5 +150,24 @@ export type CombinedDegreeWorksUploadResult = {
     | "parsedCourseCodes"
     | "parsedCourseCount"
   >;
+  notes: string[];
+};
+
+export type CurrentDegreeWorksUploadResult = {
+  selectedTargetPath: PlanningTargetPathInput;
+  sourceFileName: string;
+  documentType: DegreeWorksDocumentType;
+  documentTypeDetection: DegreeWorksDocumentTypeDetection;
+  currentProgressAnalysis: CurrentDegreeAuditAnalysis;
+  currentStateGapReport: CurrentStateGapReport;
+  currentStateNextSteps: CurrentStateNextSteps;
+  advisorMeetingSummary: string;
+  parserDiagnostics: {
+    parserWarnings: string[];
+    parserConfidence: DegreeWorksParserConfidence;
+  };
+  aiCertificateCheck?: PlanCheckResult;
+  softwareEngineeringCheck?: SoftwareEngineeringPlanCheckResult;
+  computerScienceCheck?: ComputerSciencePlanCheckResult;
   notes: string[];
 };

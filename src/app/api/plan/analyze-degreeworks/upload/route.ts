@@ -44,6 +44,7 @@ export async function POST(request: Request) {
 
   return Response.json({
     sourceFileName: upload.fileName,
+    documentType: "planned_path",
     ...combinedAnalysis,
     notes: [
       "This combined Degree Works PDF analysis is not an official degree audit.",

@@ -3,24 +3,39 @@ import type { ChangeEventHandler, MouseEventHandler } from "react";
 
 import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
 
-export function CombinedDegreeWorksUploadSection({
+export type PlanCheckWorkflowMode = "current_progress" | "planned_path";
+
+export function DegreeWorksWorkflowUploadSection({
+  mode,
   isLoading,
   onAnalyze,
   onFileChange,
+  onModeChange,
   onTargetPathChange,
   selectedFile,
   selectedTargetPath,
   validationError,
 }: {
+  mode: PlanCheckWorkflowMode;
   isLoading: boolean;
   onAnalyze: MouseEventHandler<HTMLButtonElement>;
   onFileChange: ChangeEventHandler<HTMLInputElement>;
+  onModeChange: (mode: PlanCheckWorkflowMode) => void;
   onTargetPathChange: (value: PlanningTargetPathInput) => void;
   selectedFile: File | null;
   selectedTargetPath: PlanningTargetPathInput;
   validationError: string | null;
 }) {
-  const exportSteps = [
+  const currentProgressExportSteps = [
+    "Open Auburn Degree Works.",
+    "Go to `Worksheets`.",
+    "Click the print icon on the Worksheet page.",
+    "Choose dimensions if prompted.",
+    "Click `Open PDF`.",
+    "In the PDF viewer, click the download icon or save the PDF.",
+    "Upload that saved PDF under `Current Progress`.",
+  ];
+  const plannedPathExportSteps = [
     "Open Auburn Degree Works.",
     "Go to the `Plans` tab.",
     "Open the plan you want to check.",
@@ -30,6 +45,10 @@ export function CombinedDegreeWorksUploadSection({
     "In the browser print dialog, choose `Save as PDF`.",
     "Save the PDF, then upload that saved PDF here.",
   ];
+  const isCurrentProgress = mode === "current_progress";
+  const exportSteps = isCurrentProgress
+    ? currentProgressExportSteps
+    : plannedPathExportSteps;
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 pt-5 sm:px-6 lg:pt-7">
@@ -39,19 +58,63 @@ export function CombinedDegreeWorksUploadSection({
           <div className="max-w-3xl lg:py-1">
             <div className="flex items-center gap-2">
               <FileUp aria-hidden="true" className="text-[#dd550c]" size={20} />
-              <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">Combined PDF analysis</p>
+              <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">Degree Works workflows</p>
             </div>
-            <h2 className="mt-2 text-[24px] font-semibold leading-8 text-slate-950">Analyze Degree Works PDF</h2>
+            <h2 className="mt-2 text-[24px] font-semibold leading-8 text-slate-950">
+              {isCurrentProgress ? "Check Current Progress" : "Check Planned Path"}
+            </h2>
             <p className="mt-2 text-[14px] leading-6 text-slate-600">
-              Upload one Degree Works PDF to run both the AI Engineering certificate check, Software Engineering degree progress check, and Computer Science degree progress check from the same parsed courses and credit total.
+              {isCurrentProgress
+                ? "Upload your Degree Works Worksheet audit to see where you stand right now and what to discuss taking next semester."
+                : "Upload a Degree Works Plan PDF to test whether a proposed multi-semester plan supports your graduation path and target timeline."}
             </p>
             <p className="mt-2 text-[13px] leading-5 text-slate-500">
-              This is not an official degree audit. Advisor verification is required. AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may require advisor review.
+              {isCurrentProgress
+                ? "Current Progress preserves completed, preregistered, AP/transfer, Fall Through, still-needed, and unknown statuses instead of flattening everything into planned courses."
+                : "Planned Path focuses on timeline feasibility, semester load, prerequisites, unresolved blocks, and advisor-review items for a future plan."}
             </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button
+                className={`rounded-lg border p-4 text-left transition ${
+                  isCurrentProgress
+                    ? "border-[#dd550c] bg-[#fff7f1] shadow-sm"
+                    : "border-slate-200 bg-white hover:border-[#dd550c]/50"
+                }`}
+                disabled={isLoading}
+                onClick={() => onModeChange("current_progress")}
+                type="button"
+              >
+                <span className="block text-[15px] font-semibold leading-6 text-slate-950">Current Progress</span>
+                <span className="mt-1 block text-[13px] leading-5 text-slate-600">
+                  Worksheet/Audit PDF for current standing and next-semester advisor discussion.
+                </span>
+              </button>
+              <button
+                className={`rounded-lg border p-4 text-left transition ${
+                  !isCurrentProgress
+                    ? "border-[#dd550c] bg-[#fff7f1] shadow-sm"
+                    : "border-slate-200 bg-white hover:border-[#dd550c]/50"
+                }`}
+                disabled={isLoading}
+                onClick={() => onModeChange("planned_path")}
+                type="button"
+              >
+                <span className="block text-[15px] font-semibold leading-6 text-slate-950">Planned Path</span>
+                <span className="mt-1 block text-[13px] leading-5 text-slate-600">
+                  Plan PDF for validating a future graduation path, timeline, and course sequence.
+                </span>
+              </button>
+            </div>
+
             <details className="mt-4 rounded-lg border border-[#dd550c]/25 bg-[#fff7f1] p-3 text-[13px] leading-5 text-slate-700" open>
               <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-slate-950">
                 <FileText aria-hidden="true" className="shrink-0 text-[#dd550c]" size={17} />
-                <span>How to export your Degree Works plan PDF</span>
+                <span>
+                  {isCurrentProgress
+                    ? "How to export your Degree Works current audit PDF"
+                    : "How to export your Degree Works plan PDF"}
+                </span>
               </summary>
               <ol className="mt-3 list-decimal space-y-1.5 pl-5">
                 {exportSteps.map((step) => (
@@ -69,7 +132,7 @@ export function CombinedDegreeWorksUploadSection({
                 ))}
               </ol>
               <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] leading-5 text-amber-900">
-                Upload the saved PDF, not a screenshot. The planner works best with the printable Degree Works plan PDF from the Plans tab.
+                Upload the saved PDF, not a screenshot. {isCurrentProgress ? "Use the Worksheet audit PDF for Current Progress." : "Use the printable Degree Works Plan PDF for Planned Path."}
               </p>
               <p className="mt-2 text-[12px] leading-5 text-slate-600">
                 The PDF is processed server-side for this check and is not permanently stored.
@@ -88,7 +151,7 @@ export function CombinedDegreeWorksUploadSection({
             <label className="mt-3 block text-[13px] font-semibold leading-5 text-slate-700" htmlFor="combined-degreeworks-pdf">Degree Works PDF</label>
             <input accept="application/pdf" className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15" disabled={isLoading} id="combined-degreeworks-pdf" onChange={onFileChange} type="file" />
             <p className="mt-2 text-[12px] leading-5 text-slate-500">
-              Upload the saved PDF, not a screenshot. The planner works best with the printable Degree Works plan PDF from the Plans tab.
+              Upload the saved PDF, not a screenshot. {isCurrentProgress ? "Current Progress expects a Worksheet/Audit PDF." : "Planned Path expects a Degree Works Plan PDF."}
             </p>
             <p className="mt-1 text-[12px] leading-5 text-slate-500">
               The PDF is processed server-side for this check and is not permanently stored.
@@ -97,7 +160,7 @@ export function CombinedDegreeWorksUploadSection({
             {validationError ? <p className="mt-2 text-[13px] font-medium leading-5 text-orange-700" role="alert">{validationError}</p> : null}
             <button className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#dd550c] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white shadow-sm transition hover:bg-[#b84300] disabled:cursor-not-allowed disabled:bg-slate-300" disabled={isLoading} onClick={onAnalyze} type="button">
               {isLoading ? <Loader2 aria-hidden="true" className="animate-spin" size={17} /> : null}
-              Analyze Degree Works PDF
+              {isCurrentProgress ? "Check Current Progress" : "Check Planned Path"}
             </button>
           </div>
         </div>
