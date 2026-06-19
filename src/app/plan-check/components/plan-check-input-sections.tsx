@@ -1,4 +1,4 @@
-import { FileUp, Loader2 } from "lucide-react";
+import { FileText, FileUp, Loader2 } from "lucide-react";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 
 import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
@@ -20,6 +20,17 @@ export function CombinedDegreeWorksUploadSection({
   selectedTargetPath: PlanningTargetPathInput;
   validationError: string | null;
 }) {
+  const exportSteps = [
+    "Open Auburn Degree Works.",
+    "Go to the `Plans` tab.",
+    "Open the plan you want to check.",
+    "Click the print icon on the Plans page.",
+    "Degree Works will open a printable plan page.",
+    "On that printable page, click the print icon again.",
+    "In the browser print dialog, choose `Save as PDF`.",
+    "Save the PDF, then upload that saved PDF here.",
+  ];
+
   return (
     <section className="mx-auto w-full max-w-7xl px-4 pt-5 sm:px-6 lg:pt-7">
       <div className="overflow-hidden rounded-xl border border-[#dd550c]/30 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06),0_18px_45px_rgba(15,23,42,0.06)]">
@@ -37,6 +48,33 @@ export function CombinedDegreeWorksUploadSection({
             <p className="mt-2 text-[13px] leading-5 text-slate-500">
               This is not an official degree audit. Advisor verification is required. AP, transfer, substitutions, hidden Degree Works sections, electives, prerequisites, and semester ordering may require advisor review.
             </p>
+            <details className="mt-4 rounded-lg border border-[#dd550c]/25 bg-[#fff7f1] p-3 text-[13px] leading-5 text-slate-700" open>
+              <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-slate-950">
+                <FileText aria-hidden="true" className="shrink-0 text-[#dd550c]" size={17} />
+                <span>How to export your Degree Works plan PDF</span>
+              </summary>
+              <ol className="mt-3 list-decimal space-y-1.5 pl-5">
+                {exportSteps.map((step) => (
+                  <li key={step}>
+                    {step.split("`").map((part, index) =>
+                      index % 2 === 1 ? (
+                        <code className="rounded-sm bg-white px-1 py-0.5 font-semibold text-slate-800" key={`${step}-${part}`}>
+                          {part}
+                        </code>
+                      ) : (
+                        part
+                      ),
+                    )}
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] leading-5 text-amber-900">
+                Upload the saved PDF, not a screenshot. The planner works best with the printable Degree Works plan PDF from the Plans tab.
+              </p>
+              <p className="mt-2 text-[12px] leading-5 text-slate-600">
+                The PDF is processed server-side for this check and is not permanently stored.
+              </p>
+            </details>
           </div>
           <div className="w-full rounded-lg border border-slate-200 bg-slate-50/80 p-4">
             <label className="text-[13px] font-semibold leading-5 text-slate-700" htmlFor="combined-degreeworks-target-path">Planning target</label>
@@ -49,6 +87,12 @@ export function CombinedDegreeWorksUploadSection({
             <p className="mt-2 text-[12px] leading-5 text-slate-500">Focuses the planning reports; all three detailed checks still run.</p>
             <label className="mt-3 block text-[13px] font-semibold leading-5 text-slate-700" htmlFor="combined-degreeworks-pdf">Degree Works PDF</label>
             <input accept="application/pdf" className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15" disabled={isLoading} id="combined-degreeworks-pdf" onChange={onFileChange} type="file" />
+            <p className="mt-2 text-[12px] leading-5 text-slate-500">
+              Upload the saved PDF, not a screenshot. The planner works best with the printable Degree Works plan PDF from the Plans tab.
+            </p>
+            <p className="mt-1 text-[12px] leading-5 text-slate-500">
+              The PDF is processed server-side for this check and is not permanently stored.
+            </p>
             {selectedFile ? <p className="mt-2 break-all text-[12px] font-medium leading-5 text-emerald-700">Selected: {selectedFile.name}</p> : null}
             {validationError ? <p className="mt-2 text-[13px] font-medium leading-5 text-orange-700" role="alert">{validationError}</p> : null}
             <button className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#dd550c] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white shadow-sm transition hover:bg-[#b84300] disabled:cursor-not-allowed disabled:bg-slate-300" disabled={isLoading} onClick={onAnalyze} type="button">

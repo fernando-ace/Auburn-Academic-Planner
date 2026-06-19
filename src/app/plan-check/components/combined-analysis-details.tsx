@@ -449,11 +449,28 @@ export function CombinedDegreeWorksParsedDetails({
         </ResultSection>
 
         <ResultSection title="PDF parsing notes">
-          <ParserNotes
-            detectedSignals={result.detectedSignals}
-            parserConfidence={result.parserConfidence}
-            parserWarnings={result.parserWarnings}
-          />
+          <div className="grid gap-3">
+            <ParserNotes
+              detectedSignals={result.detectedSignals}
+              parserConfidence={result.parserConfidence}
+              parserWarnings={result.parserWarnings}
+            />
+            {result.parserWarnings.length > 0 ||
+            result.parserConfidence === "low" ? (
+              <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-[13px] leading-5 text-amber-900">
+                <AlertCircle
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0"
+                  size={16}
+                />
+                <span>
+                  If this does not look right, make sure you uploaded the
+                  printable Degree Works plan PDF from the Plans tab, not a
+                  screenshot or unrelated worksheet page.
+                </span>
+              </div>
+            ) : null}
+          </div>
         </ResultSection>
 
         <ResultSection title="Semester and prerequisite check">

@@ -81,6 +81,21 @@ The MVP supports two complementary paths:
    - prerequisite and course-planning metadata appear as conservative supporting models;
    - global limitations and recommended next improvements are visible.
 
+## How to export a Degree Works plan PDF
+
+For the combined `/plan-check` upload, use the printable Degree Works plan PDF from the Plans tab:
+
+1. Open Auburn Degree Works.
+2. Go to the `Plans` tab.
+3. Open the plan you want to check.
+4. Click the print icon on the Plans page.
+5. Degree Works will open a printable plan page.
+6. On that printable page, click the print icon again.
+7. In the browser print dialog, choose `Save as PDF`.
+8. Save the PDF, then upload that saved PDF here.
+
+Upload the saved PDF, not a screenshot. Screenshots and unrelated worksheet pages may not contain enough readable plan text for the deterministic parser. Handle private student details carefully, and do not commit real student names, IDs, advisor emails, or other personal information to the repo.
+
 ## Trust and safety
 
 - The assistant is designed around official Auburn sources.
