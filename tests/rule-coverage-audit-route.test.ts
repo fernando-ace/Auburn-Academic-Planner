@@ -15,6 +15,10 @@ test("GET returns the deterministic rule coverage audit shape", async () => {
   assert.match(audit.sourceIntegrity.lastCheckedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.match(audit.sourceIntegrity.note, /local checked-in source files/i);
   assert.equal(audit.programs.length, 3);
+  assert.deepEqual(
+    audit.programs.map((program: { programKey: string }) => program.programKey).sort(),
+    ["ai_certificate", "computer_science", "software_engineering"],
+  );
   assert.ok(Array.isArray(audit.supportingModels));
   assert.ok(Array.isArray(audit.globalLimitations));
   assert.ok(Array.isArray(audit.recommendedNextImprovements));
