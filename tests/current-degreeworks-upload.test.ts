@@ -47,7 +47,7 @@ test("current-progress upload route returns worksheet current-state response", a
       (course: { code: string }) => course.code === "COMP 3220",
     ),
   );
-  assert.match(result.advisorMeetingSummary, /Courses to verify/);
+  assert.match(result.advisorMeetingSummary, /Courses already preregistered/);
 });
 
 test("current-progress upload route warns when a planned-path PDF is uploaded", async () => {
@@ -104,7 +104,7 @@ test("current-progress upload route includes external AP and transfer records", 
   );
   assert.match(
     result.advisorMeetingSummary,
-    /AP\/transfer credits were detected and should be verified in Degree Works with an advisor\./,
+    /Verify AP\/transfer and Fall Through credits in Degree Works\./,
   );
 });
 

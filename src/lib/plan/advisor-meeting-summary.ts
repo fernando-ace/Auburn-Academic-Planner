@@ -2,7 +2,6 @@ import type {
   DegreeWorksDetectedSignals,
   DegreeWorksParserConfidence,
 } from "./degreeworks-analysis.ts";
-import type { DegreeWorksCourseStatusCounts } from "./degreeworks-course-status.ts";
 import type { DraftSemesterPlan } from "./draft-semester-plan.ts";
 import type { GapReport } from "./gap-report.ts";
 import { formatBestFitPath } from "./gap-report.ts";
@@ -24,7 +23,6 @@ export type AdvisorSummaryAiCertificateResult = {
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
   detectedSignals?: DegreeWorksDetectedSignals;
-  courseStatusCounts?: DegreeWorksCourseStatusCounts;
   parserWarnings?: string[];
   parserConfidence?: DegreeWorksParserConfidence;
   requiredCoursesSatisfied: AdvisorSummaryCourse[];
@@ -68,7 +66,6 @@ export type AdvisorSummaryDegreeResult = {
   parsedCourseCodes?: string[];
   parsedCourseCount?: number;
   detectedSignals?: DegreeWorksDetectedSignals;
-  courseStatusCounts?: DegreeWorksCourseStatusCounts;
   parserWarnings?: string[];
   parserConfidence?: DegreeWorksParserConfidence;
   totalPlannedCredits: number | null;
@@ -146,134 +143,65 @@ export function buildAdvisorMeetingSummary({
     nextSemesterSuggestions?.targetPath ??
     draftSemesterPlan?.targetPath ??
     inferSingleResultPath({ aiResult, computerScienceResult, softwareEngineeringResult });
+  const suggestedCourses =
+    draftSemesterPlan?.semesters[0]?.plannedCourses.map((course) => course.code) ??
+    nextSemesterSuggestions?.suggestedCourses.map((course) => course.code) ??
+    [];
+  const questions = buildQuestions();
   const lines = [
     "Advisor Meeting Summary",
     "",
-    "This is a preparation summary, not an official degree audit; advisor verification is required.",
-    "Deterministic checks use Auburn bulletin/local rule data for catalog year 2025-2026; unresolved blocks and local prerequisite/availability models require advisor verification.",
-    `Selected target path: ${formatSelectedTarget(selectedTargetPath, resolvedPath)}`,
+    "This is a preparation summary, not an official degree audit.",
+    "",
+    "Planned path review:",
+    `- Target: ${formatSelectedTarget(selectedTargetPath, resolvedPath)}`,
+    `- Parser confidence: ${formatConfidence(
+      diagnosticResult?.parserConfidence ??
+        draftSemesterPlan?.confidence ??
+        nextSemesterSuggestions?.confidence ??
+        "unknown",
+    )}`,
+    `- Plan credits: ${formatPlanCredits(diagnosticResult)}`,
+    `- Main concern: ${formatMainConcern({ gapReport, prerequisiteCheck })}`,
+    "",
+    "Top items to review:",
+    "1. Missing or unmatched requirements.",
+    "2. Any unresolved core/elective blocks.",
+    "3. Prerequisite and semester order.",
+    "4. AP/transfer/substitution effects.",
+    "",
+    "Draft next step:",
+    "- Review the suggested first semester or top suggested courses with an advisor.",
   ];
 
-  addParserSummary(lines, diagnosticResult);
-  addMissingItems(lines, {
-    aiResult,
-    computerScienceResult,
-    gapReport,
-    resolvedPath,
-    softwareEngineeringResult,
-  });
-
-  if (gapReport?.nextActions.length) {
+  if (suggestedCourses.length > 0) {
     lines.push(
       "",
-      "Top next actions:",
-      ...gapReport.nextActions.slice(0, 4).map((action) => `- ${action}`),
+      "Suggested courses to review:",
+      ...suggestedCourses.slice(0, 6).map((code) => `- ${code}`),
     );
+
+    if (suggestedCourses.length > 6) {
+      lines.push(`+${suggestedCourses.length - 6} more items in the detailed report`);
+    }
   }
 
-  addPlanningPreview(lines, draftSemesterPlan, nextSemesterSuggestions);
-  lines.push("", "Questions to ask an advisor:", ...buildQuestions({
-    gapReport,
-    nextSemesterSuggestions,
-    prerequisiteCheck,
-  }).map((question) => `- ${question}`));
+  lines.push(
+    "",
+    "Questions for my advisor:",
+    ...questions.map((question) => `- ${question}`),
+  );
 
   return lines.join("\n");
 }
 
-function addParserSummary(lines: string[], result: SummaryResult | null) {
-  if (!result) {
-    return;
-  }
-
-  lines.push(`Parser confidence: ${result.parserConfidence ?? "not available"}`);
-  if (result.courseStatusCounts) {
-    lines.push(`Course status summary: ${formatCourseStatusCounts(result.courseStatusCounts)}`);
-  }
-}
-
-function addMissingItems(
-  lines: string[],
-  {
-    aiResult,
-    computerScienceResult,
-    gapReport,
-    resolvedPath,
-    softwareEngineeringResult,
-  }: {
-    aiResult: AdvisorSummaryAiCertificateResult | null;
-    computerScienceResult: AdvisorSummaryDegreeResult | null;
-    gapReport: AdvisorSummaryGapReport | null;
-    resolvedPath: GapReport["bestFitPath"];
-    softwareEngineeringResult: AdvisorSummaryDegreeResult | null;
-  },
-) {
-  const items = gapReport
-    ? gapReport.missingRequirements.flatMap((requirement) =>
-        requirement.items.map((item) => `${requirement.area}: ${item}`),
-      )
-    : resolvedPath === "ai_certificate"
-      ? [
-          ...(aiResult?.requiredCoursesMissing.map((course) => course.code) ?? []),
-          ...(aiResult && aiResult.electiveCandidatesFound.length === 0
-            ? ["AI Engineering certificate elective selection needs advisor review."]
-            : []),
-        ]
-      : resolvedPath === "computer_science"
-        ? computerScienceResult?.exactRequiredCoursesMissing.map((course) => course.code) ?? []
-        : softwareEngineeringResult?.exactRequiredCoursesMissing.map((course) => course.code) ?? [];
-
-  if (items.length) {
-    lines.push("", "Top missing items:", ...items.slice(0, 5).map((item) => `- ${item}`));
-  }
-}
-
-function addPlanningPreview(
-  lines: string[],
-  draftSemesterPlan: AdvisorSummaryDraftSemesterPlan | null,
-  suggestions: AdvisorSummaryNextSemesterSuggestions | null,
-) {
-  const firstSemester = draftSemesterPlan?.semesters[0];
-  if (firstSemester?.plannedCourses.length) {
-    lines.push(
-      "",
-      `First draft semester (${firstSemester.estimatedCredits} estimated credits):`,
-      ...firstSemester.plannedCourses.map((course) => `- ${course.code}`),
-    );
-    return;
-  }
-
-  if (suggestions?.suggestedCourses.length) {
-    lines.push(
-      "",
-      "Top suggested courses:",
-      ...suggestions.suggestedCourses.slice(0, 5).map((course) => `- ${course.code}: ${course.reason}`),
-    );
-  }
-}
-
-function buildQuestions({
-  gapReport,
-  nextSemesterSuggestions,
-  prerequisiteCheck,
-}: {
-  gapReport: AdvisorSummaryGapReport | null;
-  nextSemesterSuggestions: AdvisorSummaryNextSemesterSuggestions | null;
-  prerequisiteCheck: AdvisorSummaryPrerequisiteCheck | null;
-}) {
-  return dedupe([
-    "Which suggested courses are actually offered in the target term, and are any restricted by standing, approvals, or department scheduling?",
-    ...(gapReport?.advisorQuestions ?? []),
-    ...(nextSemesterSuggestions?.advisorQuestions ?? []),
-    "Which missing or unmatched requirements still need official Degree Works review?",
-    "Do AP, transfer, substitutions, exceptions, or in-progress courses change this summary?",
-    prerequisiteCheck
-      ? "Can you verify that my planned course order satisfies prerequisites?"
-      : "Are prerequisites appropriate for the next registration plan?",
-    "Which courses should I prioritize next semester?",
-    "Is the proposed semester load reasonable for my circumstances?",
-    "Which electives or advisor-approved alternatives best fit this target?",
-  ]).slice(0, 8);
+function buildQuestions() {
+  return dedupeQuestions([
+    "Does this planned path satisfy my Degree Works requirements?",
+    "Are these courses offered in the suggested terms?",
+    "Are prerequisites and course load reasonable?",
+    "Do substitutions, AP/transfer credit, or hidden Degree Works sections change the plan?",
+  ]).slice(0, 6);
 }
 
 function inferSingleResultPath({
@@ -300,18 +228,49 @@ function formatSelectedTarget(
     : formatBestFitPath(selectedTargetPath ?? resolvedPath);
 }
 
-function formatCourseStatusCounts(counts: DegreeWorksCourseStatusCounts) {
-  return [
-    `completed ${counts.completed}`,
-    `in progress ${counts.in_progress}`,
-    `planned ${counts.planned}`,
-    `transfer/AP ${counts.transfer_or_ap}`,
-    `substituted/waived ${counts.substituted_or_waived}`,
-    `missing ${counts.missing}`,
-    `unknown ${counts.unknown}`,
-  ].join("; ");
+function formatConfidence(confidence: DegreeWorksParserConfidence | "unknown") {
+  return confidence === "unknown"
+    ? "Unknown"
+    : confidence.charAt(0).toUpperCase() + confidence.slice(1);
 }
 
-function dedupe(items: string[]) {
-  return Array.from(new Set(items));
+function formatPlanCredits(result: SummaryResult | null) {
+  const credits = result && "totalPlannedCredits" in result ? result.totalPlannedCredits : null;
+
+  return typeof credits === "number" ? String(credits) : "unknown";
+}
+
+function formatMainConcern({
+  gapReport,
+  prerequisiteCheck,
+}: {
+  gapReport: AdvisorSummaryGapReport | null;
+  prerequisiteCheck: AdvisorSummaryPrerequisiteCheck | null;
+}) {
+  if (prerequisiteCheck?.isLikelySequenceValid === false) {
+    return "Prerequisite or semester order needs advisor verification.";
+  }
+
+  if ((gapReport?.missingRequirements.length ?? 0) > 0) {
+    return "Some requirements need advisor verification.";
+  }
+
+  return "Confirm Degree Works details with an advisor.";
+}
+
+function dedupeQuestions(items: string[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const normalized = item
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+    if (!normalized || seen.has(normalized)) {
+      return false;
+    }
+
+    seen.add(normalized);
+    return true;
+  });
 }

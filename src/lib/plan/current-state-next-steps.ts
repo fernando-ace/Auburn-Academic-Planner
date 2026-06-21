@@ -11,6 +11,7 @@ import type {
 } from "./current-degree-audit-analysis.ts";
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
 import { formatExternalCreditAwareCode } from "./external-credit-display.ts";
+import { formatStillNeededItemForDisplay } from "./degreeworks-still-needed.ts";
 
 export type CurrentStateGapReport = {
   overallStatus:
@@ -240,7 +241,7 @@ export function buildCurrentStateNextSteps({
     .filter((item) => item.requirementType === "graduation_milestone")
     .map((item) => ({
       label: item.requirementLabel,
-      reason: `${item.neededText} appears to be a Degree Works milestone or nonstandard requirement; verify timing and completion with an advisor.`,
+      reason: `${item.requirementLabel}: verify timing and completion with an advisor.`,
     }));
   const stillNeededAdvisorReviewItems = audit.stillNeededItems
     .filter((item) =>
@@ -252,10 +253,10 @@ export function buildCurrentStateNextSteps({
     )
     .map((item) =>
       item.requirementType === "credit_hours_from_list"
-        ? `${item.requirementLabel} is a credit-hour option list; discuss approved options with an advisor instead of selecting one automatically.`
+        ? `${formatStillNeededItemForDisplay(item)} credit-hour option list needs advisor review.`
         : item.requirementType === "course_options"
-          ? `${item.requirementLabel} has several Degree Works options; discuss the best option with an advisor instead of treating the full list as courses to take.`
-        : `${item.requirementLabel} needs advisor review: ${item.neededText}`,
+          ? `${formatStillNeededItemForDisplay(item)}.`
+        : `${item.requirementLabel} needs advisor review.`,
     );
 
   for (const candidate of candidateCourses) {
@@ -343,90 +344,109 @@ export function buildCurrentProgressAdvisorSummary({
   gapReport: CurrentStateGapReport;
   nextSteps: CurrentStateNextSteps;
 }) {
+  const mainItems = buildCurrentProgressDiscussionItems({ audit, nextSteps });
+  const questions = dedupeQuestions([
+    "Which remaining requirements should I prioritize next semester?",
+    "Do my preregistered courses satisfy the expected requirements?",
+    "Which option-list or elective requirements should I choose from?",
+    "Do any AP, transfer, or Fall Through credits change my remaining requirements?",
+    "Is the next-semester load reasonable?",
+    ...gapReport.advisorQuestions,
+    ...nextSteps.advisorQuestions,
+  ]);
   const lines = [
     "Advisor Meeting Summary",
     "",
-    "This is a current-progress preparation summary, not an official degree audit; advisor verification is required.",
-    `Worksheet parser confidence: ${audit.confidence}`,
-    `Degree status: ${audit.degreeStatus ?? "unknown"}`,
-    formatCreditSummary(audit),
+    "This is a preparation summary, not an official degree audit.",
+    "",
+    "Current standing:",
+    `- Degree status: ${formatDegreeStatus(audit.degreeStatus)}`,
+    `- Credits: ${formatShortCreditSummary(audit)}`,
+    `- Audit confidence: ${formatConfidence(audit.confidence)}`,
+    "",
+    "Main items to discuss:",
+    ...capLines(mainItems, 6).map((item, index) => `${index + 1}. ${item}`),
   ];
 
-  if (audit.externalCreditRecords.length > 0) {
+  if (mainItems.length > 6) {
+    lines.push(`+${mainItems.length - 6} more items in the detailed report`);
+  }
+
+  if (audit.preregisteredCourseCodes.length > 0) {
     lines.push(
-      "AP/transfer credits were detected and should be verified in Degree Works with an advisor.",
+      "",
+      "Courses already preregistered:",
+      ...capLines(audit.preregisteredCourseCodes, 6).map((code) => `- ${code}`),
     );
 
-    if (audit.externalCreditRecords.length <= 3) {
-      lines.push(
-        "",
-        "AP/transfer credits to verify:",
-        ...audit.externalCreditRecords.map((record) =>
-          record.satisfiesCourseCode
-            ? `- ${record.displayName}: verify ${record.satisfiesCourseCode}`
-            : `- ${record.displayName}: verify applicability`,
-        ),
-      );
+    if (audit.preregisteredCourseCodes.length > 6) {
+      lines.push(`+${audit.preregisteredCourseCodes.length - 6} more items in the detailed report`);
     }
-  }
-
-  if (audit.stillNeededCourseCodes.length > 0) {
-    lines.push(
-      "",
-      "Still needed courses to discuss:",
-      ...audit.stillNeededCourseCodes.slice(0, 8).map((code) => `- ${code}`),
-    );
-  }
-
-  if (audit.stillNeededItems.some((item) => item.courseOptions.length > 1)) {
-    lines.push(
-      "",
-      "Still needed option sets to discuss:",
-      ...audit.stillNeededItems
-        .filter((item) => item.courseOptions.length > 1)
-        .slice(0, 5)
-        .map((item) => `- ${item.requirementLabel}: ${item.neededText}`),
-    );
-  }
-
-  if (nextSteps.suggestedCourses.length > 0) {
-    lines.push(
-      "",
-      "Current-progress next-semester discussion items:",
-      ...nextSteps.suggestedCourses
-        .slice(0, 5)
-        .map((course) => `- ${course.code}: ${course.reason}`),
-    );
-  }
-
-  if (nextSteps.advisorMilestones.length > 0) {
-    lines.push(
-      "",
-      "Milestones to verify:",
-      ...nextSteps.advisorMilestones.slice(0, 5).map((item) => `- ${item.reason}`),
-    );
-  }
-
-  if (nextSteps.verificationItems.length > 0) {
-    lines.push(
-      "",
-      "Courses to verify:",
-      ...nextSteps.verificationItems.slice(0, 6).map((item) => `- ${item.reason}`),
-    );
   }
 
   lines.push(
     "",
-    "Questions to ask an advisor:",
-    ...dedupe([
-      ...gapReport.advisorQuestions,
-      ...nextSteps.advisorQuestions,
-    ])
-      .slice(0, 8)
+    "Questions for my advisor:",
+    ...questions
+      .slice(0, 6)
       .map((question) => `- ${question}`),
   );
 
+  if (questions.length > 6) {
+    lines.push(`+${questions.length - 6} more items in the detailed report`);
+  }
+
   return lines.join("\n");
+}
+
+function buildCurrentProgressDiscussionItems({
+  audit,
+  nextSteps,
+}: {
+  audit: CurrentDegreeAuditAnalysis;
+  nextSteps: CurrentStateNextSteps;
+}) {
+  const items = [
+    audit.preregisteredCourseCodes.length > 0
+      ? "Confirm how my preregistered courses affect my remaining requirements."
+      : "Confirm how completed, in-progress, and planned courses affect my remaining requirements.",
+  ];
+  const suggestedCodes = nextSteps.suggestedCourses
+    .flatMap((course) => course.code.split(/\s+or\s+/i))
+    .map((code) => code.trim())
+    .filter(Boolean);
+  const priorityCodes = dedupe([
+    ...suggestedCodes,
+    ...audit.stillNeededCourseCodes,
+  ]).slice(0, 5);
+
+  if (priorityCodes.length > 0) {
+    items.push(
+      `Prioritize remaining courses such as ${formatReadableList(priorityCodes)}.`,
+    );
+  }
+
+  if (audit.stillNeededItems.some((item) => item.courseOptions.length > 1 || item.requirementType === "credit_hours_from_list")) {
+    items.push("Choose remaining core/elective options, especially option-list and elective requirements.");
+  }
+
+  if (
+    audit.externalCreditRecords.length > 0 ||
+    audit.transferOrApCourseCodes.length > 0 ||
+    audit.nonDegreeApplicableCourseCodes.length > 0
+  ) {
+    items.push("Verify AP/transfer and Fall Through credits in Degree Works.");
+  }
+
+  if (nextSteps.advisorMilestones.length > 0) {
+    items.push(
+      `Verify milestone requirements such as ${formatReadableList(
+        nextSteps.advisorMilestones.map((item) => item.label).slice(0, 2),
+      )}.`,
+    );
+  }
+
+  return dedupe(items);
 }
 
 function resolveTargetPath({
@@ -573,8 +593,55 @@ function formatCreditSummary(audit: CurrentDegreeAuditAnalysis) {
   return `Credits required/applied/needed: ${required}/${applied}/${needed}.`;
 }
 
+function formatShortCreditSummary(audit: CurrentDegreeAuditAnalysis) {
+  const applied = audit.creditsApplied ?? "unknown";
+  const required = audit.creditsRequired ?? "unknown";
+  const remaining = audit.creditsNeeded ?? "unknown";
+
+  return `${applied} applied / ${required} required / ${remaining} remaining`;
+}
+
+function formatDegreeStatus(status: CurrentDegreeAuditAnalysis["degreeStatus"]) {
+  if (status === "complete") return "Complete";
+  if (status === "incomplete") return "Incomplete";
+  return "Unknown";
+}
+
+function formatConfidence(confidence: DegreeWorksParserConfidence) {
+  return confidence.charAt(0).toUpperCase() + confidence.slice(1);
+}
+
+function formatReadableList(items: string[]) {
+  if (items.length <= 1) {
+    return items[0] ?? "items to review";
+  }
+
+  return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
+}
+
+function capLines(items: string[], maxItems: number) {
+  return items.slice(0, maxItems);
+}
+
 function dedupe(items: string[]) {
   return Array.from(new Set(items.filter(Boolean)));
+}
+
+function dedupeQuestions(items: string[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const normalized = item
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+    if (!normalized || seen.has(normalized)) {
+      return false;
+    }
+
+    seen.add(normalized);
+    return true;
+  });
 }
 
 function dedupeByCode(items: { code: string; reason: string }[]) {

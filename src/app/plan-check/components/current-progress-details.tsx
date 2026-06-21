@@ -11,6 +11,7 @@ import {
   buildExternalCreditAwareBucketItems,
   findExternalCreditRecordForCode,
 } from "@/lib/plan/external-credit-display";
+import { formatStillNeededItemForDisplay } from "@/lib/plan/degreeworks-still-needed";
 import type { CurrentDegreeWorksUploadResult } from "../types";
 import { ResultSection } from "./result-cards";
 
@@ -88,7 +89,7 @@ export function CurrentProgressResultDetails({
                   {attentionStillNeededItems.map((item) => (
                     <li className="text-[13px] leading-5 text-slate-700" key={`${item.blockName}-${item.requirementLabel}-${item.neededText}`}>
                       <span className="font-semibold text-slate-950">{item.requirementLabel}</span>
-                      <span className="text-slate-500"> ({formatRequirementType(item.requirementType)})</span>: {item.neededText}
+                      <span className="text-slate-500"> ({formatRequirementType(item.requirementType)})</span>: {formatStillNeededItemForDisplay(item)}
                     </li>
                   ))}
                 </AttentionGroup>
@@ -160,7 +161,7 @@ export function CurrentProgressResultDetails({
                     {nextSteps.advisorMilestones.map((item) => (
                       <li className="flex gap-2 text-[13px] leading-5 text-slate-700" key={`${item.label}-${item.reason}`}>
                         <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-[#b84300]" size={15} />
-                        <span>{item.reason}</span>
+                        <span>{item.label}</span>
                       </li>
                     ))}
                   </ul>
