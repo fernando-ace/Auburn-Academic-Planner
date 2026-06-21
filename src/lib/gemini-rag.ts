@@ -6,7 +6,16 @@ import { selectDisplaySources } from "./chat-presentation.ts";
 import { getGeminiModel } from "./gemini-config.ts";
 
 const require = createRequire(import.meta.url);
-const manifest = require("../../sources/manifest.json") as ManifestSource[];
+const manifest = require("../../sources/manifest.json") as RawManifestSource[];
+
+let curatedManifest: RawManifestSource[] = [];
+try {
+  curatedManifest = require(
+    "../../sources/auburn/curated/manifest.json",
+  ) as RawManifestSource[];
+} catch {
+  curatedManifest = [];
+}
 
 export type IncomingMessage = {
   role: "user" | "assistant";
@@ -17,10 +26,23 @@ export type ManifestSource = {
   id: string;
   title: string;
   type: string;
-  catalogYear: string;
-  program: string;
-  url: string;
-  lastChecked: string;
+  catalogYear?: string;
+  program?: string;
+  url?: string;
+  lastChecked?: string;
+  fileName: string;
+};
+
+type RawManifestSource = {
+  id?: unknown;
+  title?: unknown;
+  type?: unknown;
+  catalogYear?: unknown;
+  program?: unknown;
+  url?: unknown;
+  lastChecked?: unknown;
+  seedLastChecked?: unknown;
+  fetchedAt?: unknown;
   fileName: string;
 };
 
@@ -84,7 +106,9 @@ const FALLBACK_ADVISOR_NOTE =
 const NO_RETRIEVAL_ANSWER =
   "The Gemini File Search tool did not return Auburn source material for this question, so I cannot answer it confidently from the uploaded Auburn sources.";
 
-const typedManifest = manifest;
+const typedManifest = [...manifest, ...curatedManifest]
+  .map(normalizeManifestSource)
+  .filter((source): source is ManifestSource => source !== null);
 
 export type RetrievalContext = {
   userQuestion: string;
@@ -129,6 +153,37 @@ function includesPattern(value: string, pattern: RegExp) {
 
 function uniqueStrings(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
+function normalizeManifestSource(source: RawManifestSource): ManifestSource | null {
+  const id = stringValue(source.id);
+  const title = stringValue(source.title);
+  const type = stringValue(source.type);
+  const fileName = stringValue(source.fileName);
+
+  if (!id || !title || !type || !fileName) {
+    return null;
+  }
+
+  return {
+    id,
+    title,
+    type,
+    catalogYear: stringValue(source.catalogYear),
+    program: stringValue(source.program),
+    url: stringValue(source.url),
+    lastChecked:
+      stringValue(source.lastChecked) ??
+      stringValue(source.seedLastChecked) ??
+      stringValue(source.fetchedAt),
+    fileName,
+  };
 }
 
 function latestUserQuestion(messages: IncomingMessage[]) {
@@ -185,6 +240,42 @@ function buildRetrievalContext(messages: IncomingMessage[]): RetrievalContext {
       "credits applied",
       "credits needed",
       "preregistered",
+    );
+  }
+
+  if (
+    includesPattern(
+      lowerQuestion,
+      /\bdegree\s*works\b|\bdegreeworks\b|\bwhere\b.*\b(?:check|find|access|see)\b.*\bdegree\s*works\b/,
+    )
+  ) {
+    addSource("auburn-registrar-degreeworks");
+    expansions.push(
+      "DegreeWorks",
+      "Auburn Registrar DegreeWorks",
+      "auburn/curated/auburn-registrar-degreeworks.html",
+      "where students check Degree Works",
+      "advisor verification",
+    );
+  }
+
+  if (
+    includesPattern(
+      lowerQuestion,
+      /\btransfer\s+credit\b|\btransfer\s+credits\b|\btransfer\b.*\bcredit\b|\bcredit\s+tables?\b|\bap\s+credit\b/,
+    )
+  ) {
+    addSource("auburn-transfer-credit-policy");
+    addSource("auburn-pathways-transfer-credit");
+    addSource("auburn-registrar-credit-tables");
+    expansions.push(
+      "Auburn transfer credit policy",
+      "Undergraduate Transfer Credit Policy",
+      "Transfer Credit",
+      "Registrar Credit Tables",
+      "auburn/curated/auburn-transfer-credit-policy.html",
+      "auburn/curated/auburn-pathways-transfer-credit.html",
+      "auburn/curated/auburn-registrar-credit-tables.html",
     );
   }
 

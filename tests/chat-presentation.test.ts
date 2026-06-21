@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   cleanSourcePreview,
+  formatSourceTypeLabel,
   sanitizeAssistantMarkdown,
   selectDisplaySources,
   SOURCE_PREVIEW_FALLBACK,
@@ -46,6 +47,18 @@ const degreeWorksPlan: PresentableChatSource = {
   sourceType: "degreeworks_sample",
   program: "software_engineering",
   fileName: "auburn/degreeworks-plan-sample.pdf",
+};
+
+const transferCreditPolicy: PresentableChatSource = {
+  title: "Undergraduate Transfer Credit Policy",
+  sourceType: "transfer_credit",
+  fileName: "auburn/curated/auburn-transfer-credit-policy.html",
+};
+
+const registrarCreditTables: PresentableChatSource = {
+  title: "Registrar Credit Tables",
+  sourceType: "ap_credit",
+  fileName: "auburn/curated/auburn-registrar-credit-tables.html",
 };
 
 test("sanitizes assistant markdown without removing supported markdown syntax", () => {
@@ -146,4 +159,30 @@ test("keeps the best retrieved source with a caveat when filtering removes every
   assert.equal(result.length, 1);
   assert.equal(result[0].relevanceNote, SOURCE_RELEVANCE_FALLBACK_NOTE);
   assert.equal(result[0].snippet, SOURCE_PREVIEW_FALLBACK);
+});
+
+test("transfer credit questions prefer curated transfer policy sources", () => {
+  const result = selectDisplaySources(
+    "How does Auburn handle transfer credit?",
+    [softwareBulletin, registrarCreditTables, transferCreditPolicy],
+  );
+
+  assert.equal(result[0].title, transferCreditPolicy.title);
+  assert.deepEqual(
+    result.map((source) => source.title),
+    [
+      transferCreditPolicy.title,
+      registrarCreditTables.title,
+      softwareBulletin.title,
+    ],
+  );
+});
+
+test("formats curated source type labels for source cards", () => {
+  assert.equal(
+    formatSourceTypeLabel("transfer_credit"),
+    "Transfer credit policy",
+  );
+  assert.equal(formatSourceTypeLabel("registrar"), "Registrar page");
+  assert.equal(formatSourceTypeLabel("course_catalog"), "Course catalog");
 });

@@ -264,7 +264,13 @@ The fixtures improve compatibility coverage but cannot model every Degree Works 
    GEMINI_API_KEY=...
    ```
 
-5. Upload the sources and create the Gemini File Search store:
+5. Preview the exact upload inventory without calling Gemini:
+
+   ```bash
+   npm run sources:upload -- --dry-run
+   ```
+
+6. Upload the sources and create the Gemini File Search store:
 
    ```bash
    npm run sources:upload
@@ -276,7 +282,7 @@ The fixtures improve compatibility coverage but cannot model every Degree Works 
    GEMINI_FILE_SEARCH_STORE_NAME=fileSearchStores/...
    ```
 
-6. Copy that store name into `.env.local`:
+7. Copy that store name into `.env.local`:
 
    ```env
    GEMINI_FILE_SEARCH_STORE_NAME=fileSearchStores/...

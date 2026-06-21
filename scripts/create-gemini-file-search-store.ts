@@ -12,6 +12,7 @@ import { CURATED_ACADEMIC_SOURCE_MANIFEST_PATH } from "../src/lib/sources/curate
 
 const FILE_SEARCH_STORE_DISPLAY_NAME = "Auburn Academic Planner Sources";
 const POLL_INTERVAL_MS = 5000;
+const LIST_FLAGS = new Set(["--dry-run", "--list"]);
 
 type ManifestSource = {
   id?: unknown;
@@ -213,6 +214,12 @@ function customMetadata(source: ValidSource): CustomMetadata[] {
   ].filter((item) => item.stringValue.length > 0);
 }
 
+function formatMetadataLabels(source: ValidSource) {
+  return customMetadata(source)
+    .map((item) => `${item.key}=${item.stringValue}`)
+    .join(" | ");
+}
+
 function mimeTypeFor(filePath: string) {
   const extension = path.extname(filePath).toLowerCase();
 
@@ -237,6 +244,28 @@ function mimeTypeFor(filePath: string) {
 
 function sleep(milliseconds: number) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function shouldListSources(args: string[]) {
+  return (
+    args.some((arg) => LIST_FLAGS.has(arg)) ||
+    process.env.npm_config_dry_run === "true" ||
+    process.env.npm_config_list === "true"
+  );
+}
+
+function printUploadInventory(sources: ValidSource[]) {
+  console.log("Gemini File Search upload inventory");
+  console.log(`Store display name: ${FILE_SEARCH_STORE_DISPLAY_NAME}`);
+  console.log(`Source files: ${sources.length}`);
+
+  sources.forEach((source, index) => {
+    const mimeType = source.contentType || mimeTypeFor(source.filePath) || "unknown";
+    console.log(
+      `${String(index + 1).padStart(2, "0")}. ${source.fileName} | title="${source.title}" | mimeType=${mimeType}`,
+    );
+    console.log(`    metadata: ${formatMetadataLabels(source)}`);
+  });
 }
 
 async function waitForUploadOperation(
@@ -268,6 +297,14 @@ async function waitForUploadOperation(
 }
 
 async function main() {
+  const listOnly = shouldListSources(process.argv.slice(2));
+  const sources = readManifest();
+
+  if (listOnly) {
+    printUploadInventory(sources);
+    return;
+  }
+
   loadLocalEnv();
 
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -277,7 +314,6 @@ async function main() {
     );
   }
 
-  const sources = readManifest();
   const ai = new GoogleGenAI({ apiKey });
 
   console.log(`Creating Gemini File Search store: ${FILE_SEARCH_STORE_DISPLAY_NAME}`);

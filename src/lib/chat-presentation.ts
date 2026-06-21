@@ -28,10 +28,20 @@ const PROGRAM_LABELS: Record<string, string> = {
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
   bulletin: "Bulletin",
+  bulletin_major: "Bulletin major page",
   flowchart: "Flowchart",
   degreeworks_sample: "Degree Works Sample",
   certificate: "Certificate page",
+  advising: "Advising page",
+  ap_credit: "AP and credit table",
+  core_curriculum: "Core curriculum",
+  course_catalog: "Course catalog",
+  registrar: "Registrar page",
+  transfer_credit: "Transfer credit policy",
 };
+
+const TRANSFER_CREDIT_INTENT =
+  /\btransfer\s+credits?\b|\btransfer\b.*\bcredits?\b|\bcredits?\b.*\btransfer\b|\bcredit\s+tables?\b|\bap\s+credit\b/i;
 
 function decodeCommonHtmlEntities(value: string) {
   const entities: Record<string, string> = {
@@ -148,11 +158,21 @@ function relevanceScore(question: string, source: PresentableChatSource) {
   }
 
   if (source.sourceType === "bulletin") score += 35;
+  if (source.sourceType === "bulletin_major") score += 35;
   if (source.sourceType === "certificate") score += 30;
   if (source.sourceType === "flowchart") score += 20;
+  if (source.sourceType === "registrar") score += 20;
+  if (source.sourceType === "advising") score += 20;
+  if (source.sourceType === "course_catalog") score += 15;
+  if (source.sourceType === "core_curriculum") score += 15;
 
   if (DEGREE_WORKS_INTENT.test(question) && isDegreeWorksSource(source)) {
     score += 45;
+  }
+  if (TRANSFER_CREDIT_INTENT.test(question)) {
+    if (source.sourceType === "transfer_credit") score += 90;
+    if (source.sourceType === "ap_credit") score += 55;
+    if (/transfer\s+credit/i.test(normalizedSource)) score += 35;
   }
   if (/\bdashboard\b/i.test(question) && /dashboard/.test(normalizedSource)) {
     score += 60;
