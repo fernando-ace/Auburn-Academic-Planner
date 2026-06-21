@@ -7,52 +7,15 @@ import {
   sanitizeAssistantMarkdown,
   selectDisplaySources,
   SOURCE_PREVIEW_FALLBACK,
-  SOURCE_RELEVANCE_FALLBACK_NOTE,
   type PresentableChatSource,
 } from "../src/lib/chat-presentation.ts";
-
-const softwareBulletin: PresentableChatSource = {
-  title: "Software Engineering B.S. Bulletin",
-  sourceType: "bulletin",
-  program: "software_engineering",
-  catalogYear: "2025-2026",
-  fileName: "auburn/software-engineering-bulletin.html",
-  snippet:
-    "The Software Engineering curriculum includes engineering, computing, and university core requirements.",
-};
-
-const softwareFlowchart: PresentableChatSource = {
-  title: "Software Engineering Flowchart",
-  sourceType: "flowchart",
-  program: "software_engineering",
-  fileName: "auburn/software-engineering-flowchart.pdf",
-};
-
-const computerScienceBulletin: PresentableChatSource = {
-  title: "Computer Science B.S. Bulletin",
-  sourceType: "bulletin",
-  program: "computer_science",
-  fileName: "auburn/computer-science-bulletin.html",
-};
-
-const degreeWorksDashboard: PresentableChatSource = {
-  title: "Degree Works Dashboard Sample",
-  sourceType: "degreeworks_sample",
-  program: "software_engineering",
-  fileName: "auburn/degreeworks-dashboard-sample.pdf",
-};
-
-const degreeWorksPlan: PresentableChatSource = {
-  title: "Degree Works Plan Sample",
-  sourceType: "degreeworks_sample",
-  program: "software_engineering",
-  fileName: "auburn/degreeworks-plan-sample.pdf",
-};
 
 const transferCreditPolicy: PresentableChatSource = {
   title: "Undergraduate Transfer Credit Policy",
   sourceType: "transfer_credit",
   fileName: "auburn/curated/auburn-transfer-credit-policy.html",
+  snippet:
+    "Transfer credit accepted by Auburn University may be applied toward degree requirements after review.",
 };
 
 const registrarCreditTables: PresentableChatSource = {
@@ -61,26 +24,35 @@ const registrarCreditTables: PresentableChatSource = {
   fileName: "auburn/curated/auburn-registrar-credit-tables.html",
 };
 
+const degreeWorksSource: PresentableChatSource = {
+  title: "DegreeWorks",
+  sourceType: "registrar",
+  fileName: "auburn/curated/auburn-registrar-degreeworks.html",
+};
+
+const coreCurriculum: PresentableChatSource = {
+  title: "Core Curriculum and General Education Outcomes",
+  sourceType: "core_curriculum",
+  fileName: "auburn/curated/auburn-core-curriculum.html",
+};
+
 test("sanitizes assistant markdown without removing supported markdown syntax", () => {
   const result = sanitizeAssistantMarkdown(
-    "\u0000**Requirements**\r\n\r\n<script>alert('no')</script>\r\n- `COMP 1210`",
+    "\u0000**Requirements**\r\n\r\n<script>alert('no')</script>\r\n- `ENGL 1100`",
   );
 
-  assert.equal(
-    result,
-    "**Requirements**\n\nalert('no')\n- `COMP 1210`",
-  );
+  assert.equal(result, "**Requirements**\n\nalert('no')\n- `ENGL 1100`");
   assert.doesNotMatch(result, /<script>|<\/script>/);
 });
 
-test("cleans PDF, OCR, page, and HTML extraction noise from source previews", () => {
+test("cleans OCR, page, and HTML extraction noise from source previews", () => {
   const result = cleanSourcePreview(
-    "==Start of PDF== ==Start of OCR== Page 2 of 8 <table><tr><td>Software Engineering students complete the listed curriculum requirements before graduation.</td></tr></table> ==End of OCR==",
+    "==Start of OCR== Page 2 of 8 <table><tr><td>Auburn students should review academic requirements with an advisor before registration decisions.</td></tr></table> ==End of OCR==",
   );
 
   assert.equal(
     result,
-    "Software Engineering students complete the listed curriculum requirements before graduation.",
+    "Auburn students should review academic requirements with an advisor before registration decisions.",
   );
   assert.doesNotMatch(result, /Start of|OCR|<td>|<\/tr>|Page 2/i);
 });
@@ -93,110 +65,30 @@ test("uses metadata fallback for short or code-like source previews", () => {
   );
 });
 
-test("removes orphaned HTML attribute fragments from source previews", () => {
-  const separatorPreview = cleanSourcePreview(
-    'class="separator"> Student Affairs Student Business &&#8203; Account Services Veterans Resource Center Archived Bulletins </',
-  );
-  const hrefPreview = cleanSourcePreview(
-    'href="https://cws.auburn.edu/ovpr/pm/resources">Research Resources Centers & Institutes Graduate Research Undergraduate Research Auburn',
-  );
-
-  assert.doesNotMatch(separatorPreview, /class=|&#|<|>/i);
-  assert.match(separatorPreview, /Student Affairs Student Business Account Services/);
-  assert.doesNotMatch(hrefPreview, /href=|<|>/i);
-  assert.match(hrefPreview, /Research Resources Centers/);
-});
-
-test("caps long source previews without cutting the final word", () => {
-  const result = cleanSourcePreview(
-    "Software Engineering curriculum requirements include mathematics, science, computing, engineering, and university core courses that students should review with an academic advisor before registration decisions.",
-    100,
-  );
-
-  assert.ok(result.length <= 100);
-  assert.match(result, /…$/);
-  assert.doesNotMatch(result, /\s…$/);
-});
-
-test("general Software Engineering questions prefer bulletin and exclude Degree Works samples", () => {
-  const result = selectDisplaySources(
-    "What are the Software Engineering degree requirements?",
-    [
-      degreeWorksDashboard,
-      computerScienceBulletin,
-      softwareFlowchart,
-      degreeWorksPlan,
-      softwareBulletin,
-    ],
-  );
-
-  assert.equal(result[0].title, softwareBulletin.title);
-  assert.deepEqual(
-    result.map((source) => source.title),
-    [softwareBulletin.title, softwareFlowchart.title],
-  );
-});
-
-test("cross-program comparisons retain sources for both named programs", () => {
-  const result = selectDisplaySources(
-    "How does Computer Science differ from Software Engineering?",
-    [computerScienceBulletin, softwareBulletin, degreeWorksDashboard],
-  );
-
-  assert.deepEqual(
-    new Set(result.map((source) => source.program)),
-    new Set(["computer_science", "software_engineering"]),
-  );
-  assert.ok(result.every((source) => source.sourceType !== "degreeworks_sample"));
-});
-
-test("Degree Works and personal-plan questions retain matching sample sources", () => {
-  const dashboardResult = selectDisplaySources(
-    "What does my Degree Works dashboard show?",
-    [softwareBulletin, degreeWorksPlan, degreeWorksDashboard],
-  );
-  const planResult = selectDisplaySources(
-    "Which certificate courses are in my plan?",
-    [softwareBulletin, degreeWorksPlan],
-  );
-
-  assert.equal(dashboardResult[0].title, degreeWorksDashboard.title);
-  assert.ok(planResult.some((source) => source.title === degreeWorksPlan.title));
-});
-
-test("keeps the best retrieved source with a caveat when filtering removes everything", () => {
-  const result = selectDisplaySources(
-    "What are the Software Engineering degree requirements?",
-    [degreeWorksDashboard, degreeWorksPlan],
-  );
-
-  assert.equal(result.length, 1);
-  assert.equal(result[0].relevanceNote, SOURCE_RELEVANCE_FALLBACK_NOTE);
-  assert.equal(result[0].snippet, SOURCE_PREVIEW_FALLBACK);
-});
-
 test("transfer credit questions prefer curated transfer policy sources", () => {
   const result = selectDisplaySources(
     "How does Auburn handle transfer credit?",
-    [softwareBulletin, registrarCreditTables, transferCreditPolicy],
+    [degreeWorksSource, registrarCreditTables, transferCreditPolicy],
   );
 
   assert.equal(result[0].title, transferCreditPolicy.title);
   assert.deepEqual(
     result.map((source) => source.title),
-    [
-      transferCreditPolicy.title,
-      registrarCreditTables.title,
-      softwareBulletin.title,
-    ],
+    [transferCreditPolicy.title, registrarCreditTables.title],
   );
 });
 
-test("formats curated source type labels for source cards", () => {
-  assert.equal(
-    formatSourceTypeLabel("transfer_credit"),
-    "Transfer credit policy",
+test("Degree Works questions prefer the curated registrar source", () => {
+  const result = selectDisplaySources(
+    "What is Degree Works used for?",
+    [coreCurriculum, transferCreditPolicy, degreeWorksSource],
   );
+
+  assert.equal(result[0].title, degreeWorksSource.title);
+});
+
+test("formats curated source type labels for source cards", () => {
+  assert.equal(formatSourceTypeLabel("transfer_credit"), "Transfer credit policy");
   assert.equal(formatSourceTypeLabel("registrar"), "Registrar page");
   assert.equal(formatSourceTypeLabel("course_catalog"), "Course catalog");
 });

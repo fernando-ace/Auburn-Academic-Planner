@@ -5,13 +5,10 @@ import {
   ArrowLeft,
   ClipboardCheck,
   Loader2,
-  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
 
-import { buildAdvisorMeetingSummary } from "@/lib/plan/advisor-meeting-summary";
-import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
 import { EmptyState } from "@/components/ui-primitives";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
 import { CombinedDegreeWorksParsedDetails, PlannedPathCoverageCard, PlannedPathOverviewCard } from "./components/combined-analysis-details";
@@ -20,13 +17,9 @@ import {
   DegreeWorksWorkflowUploadSection,
   type PlanCheckWorkflowMode,
 } from "./components/plan-check-input-sections";
-import { DraftSemesterPlanCard, GapReportCard, NextSemesterSuggestionsCard } from "./components/planning-cards";
 import type {
   CombinedDegreeWorksUploadResult,
-  ComputerSciencePlanCheckResult,
   CurrentDegreeWorksUploadResult,
-  PlanCheckResult,
-  SoftwareEngineeringPlanCheckResult,
 } from "./types";
 
 const combinedDegreeWorksUploadEndpoint =
@@ -39,11 +32,6 @@ export default function PlanCheckPage() {
     useState<File | null>(null);
   const [selectedWorkflowMode, setSelectedWorkflowMode] =
     useState<PlanCheckWorkflowMode>("current_progress");
-  const [result, setResult] = useState<PlanCheckResult | null>(null);
-  const [softwareEngineeringResult, setSoftwareEngineeringResult] =
-    useState<SoftwareEngineeringPlanCheckResult | null>(null);
-  const [computerScienceResult, setComputerScienceResult] =
-    useState<ComputerSciencePlanCheckResult | null>(null);
   const [combinedDegreeWorksResult, setCombinedDegreeWorksResult] =
     useState<CombinedDegreeWorksUploadResult | null>(null);
   const [currentDegreeWorksResult, setCurrentDegreeWorksResult] =
@@ -64,33 +52,14 @@ export default function PlanCheckPage() {
   const advisorMeetingSummary = useMemo(
     () =>
       currentDegreeWorksResult?.advisorMeetingSummary ??
-      buildAdvisorMeetingSummary({
-        aiResult: result,
-        softwareEngineeringResult,
-        computerScienceResult,
-        prerequisiteCheck: combinedDegreeWorksResult?.prerequisiteCheck ?? null,
-        gapReport: combinedDegreeWorksResult?.gapReport ?? null,
-        nextSemesterSuggestions:
-          combinedDegreeWorksResult?.nextSemesterSuggestions ?? null,
-        draftSemesterPlan: combinedDegreeWorksResult?.draftSemesterPlan ?? null,
-        selectedTargetPath: combinedDegreeWorksResult?.selectedTargetPath,
-      }),
-    [
-      combinedDegreeWorksResult?.draftSemesterPlan,
-      combinedDegreeWorksResult?.gapReport,
-      combinedDegreeWorksResult?.nextSemesterSuggestions,
-      combinedDegreeWorksResult?.prerequisiteCheck,
-      combinedDegreeWorksResult?.selectedTargetPath,
-      computerScienceResult,
-      currentDegreeWorksResult?.advisorMeetingSummary,
-      result,
-      softwareEngineeringResult,
-    ],
+      (combinedDegreeWorksResult
+        ? buildPlannedPathAdvisorSummary(combinedDegreeWorksResult)
+        : ""),
+    [combinedDegreeWorksResult, currentDegreeWorksResult?.advisorMeetingSummary],
   );
 
   async function runCombinedDegreeWorksUploadPlanCheck(
     file: File,
-    targetPath: PlanningTargetPathInput,
     currentProgressAnalysis?: CurrentDegreeWorksUploadResult["currentProgressAnalysis"],
   ) {
     if (isCombinedDegreeWorksLoading) {
@@ -103,7 +72,6 @@ export default function PlanCheckPage() {
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("targetPath", targetPath);
     if (currentProgressAnalysis) {
       formData.append(
         "currentProgressAnalysis",
@@ -143,30 +111,10 @@ export default function PlanCheckPage() {
 
       setCombinedDegreeWorksResult(combinedPayload);
       setCurrentDegreeWorksResult(null);
-      setResult({
-        ...combinedPayload.aiCertificateCheck,
-        ...sharedPlanFields,
-        totalPlannedCredits: combinedPayload.totalPlannedCredits,
-      });
-      setSoftwareEngineeringResult({
-        ...combinedPayload.softwareEngineeringCheck,
-        ...sharedPlanFields,
-        program: "BSWE Software Engineering",
-        totalPlannedCredits: combinedPayload.totalPlannedCredits,
-      });
-      setComputerScienceResult({
-        ...combinedPayload.computerScienceCheck,
-        ...sharedPlanFields,
-        major: "Computer Science",
-        program: "CSCI Computer Science",
-        totalPlannedCredits: combinedPayload.totalPlannedCredits,
-      });
+      void sharedPlanFields;
     } catch (fetchError) {
       setCombinedDegreeWorksResult(null);
       setCurrentDegreeWorksResult(null);
-      setResult(null);
-      setSoftwareEngineeringResult(null);
-      setComputerScienceResult(null);
       setCombinedDegreeWorksError(
         fetchError instanceof Error
           ? fetchError.message
@@ -179,7 +127,6 @@ export default function PlanCheckPage() {
 
   async function runCurrentDegreeWorksUploadPlanCheck(
     file: File,
-    targetPath: PlanningTargetPathInput,
   ) {
     if (isCombinedDegreeWorksLoading) {
       return;
@@ -189,13 +136,9 @@ export default function PlanCheckPage() {
     setCombinedDegreeWorksError(null);
     setCombinedDegreeWorksResult(null);
     setCurrentDegreeWorksResult(null);
-    setResult(null);
-    setSoftwareEngineeringResult(null);
-    setComputerScienceResult(null);
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("targetPath", targetPath);
 
     try {
       const response = await fetch(currentDegreeWorksUploadEndpoint, {
@@ -276,12 +219,10 @@ export default function PlanCheckPage() {
     if (selectedWorkflowMode === "current_progress") {
       void runCurrentDegreeWorksUploadPlanCheck(
         selectedCombinedDegreeWorksPdfFile,
-        "auto",
       );
     } else {
       void runCombinedDegreeWorksUploadPlanCheck(
         selectedCombinedDegreeWorksPdfFile,
-        "auto",
         currentDegreeWorksResult?.currentProgressAnalysis,
       );
     }
@@ -291,9 +232,6 @@ export default function PlanCheckPage() {
     setSelectedCombinedDegreeWorksPdfFile(null);
     setCombinedDegreeWorksResult(null);
     setCurrentDegreeWorksResult(null);
-    setResult(null);
-    setSoftwareEngineeringResult(null);
-    setComputerScienceResult(null);
     setCombinedDegreeWorksError(null);
     setCombinedDegreeWorksUploadValidationError(null);
     setAdvisorSummaryCopyStatus(null);
@@ -386,9 +324,7 @@ export default function PlanCheckPage() {
       ? {
           workflowType: "Planned Path",
           fileName: combinedDegreeWorksResult.sourceFileName,
-          detectedProgram: formatSelectedPlanningTarget(
-            combinedDegreeWorksResult.selectedTargetPath,
-          ),
+          detectedProgram: formatSelectedPlanningTarget(),
           creditsSummary:
             typeof combinedDegreeWorksResult.totalPlannedCredits === "number"
               ? `${combinedDegreeWorksResult.totalPlannedCredits} planned credits`
@@ -415,13 +351,6 @@ export default function PlanCheckPage() {
           </div>
           <nav className="flex shrink-0 items-center gap-2" aria-label="Planning Hub navigation">
             <Link
-              className="hidden h-10 items-center gap-2 rounded-lg border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10 sm:inline-flex"
-              href="/rule-audit"
-            >
-              <ShieldCheck aria-hidden="true" size={16} />
-              Rule Audit
-            </Link>
-            <Link
               className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10"
               href="/chat"
             >
@@ -431,21 +360,6 @@ export default function PlanCheckPage() {
           </nav>
         </div>
       </header>
-
-      <div className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 text-[13px]">
-          <p className="hidden text-slate-600 sm:block">
-            Review which local rules are source-backed, modeled, or advisor-review-only.
-          </p>
-          <Link
-            className="inline-flex items-center gap-2 font-semibold text-[#b84300] hover:underline"
-            href="/rule-audit"
-          >
-            <ShieldCheck aria-hidden="true" size={16} />
-            View rule coverage audit
-          </Link>
-        </div>
-      </div>
 
       <DegreeWorksWorkflowUploadSection
         analyzedFileSummary={analyzedFileSummary}
@@ -496,7 +410,7 @@ export default function PlanCheckPage() {
                 className="animate-spin text-[#dd550c]"
                 size={19}
               />
-              Analyzing Degree Works PDF against deterministic checks...
+              Analyzing Degree Works PDF...
             </div>
           ) : null}
 
@@ -519,18 +433,6 @@ export default function PlanCheckPage() {
             <>
               <PlannedPathOverviewCard result={combinedDegreeWorksResult} />
               <PlannedPathCoverageCard result={combinedDegreeWorksResult} />
-              <GapReportCard
-                gapReport={combinedDegreeWorksResult.gapReport}
-                selectedTargetPath={combinedDegreeWorksResult.selectedTargetPath}
-              />
-              <NextSemesterSuggestionsCard
-                selectedTargetPath={combinedDegreeWorksResult.selectedTargetPath}
-                suggestions={combinedDegreeWorksResult.nextSemesterSuggestions}
-              />
-              <DraftSemesterPlanCard
-                plan={combinedDegreeWorksResult.draftSemesterPlan}
-                selectedTargetPath={combinedDegreeWorksResult.selectedTargetPath}
-              />
               {advisorMeetingSummary ? (
                 <AdvisorMeetingSummary
                   copyStatus={advisorSummaryCopyStatus}
@@ -549,8 +451,7 @@ export default function PlanCheckPage() {
               Upload a Degree Works Worksheet audit for Current Progress. Upload
               a Degree Works Plan PDF for Planned Path. Works from Degree
               Works-native requirements for any Auburn program with readable
-              PDF text. Local deterministic models are documented as secondary
-              rule coverage, not primary student-facing planning modes.
+              PDF text.
             </EmptyState>
           ) : null}
         </section>
@@ -571,17 +472,41 @@ function formatCurrentProgressCredits(
   return `${appliedText} applied / ${requiredText} required / ${remainingText} remaining`;
 }
 
-function formatSelectedPlanningTarget(targetPath: PlanningTargetPathInput) {
-  switch (targetPath) {
-    case "ai_certificate":
-      return "AI Engineering certificate";
-    case "software_engineering":
-      return "Software Engineering";
-    case "computer_science":
-      return "Computer Science";
-    case "degreeworks_only":
-      return "Degree Works audit";
-    case "auto":
-      return "Auto-detected program";
+function formatSelectedPlanningTarget() {
+  return "Degree Works-native";
+}
+
+function buildPlannedPathAdvisorSummary(result: CombinedDegreeWorksUploadResult) {
+  const lines = [
+    "Advisor Meeting Summary",
+    "",
+    "This is a preparation summary, not an official degree audit.",
+    "",
+    "Planned path review:",
+    `- Source file: ${result.sourceFileName}`,
+    `- Parser confidence: ${result.parserConfidence}`,
+    `- Planned courses parsed: ${result.parsedCourseCount}`,
+    `- Planned credits: ${result.totalPlannedCredits ?? "unknown"}`,
+  ];
+
+  if (result.plannedPathCoverage) {
+    lines.push(
+      "",
+      "Current Progress comparison:",
+      `- Covered Still needed items: ${result.plannedPathCoverage.coveredStillNeededItems.length}`,
+      `- Partially covered Still needed items: ${result.plannedPathCoverage.partiallyCoveredStillNeededItems.length}`,
+      `- Uncovered Still needed items: ${result.plannedPathCoverage.uncoveredStillNeededItems.length}`,
+      `- Advisor-review items: ${result.plannedPathCoverage.advisorReviewItems.length}`,
+    );
   }
+
+  lines.push(
+    "",
+    "Questions for my advisor:",
+    "- Does this planned path satisfy my Degree Works Still needed requirements?",
+    "- Are substitutions, exceptions, AP/transfer credit, or hidden Degree Works sections missing from the PDF text?",
+    "- Are these courses offered in the planned terms with a reasonable workload?",
+  );
+
+  return lines.join("\n");
 }

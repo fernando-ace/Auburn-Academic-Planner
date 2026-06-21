@@ -9,13 +9,8 @@ import { POST as plannedPost } from "../src/app/api/plan/analyze-degreeworks/upl
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const fixtureDirectory = path.join(testDir, "fixtures", "degreeworks");
-const plannedSamplePdfPath = path.join(
-  testDir,
-  "..",
-  "sources",
-  "auburn",
-  "degreeworks-plan-sample.pdf",
-);
+const plannedPathText =
+  "Degree Works Plan Description Universal plan Total planned credits 122 Fall 2026 ACCT 2110 PHIL 1020 FREE 9999";
 
 test("current-progress upload route returns worksheet current-state response", async () => {
   const worksheetText = await readFile(
@@ -47,18 +42,14 @@ test("current-progress upload route returns worksheet current-state response", a
       (course: { code: string }) => course.code === "COMP 3220",
     ),
   );
-  assert.match(result.advisorMeetingSummary, /Courses already preregistered/);
+  assert.match(result.advisorMeetingSummary, /Advisor Meeting Summary/);
 });
 
 test("current-progress upload route warns when a planned-path PDF is uploaded", async () => {
   const response = await currentPost(
     formDataRequest(
       "http://localhost/api/plan/analyze-degreeworks-current/upload",
-      new File(
-        [await readFile(plannedSamplePdfPath)],
-        "degreeworks-plan-sample.pdf",
-        { type: "application/pdf" },
-      ),
+      await pdfFileFromText(plannedPathText, "universal-plan.pdf"),
     ),
   );
   const result = await response.json();
@@ -104,11 +95,11 @@ test("current-progress upload route includes external AP and transfer records", 
   );
   assert.match(
     result.advisorMeetingSummary,
-    /Verify AP, transfer, and Fall Through credit applicability\./,
+    /AP, transfer, Fall Through/,
   );
 });
 
-test("current-progress upload route returns universal native analysis and enrichment metadata", async () => {
+test("current-progress upload route returns universal native analysis", async () => {
   const worksheetText = await readFile(
     path.join(fixtureDirectory, "worksheet-business-audit-sample.txt"),
     "utf8",
@@ -117,37 +108,32 @@ test("current-progress upload route returns universal native analysis and enrich
     formDataRequest(
       "http://localhost/api/plan/analyze-degreeworks-current/upload",
       await pdfFileFromText(worksheetText, "worksheet-business.pdf"),
-      "degreeworks_only",
     ),
   );
   const result = await response.json();
 
   assert.equal(response.status, 200);
   assert.equal(result.detectedProgram.program, "BSBA Business Administration");
-  assert.equal(result.availableEnrichments.length, 0);
+  assert.equal(result.availableEnrichments, undefined);
   assert.ok(result.degreeWorksNativeAnalysis.stillNeededItems.length > 0);
-  assert.ok(result.catalogEnrichmentResults);
-  assert.equal(result.currentStateNextSteps.targetPath, "degreeworks_only");
+  assert.equal(result.catalogEnrichmentResults, undefined);
+  assert.equal(result.currentStateNextSteps.targetPath, "degreeworks_native");
 });
 
-test("existing planned-path upload route still returns combined planned result", async () => {
+test("planned-path upload route returns Degree Works-native planned result", async () => {
   const response = await plannedPost(
     formDataRequest(
       "http://localhost/api/plan/analyze-degreeworks/upload",
-      new File(
-        [await readFile(plannedSamplePdfPath)],
-        "degreeworks-plan-sample.pdf",
-        { type: "application/pdf" },
-      ),
+      await pdfFileFromText(plannedPathText, "universal-plan.pdf"),
     ),
   );
   const result = await response.json();
 
   assert.equal(response.status, 200);
   assert.equal(result.documentType, "planned_path");
-  assert.equal(result.parsedCourseCount, 45);
+  assert.ok(result.parsedCourseCount > 0);
   assert.equal(result.totalPlannedCredits, 122);
-  assert.ok(result.nextSemesterSuggestions);
+  assert.equal(result.nextSemesterSuggestions, undefined);
 });
 
 test("planned-path upload route can compare against current progress evidence", async () => {
@@ -159,7 +145,6 @@ test("planned-path upload route can compare against current progress evidence", 
     formDataRequest(
       "http://localhost/api/plan/analyze-degreeworks-current/upload",
       await pdfFileFromText(worksheetText, "worksheet-business.pdf"),
-      "degreeworks_only",
     ),
   );
   const currentResult = await currentResponse.json();
@@ -170,7 +155,6 @@ test("planned-path upload route can compare against current progress evidence", 
         "Degree Works Plan Description Business plan Total planned credits 120 Fall 2026 ACCT 2110 PHIL 1020 FREE 9999",
         "business-plan.pdf",
       ),
-      "degreeworks_only",
       currentResult.currentProgressAnalysis,
     ),
   );
@@ -199,12 +183,10 @@ async function pdfFileFromText(text: string, fileName: string) {
 function formDataRequest(
   url: string,
   file: File,
-  targetPath = "software_engineering",
   currentProgressAnalysis?: unknown,
 ) {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("targetPath", targetPath);
   if (currentProgressAnalysis) {
     formData.append(
       "currentProgressAnalysis",

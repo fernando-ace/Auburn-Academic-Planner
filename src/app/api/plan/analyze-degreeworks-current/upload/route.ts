@@ -4,19 +4,11 @@ import {
   emptyCurrentDegreeAuditAnalysis,
 } from "../../../../../lib/plan/current-degree-audit-analysis.ts";
 import { detectDegreeWorksDocumentType } from "../../../../../lib/plan/degreeworks-document-type.ts";
-import { getAvailableDegreeWorksEnrichments } from "../../../../../lib/plan/degreeworks-enrichments.ts";
 import {
   buildCurrentProgressAdvisorSummary,
   buildCurrentStateGapReport,
   buildCurrentStateNextSteps,
 } from "../../../../../lib/plan/current-state-next-steps.ts";
-import {
-  isPlanningTargetPathInput,
-  type PlanningTargetPathInput,
-} from "../../../../../lib/plan/target-path.ts";
-import { checkAiEngineeringCertificate } from "../../../../../lib/rules/ai-certificate.ts";
-import { checkComputerScienceDegree } from "../../../../../lib/rules/computer-science-degree.ts";
-import { checkSoftwareEngineeringDegree } from "../../../../../lib/rules/software-engineering-degree.ts";
 
 export const runtime = "nodejs";
 
@@ -31,19 +23,6 @@ export async function POST(request: Request) {
   }
 
   const uploadedFile = formData.get("file");
-  const targetPathValue = formData.get("targetPath") ?? "auto";
-
-  if (!isPlanningTargetPathInput(targetPathValue)) {
-    return Response.json(
-      {
-        error:
-          "targetPath must be auto, software_engineering, computer_science, ai_certificate, or degreeworks_only.",
-      },
-      { status: 400 },
-    );
-  }
-
-  const targetPath: PlanningTargetPathInput = targetPathValue;
   const upload = await validatePdfUpload(uploadedFile);
 
   if (!upload.ok) {
@@ -59,7 +38,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       sourceFileName: upload.fileName,
-      selectedTargetPath: targetPath,
+      selectedTargetPath: "degreeworks_native",
       documentType: documentTypeDetection.documentType,
       documentTypeDetection,
       detectedProgram: currentProgressAnalysis.detectedProgram,
@@ -78,7 +57,6 @@ export async function POST(request: Request) {
         advisorMeetingSummary:
           "Advisor Meeting Summary\n\nThe uploaded PDF was not confidently detected as a Degree Works Worksheet audit. Re-export the Worksheet audit PDF for Current Progress, or use Planned Path for a Degree Works Plan PDF.",
       },
-      availableEnrichments: [],
       currentProgressAnalysis,
       currentStateGapReport: {
         overallStatus: "insufficient_data",
@@ -98,7 +76,7 @@ export async function POST(request: Request) {
         ],
       },
       currentStateNextSteps: {
-        targetPath: "mixed_or_unclear",
+        targetPath: "degreeworks_native",
         confidence: "low",
         suggestedCourses: [],
         advisorMilestones: [],
@@ -124,25 +102,11 @@ export async function POST(request: Request) {
   }
 
   const currentProgressAnalysis = analyzeCurrentDegreeAuditText(upload.text);
-  const currentCourseCodes = currentProgressAnalysis.currentApplicableCourseCodes;
-  const aiCertificateCheck = checkAiEngineeringCertificate(currentCourseCodes);
-  const softwareEngineeringCheck = checkSoftwareEngineeringDegree({
-    courseCodes: currentCourseCodes,
-    totalPlannedCredits: currentProgressAnalysis.creditsApplied ?? null,
-  });
-  const computerScienceCheck = checkComputerScienceDegree({
-    courseCodes: currentCourseCodes,
-    totalPlannedCredits: currentProgressAnalysis.creditsApplied ?? null,
-  });
   const currentStateGapReport = buildCurrentStateGapReport({
     audit: currentProgressAnalysis,
   });
   const currentStateNextSteps = buildCurrentStateNextSteps({
     audit: currentProgressAnalysis,
-    aiCertificateCheck,
-    softwareEngineeringCheck,
-    computerScienceCheck,
-    targetPath,
   });
   const advisorMeetingSummary = buildCurrentProgressAdvisorSummary({
     audit: currentProgressAnalysis,
@@ -152,7 +116,7 @@ export async function POST(request: Request) {
 
   return Response.json({
     sourceFileName: upload.fileName,
-    selectedTargetPath: targetPath,
+    selectedTargetPath: "degreeworks_native",
     documentType: "worksheet_audit",
     documentTypeDetection,
     detectedProgram: currentProgressAnalysis.detectedProgram,
@@ -168,21 +132,9 @@ export async function POST(request: Request) {
       advisorQuestions: currentStateGapReport.advisorQuestions,
       advisorMeetingSummary,
     },
-    availableEnrichments: getAvailableDegreeWorksEnrichments({
-      detectedProgram: currentProgressAnalysis.detectedProgram,
-      targetPath,
-    }),
     currentProgressAnalysis,
     currentStateGapReport,
     currentStateNextSteps,
-    catalogEnrichmentResults: {
-      aiCertificateCheck,
-      softwareEngineeringCheck,
-      computerScienceCheck,
-    },
-    aiCertificateCheck,
-    softwareEngineeringCheck,
-    computerScienceCheck,
     advisorMeetingSummary,
     parserDiagnostics: {
       parserWarnings: currentProgressAnalysis.parserWarnings,

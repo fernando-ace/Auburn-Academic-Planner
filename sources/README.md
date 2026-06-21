@@ -1,30 +1,22 @@
 # Auburn Academic Source Scope
 
-This project does not crawl all of `auburn.edu`. Auburn Academic Planner uses a scoped source policy so academic answers stay grounded in official planning material instead of random Auburn pages.
+This project does not crawl all of `auburn.edu`. Auburn Academic Planner uses a scoped source policy so chat answers stay grounded in official academic planning material.
 
-## Tier 1: Deterministic Rule Sources
+## Curated RAG Sources
 
-Tier 1 sources are official program or certificate requirement pages that have been manually converted into local rule JSON under `rules/auburn/`.
+The only Auburn academic source files used for Gemini File Search upload are the curated HTML files under `sources/auburn/curated/` and their manifest.
 
-- AI Engineering certificate
-- Software Engineering
-- Computer Science
+The curated source set may include:
 
-These sources may support deterministic Planning Hub checks because the local rule model has been transcribed and tested. Adding a new Auburn page to the seed list does not make it deterministic.
-
-## Tier 2: RAG Academic Advising Sources
-
-Tier 2 sources are official Auburn academic/advising sources that may be used for source-grounded chat answers when they are deliberately added to the upload manifest.
-
-- Auburn Bulletin undergraduate major, minor, and certificate pages
+- Auburn Bulletin undergraduate major and college index pages
 - Auburn Bulletin Courses of Instruction pages
 - University Core Curriculum pages
-- Registrar, advising, Degree Works, transfer credit, and AP credit pages
-- College-specific academic requirement pages
+- Registrar Degree Works, transfer credit, and AP credit pages
+- Reviewed Auburn academic planning pages listed in `sources/auburn/academic-source-seeds.json`
 
-These sources are RAG-only unless a developer manually creates and validates local rule JSON for them.
+These files support source-grounded chat. Planning Hub remains Degree Works-native and does not add requirements from catalog pages.
 
-## Tier 3: Excluded Sources
+## Excluded Sources
 
 These sources are out of scope for academic planning and should not be ingested:
 
@@ -38,11 +30,11 @@ These sources are out of scope for academic planning and should not be ingested:
 
 ## Local Source Files
 
-- `sources/manifest.json` is the current Gemini File Search upload manifest.
-- `sources/auburn/academic-source-seeds.json` is a curated local seed list for future Auburn-wide academic expansion.
-- `sources/auburn/curated/manifest.json` is generated only after an explicit curated source fetch.
+- `sources/auburn/academic-source-seeds.json` is the reviewed seed registry.
+- `sources/auburn/curated/manifest.json` lists the 10 cached curated HTML files.
 - `npm run sources:check-scope` validates the seed list and source classification without fetching live URLs.
-- `npm run sources:fetch:dry-run` shows which RAG-only seed URLs would be fetched.
+- `npm run sources:fetch:dry-run` shows which seed URLs would be fetched.
 - `npm run sources:fetch` fetches only those exact curated URLs and writes local cached HTML files.
+- `npm run sources:upload -- --dry-run` prints the curated Gemini File Search upload inventory without making an API call.
 
-The seed list is not a crawler queue. It is a scoped registry of official academic sources that can be reviewed before anything is downloaded, stored, or uploaded. The fetch script does not recursively follow links, does not crawl all of `auburn.edu`, and does not convert RAG-only sources into deterministic Planning Hub rules.
+The seed list is not a crawler queue. The fetch script does not recursively follow links or crawl all of `auburn.edu`.

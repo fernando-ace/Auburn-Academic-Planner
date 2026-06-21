@@ -14,10 +14,9 @@ import {
   MessageSquareText,
   PanelRightOpen,
   Send,
-  ShieldCheck,
   X,
 } from "lucide-react";
-import { FormEvent, MouseEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import {
@@ -26,7 +25,6 @@ import {
   formatSourceTypeLabel,
   sanitizeAssistantMarkdown,
 } from "@/lib/chat-presentation";
-import { parseCourseCodes } from "@/lib/courses/course-code-parser";
 
 type Role = "user" | "assistant";
 
@@ -60,25 +58,6 @@ type ChatResponse = {
   advisorVerificationNote: string;
 };
 
-type PlanCheckCourse = {
-  code: string;
-  title: string;
-  creditHours: number;
-  approvalStatus?: string;
-};
-
-type PlanCheckResult = {
-  planDescription: string;
-  major: string;
-  totalPlannedCredits: number | null;
-  requiredCoursesSatisfied: PlanCheckCourse[];
-  requiredCoursesMissing: PlanCheckCourse[];
-  electiveCandidatesFound: PlanCheckCourse[];
-  isLikelyComplete: boolean;
-  advisorVerificationRequired: boolean;
-  notes: string[];
-};
-
 const exampleQuestions = [
   "How does Auburn handle transfer credit?",
   "What is Degree Works used for?",
@@ -98,7 +77,6 @@ const planningTopics = [
 
 const advisorNote =
   "Advisor verification required: use this as preparation and verify your plan with an Auburn academic advisor.";
-const planCheckEndpoint = "/api/plan/check-ai-certificate";
 
 function confidenceClass(confidence?: ChatMessage["confidence"]) {
   if (confidence === "High") {
@@ -174,112 +152,7 @@ function AssistantMarkdown({ children }: { children: string }) {
   );
 }
 
-function BooleanPill({ value }: { value: boolean }) {
-  return (
-    <span
-      className={`rounded-sm border px-2 py-0.5 text-[12px] font-semibold ${
-        value
-          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-          : "border-orange-200 bg-orange-50 text-orange-800"
-      }`}
-    >
-      {value ? "Yes" : "No"}
-    </span>
-  );
-}
-
-function CourseList({
-  courses,
-  emptyText,
-}: {
-  courses: PlanCheckCourse[];
-  emptyText: string;
-}) {
-  if (courses.length === 0) {
-    return <p className="text-[12px] leading-5 text-slate-500">{emptyText}</p>;
-  }
-
-  return (
-    <ul className="space-y-1">
-      {courses.map((course) => (
-        <li
-          className="rounded-sm border border-slate-200 bg-white px-2 py-1.5 text-[12px] leading-5 text-slate-700"
-          key={course.code}
-        >
-          <span className="font-semibold text-slate-950">{course.code}</span>
-          <span className="text-slate-500"> - {course.title}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function PlanCheckCard() {
-  const [enteredCourses, setEnteredCourses] = useState("");
-  const [result, setResult] = useState<PlanCheckResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function runPlanCheck(request: RequestInit = {}) {
-    if (isLoading) {
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(planCheckEndpoint, request);
-      const payload = (await response.json()) as Partial<PlanCheckResult> & {
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "The plan check could not run.");
-      }
-
-      setResult(payload as PlanCheckResult);
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "The plan check could not run.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  function checkSamplePlan(event: MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    void runPlanCheck();
-  }
-
-  function checkEnteredCourses(event: MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const courseCodes = parseCourseCodes(enteredCourses);
-
-    if (courseCodes.length === 0) {
-      setResult(null);
-      setError("Enter at least one planned course code before checking.");
-      return;
-    }
-
-    void runPlanCheck({
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        courseCodes,
-        planDescription: "Custom entered plan",
-        major: "Software Engineering",
-        totalPlannedCredits: null,
-      }),
-    });
-  }
-
   return (
     <section className="rounded-xl border border-[#dd550c]/30 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_8px_22px_rgba(15,23,42,0.04)]">
       <div className="flex items-start gap-3">
@@ -291,27 +164,15 @@ function PlanCheckCard() {
             Planning Hub
           </h2>
           <p className="mt-0.5 text-[12px] leading-5 text-slate-500">
-            Current audits and future plans
+            Current progress and planned paths
           </p>
         </div>
       </div>
 
-      <div className="mt-3">
-        <label
-          className="text-[12px] font-semibold leading-5 text-slate-700"
-          htmlFor="plan-check-courses"
-        >
-          Enter planned courses
-        </label>
-        <textarea
-          className="mt-1 min-h-24 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15"
-          disabled={isLoading}
-          id="plan-check-courses"
-          onChange={(event) => setEnteredCourses(event.target.value)}
-          placeholder="COMP 5600, COMP 5630, COMP 5130, COMP 5610"
-          value={enteredCourses}
-        />
-      </div>
+      <p className="mt-3 text-[12px] leading-5 text-slate-600">
+        Upload a Degree Works Worksheet/Audit PDF for Current Progress, or a
+        Degree Works Plan PDF for Planned Path comparison.
+      </p>
 
       <div className="mt-3 grid gap-2">
         <Link
@@ -320,135 +181,7 @@ function PlanCheckCard() {
         >
           Open Planning Hub
         </Link>
-        <button
-          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-center text-[13px] font-semibold leading-5 text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-          disabled={isLoading}
-          onClick={checkSamplePlan}
-          type="button"
-        >
-          {isLoading ? (
-            <Loader2 aria-hidden="true" className="animate-spin" size={16} />
-          ) : null}
-          Check sample plan
-        </button>
-        <button
-          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[#03244d] px-3 py-2 text-center text-[13px] font-semibold leading-5 text-white transition hover:bg-[#021b3a] disabled:cursor-not-allowed disabled:bg-slate-300"
-          disabled={isLoading}
-          onClick={checkEnteredCourses}
-          type="button"
-        >
-          {isLoading ? (
-            <Loader2 aria-hidden="true" className="animate-spin" size={16} />
-          ) : null}
-          Check entered courses
-        </button>
       </div>
-
-      {error ? (
-        <div className="mt-3 rounded-md border border-orange-200 bg-orange-50 p-3">
-          <div className="flex gap-2">
-            <AlertCircle
-              aria-hidden="true"
-              className="mt-0.5 shrink-0 text-orange-700"
-              size={16}
-            />
-            <p className="text-[12px] leading-5 text-orange-800">{error}</p>
-          </div>
-        </div>
-      ) : null}
-
-      {result ? (
-        <div className="mt-3 space-y-3 border-t border-slate-200 pt-3">
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500">
-              Plan description
-            </p>
-            <p className="mt-1 text-[13px] font-semibold leading-5 text-slate-950">
-              {result.planDescription}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-md border border-slate-200 bg-slate-50 p-2">
-              <p className="text-[11px] font-semibold uppercase text-slate-500">
-                Major
-              </p>
-              <p className="mt-1 text-[12px] font-semibold leading-5 text-slate-800">
-                {result.major}
-              </p>
-            </div>
-            <div className="rounded-md border border-slate-200 bg-slate-50 p-2">
-              <p className="text-[11px] font-semibold uppercase text-slate-500">
-                Credits
-              </p>
-              <p className="mt-1 text-[12px] font-semibold leading-5 text-slate-800">
-                {result.totalPlannedCredits ?? "Not provided"}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-[12px] font-semibold text-slate-600">
-              Required courses satisfied
-            </p>
-            <CourseList
-              courses={result.requiredCoursesSatisfied}
-              emptyText="No required courses found."
-            />
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-[12px] font-semibold text-slate-600">
-              Required courses missing
-            </p>
-            <CourseList
-              courses={result.requiredCoursesMissing}
-              emptyText="No required courses missing."
-            />
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-[12px] font-semibold text-slate-600">
-              Elective candidates found
-            </p>
-            <CourseList
-              courses={result.electiveCandidatesFound}
-              emptyText="No elective candidates found."
-            />
-          </div>
-
-          <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[12px] font-semibold text-slate-700">
-                Likely complete
-              </p>
-              <BooleanPill value={result.isLikelyComplete} />
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[12px] font-semibold text-slate-700">
-                Advisor verification required
-              </p>
-              <BooleanPill value={result.advisorVerificationRequired} />
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-[12px] font-semibold text-slate-600">
-              Notes
-            </p>
-            <ul className="space-y-1.5">
-              {result.notes.map((note) => (
-                <li
-                  className="text-[12px] leading-5 text-slate-600"
-                  key={note}
-                >
-                  {note}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      ) : null}
     </section>
   );
 }
@@ -515,7 +248,7 @@ function PlanningTopicsPanel({
 
         <section className="rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
           <div className="flex gap-3">
-            <ShieldCheck
+            <CheckCircle2
               aria-hidden="true"
               className="mt-0.5 shrink-0 text-[#b84300]"
               size={18}
@@ -877,12 +610,6 @@ export function ChatWorkspace() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Link
-            className="hidden h-9 items-center rounded-md border border-white/20 px-3 text-[13px] font-semibold text-white transition hover:bg-white/10 sm:inline-flex"
-            href="/rule-audit"
-          >
-            Rule Audit
-          </Link>
-          <Link
             className="inline-flex h-9 items-center rounded-lg bg-[#dd550c] px-3 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#b84300]"
             href="/plan-check"
           >
@@ -943,12 +670,10 @@ export function ChatWorkspace() {
                     and advisor verification guidance.
                   </p>
                   <div className="mx-auto mt-5 flex max-w-xl gap-3 rounded-lg border border-[#03244d]/15 bg-[#eef4fa] p-3 text-left text-[13px] leading-5 text-[#03244d]">
-                    <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
+                    <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
                     <p>
                       Planning Hub works from Degree Works audits for Auburn
-                      programs with readable PDF text. Local catalog
-                      enrichments appear when reviewed local rules are
-                      available. Use{" "}
+                      programs with readable PDF text. Use{" "}
                       <Link className="font-semibold text-[#b84300] underline underline-offset-2" href="/plan-check">
                         Planning Hub
                       </Link>{" "}

@@ -24,30 +24,6 @@
     "notes": "Official Auburn Bulletin course catalog index; RAG-only unless specific course rules are manually modeled."
   },
   {
-    "id": "auburn-computer-science-bulletin",
-    "title": "Computer Science B.S. Bulletin",
-    "url": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/departmentofcomputerscienceandsoftwareengineering/computerscience_major/",
-    "type": "bulletin_major",
-    "college": "Samuel Ginn College of Engineering",
-    "department": "Computer Science and Software Engineering",
-    "catalogYear": "2025-2026",
-    "status": "deterministic_rule_source",
-    "lastChecked": "2026-06-13",
-    "notes": "Official Auburn Bulletin page manually converted into local Computer Science rule JSON."
-  },
-  {
-    "id": "auburn-software-engineering-bulletin",
-    "title": "Software Engineering B.S. Bulletin",
-    "url": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/departmentofcomputerscienceandsoftwareengineering/softwareengineering_major/",
-    "type": "bulletin_major",
-    "college": "Samuel Ginn College of Engineering",
-    "department": "Computer Science and Software Engineering",
-    "catalogYear": "2025-2026",
-    "status": "deterministic_rule_source",
-    "lastChecked": "2026-06-13",
-    "notes": "Official Auburn Bulletin page manually converted into local Software Engineering rule JSON."
-  },
-  {
     "id": "auburn-computer-science-online-bulletin",
     "title": "Bachelor of Computer Science (On-line) Bulletin",
     "url": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/departmentofcomputerscienceandsoftwareengineering/bachelorofcomputerscience_major/",
@@ -58,18 +34,6 @@
     "status": "rag_only",
     "lastChecked": "2026-06-21",
     "notes": "Official Auburn Bulletin page for the Bachelor of Computer Science (On-line) completion path; not locally modeled as a deterministic rule source."
-  },
-  {
-    "id": "auburn-ai-engineering-certificate",
-    "title": "Artificial Intelligence Engineering Certificate Bulletin",
-    "url": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/departmentofcomputerscienceandsoftwareengineering/artificialintelligence_engineering_ucrt/",
-    "type": "certificate",
-    "college": "Samuel Ginn College of Engineering",
-    "department": "Computer Science and Software Engineering",
-    "catalogYear": "2025-2026",
-    "status": "deterministic_rule_source",
-    "lastChecked": "2026-06-13",
-    "notes": "Official Auburn Bulletin certificate page manually converted into local AI Engineering certificate rule JSON."
   },
   {
     "id": "auburn-csse-department-bulletin",

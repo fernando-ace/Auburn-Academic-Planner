@@ -51,7 +51,6 @@ type ValidSource = {
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, "..");
 const sourcesDir = path.join(projectRoot, "sources");
-const manifestPath = path.join(sourcesDir, "manifest.json");
 const curatedManifestPath = path.join(
   projectRoot,
   ...CURATED_ACADEMIC_SOURCE_MANIFEST_PATH.split("/"),
@@ -88,28 +87,26 @@ function loadLocalEnv() {
 }
 
 function readManifest() {
-  if (!existsSync(manifestPath)) {
-    throw new Error(`Missing source manifest: ${manifestPath}`);
+  if (!existsSync(curatedManifestPath)) {
+    throw new Error(`Missing curated source manifest: ${curatedManifestPath}`);
   }
 
-  const sourceEntries = readManifestEntries(
-    manifestPath,
-    "sources/manifest.json",
-  );
-  const curatedEntries = existsSync(curatedManifestPath)
-    ? readManifestEntries(
-        curatedManifestPath,
-        CURATED_ACADEMIC_SOURCE_MANIFEST_PATH,
-      )
-    : [];
-
-  const sources = [...sourceEntries, ...curatedEntries].map((source, index) =>
+  const sources = readManifestEntries(
+    curatedManifestPath,
+    CURATED_ACADEMIC_SOURCE_MANIFEST_PATH,
+  ).map((source, index) =>
     normalizeSource(source, index),
   );
 
   if (sources.length === 0) {
     throw new Error(
-      "sources/manifest.json is empty. Add at least one source entry with a non-empty fileName.",
+      `${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} is empty. Add curated source entries before uploading.`,
+    );
+  }
+
+  if (sources.length !== 10) {
+    throw new Error(
+      `${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} must contain exactly 10 curated sources; found ${sources.length}.`,
     );
   }
 

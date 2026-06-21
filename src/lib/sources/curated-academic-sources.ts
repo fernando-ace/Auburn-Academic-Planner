@@ -1,6 +1,5 @@
 import {
   classifyAcademicSource,
-  isDeterministicRuleSource,
   type AcademicSourceSeed,
   type AcademicSourceStatus,
   type AcademicSourceType,
@@ -160,10 +159,6 @@ export function validateCuratedAcademicSources(
       errors.push(`${id} is not eligible for curated RAG fetch.`);
     }
 
-    if (isDeterministicRuleSource(seed)) {
-      errors.push(`${id} is a deterministic rule source and must stay out of the curated RAG cache.`);
-    }
-
     compareString(entry.title, seed.title, `${label}.title`, errors);
     compareString(entry.url, seed.url, `${label}.url`, errors);
     compareString(entry.type, seed.type, `${label}.type`, errors);
@@ -180,10 +175,6 @@ export function validateCuratedAcademicSources(
     const fetchedAt = stringValue(entry.fetchedAt);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fetchedAt)) {
       errors.push(`${label}.fetchedAt must use YYYY-MM-DD.`);
-    }
-
-    if (entry.status === "deterministic_rule_source") {
-      errors.push(`${id} cannot become deterministic_rule_source through curated fetch metadata.`);
     }
 
     const fileName = stringValue(entry.fileName);

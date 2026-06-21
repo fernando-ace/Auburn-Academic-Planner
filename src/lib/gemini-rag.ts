@@ -6,16 +6,9 @@ import { selectDisplaySources } from "./chat-presentation.ts";
 import { getGeminiModel } from "./gemini-config.ts";
 
 const require = createRequire(import.meta.url);
-const manifest = require("../../sources/manifest.json") as RawManifestSource[];
-
-let curatedManifest: RawManifestSource[] = [];
-try {
-  curatedManifest = require(
-    "../../sources/auburn/curated/manifest.json",
-  ) as RawManifestSource[];
-} catch {
-  curatedManifest = [];
-}
+const curatedManifest = require(
+  "../../sources/auburn/curated/manifest.json",
+) as RawManifestSource[];
 
 export type IncomingMessage = {
   role: "user" | "assistant";
@@ -77,17 +70,15 @@ export type GeminiRagConfig = {
 };
 
 const SYSTEM_INSTRUCTIONS = `
-You are Auburn Academic Planner, an academic planning assistant for Auburn CSSE students.
+You are Auburn Academic Planner, an academic planning assistant for Auburn students.
 
-Answer questions about Auburn Software Engineering, Computer Science, and the Artificial Intelligence Engineering certificate.
+Answer questions from the curated Auburn academic sources.
 
 Grounding rules:
 - For degree requirements, prerequisites, catalog rules, certificate requirements, course lists, credit counts, advising rules, or policy-like questions, answer only from retrieved Auburn sources.
 - If retrieved Auburn sources are missing or insufficient, say that the retrieved sources do not contain enough information to answer confidently.
 - Do not use general knowledge to fill in Auburn degree requirements.
 - Do not invent citations, URLs, catalog years, or program metadata.
-- If the user names a source document, such as "Degree Works Plan Sample" or "Degree Works Dashboard Sample", you must search that named source and use it only if File Search retrieves it.
-- If a document-specific question compares a named student document to a certificate, major, prerequisite, or bulletin requirement, search both the named student document and the relevant Auburn bulletin/certificate source.
 - Cite only retrieved File Search chunks. If the named source is not retrieved, say the matching file was not retrieved and do not infer from memory.
 
 Product boundaries:
@@ -106,7 +97,7 @@ const FALLBACK_ADVISOR_NOTE =
 const NO_RETRIEVAL_ANSWER =
   "The Gemini File Search tool did not return Auburn source material for this question, so I cannot answer it confidently from the uploaded Auburn sources.";
 
-const typedManifest = [...manifest, ...curatedManifest]
+const typedManifest = curatedManifest
   .map(normalizeManifestSource)
   .filter((source): source is ManifestSource => source !== null);
 
@@ -209,43 +200,6 @@ function buildRetrievalContext(messages: IncomingMessage[]): RetrievalContext {
   if (
     includesPattern(
       lowerQuestion,
-      /\bdegree\s*works\b.*\bplan\s*sample\b|\bdegreeworks[-\s]?plan[-\s]?sample\b/,
-    )
-  ) {
-    addSource("degreeworks-plan-sample");
-    expansions.push(
-      "Degree Works Plan Sample",
-      "degreeworks-plan-sample.pdf",
-      "auburn/degreeworks-plan-sample.pdf",
-      "3 Year Bachelors Degree + AI Certificate",
-      "COMP 5600",
-      "COMP 5630",
-      "COMP 5130",
-      "COMP 5610",
-    );
-  }
-
-  if (
-    includesPattern(
-      lowerQuestion,
-      /\bdegree\s*works\b.*\bdashboard\s*sample\b|\bdegreeworks[-\s]?dashboard[-\s]?sample\b/,
-    )
-  ) {
-    addSource("degreeworks-dashboard-sample");
-    expansions.push(
-      "Degree Works Dashboard Sample",
-      "degreeworks-dashboard-sample.pdf",
-      "auburn/degreeworks-dashboard-sample.pdf",
-      "credits required",
-      "credits applied",
-      "credits needed",
-      "preregistered",
-    );
-  }
-
-  if (
-    includesPattern(
-      lowerQuestion,
       /\bdegree\s*works\b|\bdegreeworks\b|\bwhere\b.*\b(?:check|find|access|see)\b.*\bdegree\s*works\b/,
     )
   ) {
@@ -279,23 +233,6 @@ function buildRetrievalContext(messages: IncomingMessage[]): RetrievalContext {
     );
   }
 
-  if (
-    includesPattern(
-      lowerQuestion,
-      /\bai\s+certificate\b|\bartificial\s+intelligence\s+engineering\s+certificate\b/,
-    )
-  ) {
-    addSource("auburn-ai-engineering-certificate");
-    expansions.push(
-      "Artificial Intelligence Engineering Certificate Bulletin",
-      "auburn/ai-engineering-certificate.html",
-      "COMP 5600",
-      "COMP 5630",
-      "COMP 5130",
-      "approved AI elective",
-    );
-  }
-
   const expandedQuery = uniqueStrings(expansions).join("; ");
   return {
     userQuestion,
@@ -305,26 +242,17 @@ function buildRetrievalContext(messages: IncomingMessage[]): RetrievalContext {
 }
 
 function retrievalPrompt(context: RetrievalContext) {
-  const expectedSourceIds = new Set(
-    context.expectedSources.map((source) => source.id),
-  );
   const sourceInstruction =
     context.expectedSources.length > 0
       ? `Named/relevant source files to retrieve and cite: ${context.expectedSources
           .map((source) => `${source.title} (${source.fileName})`)
           .join(", ")}.`
       : "Search the uploaded Auburn sources for the most relevant grounding chunks.";
-  const comparisonInstruction =
-    expectedSourceIds.has("degreeworks-plan-sample") &&
-    expectedSourceIds.has("auburn-ai-engineering-certificate")
-      ? "For Degree Works Plan Sample comparisons to the Artificial Intelligence Engineering certificate, list retrieved planned courses that satisfy the three required courses and the approved AI elective slot. If COMP 5610 Artificial Intelligence Programming is retrieved from the plan, include it as the planned approved AI elective candidate and remind the student to verify department/advisor approval."
-      : undefined;
 
   return [
     `Current user question to answer: ${context.userQuestion}`,
     sourceInstruction,
     `Expanded retrieval query for File Search only: ${context.expandedQuery}`,
-    comparisonInstruction,
     "Use the expanded query only to improve retrieval. Do not treat expansion terms as facts unless retrieved source chunks support them.",
     "If File Search does not retrieve the named source or relevant Auburn source chunks, say the matching file was not retrieved and do not answer from memory.",
   ]

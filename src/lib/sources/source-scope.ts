@@ -13,15 +13,8 @@ export const academicSourceTypes = [
 ] as const;
 
 export const academicSourceStatuses = [
-  "deterministic_rule_source",
   "rag_only",
   "excluded",
-] as const;
-
-export const deterministicRuleSourceIds = [
-  "auburn-ai-engineering-certificate",
-  "auburn-software-engineering-bulletin",
-  "auburn-computer-science-bulletin",
 ] as const;
 
 export type AcademicSourceType = (typeof academicSourceTypes)[number];
@@ -42,7 +35,6 @@ export type AcademicSourceSeed = {
 
 export type SourceScopeClassification =
   | "eligible_academic_source"
-  | "deterministic_rule_candidate"
   | "rag_only"
   | "excluded";
 
@@ -53,8 +45,6 @@ export type SeedValidationResult = {
 
 const typeSet = new Set<string>(academicSourceTypes);
 const statusSet = new Set<string>(academicSourceStatuses);
-const deterministicRuleSourceIdSet = new Set<string>(deterministicRuleSourceIds);
-
 const academicBulletinPathPatterns = [
   /^\/undergraduate\/majors\/?$/i,
   /^\/undergraduate\/[^?#]*\/majors\/?$/i,
@@ -91,10 +81,6 @@ export function classifyAcademicSource(
 
   if (seed?.status === "excluded") {
     return "excluded";
-  }
-
-  if (seed && isDeterministicRuleSource(seed)) {
-    return "deterministic_rule_candidate";
   }
 
   if (seed?.status === "rag_only") {
@@ -188,62 +174,12 @@ export function validateAcademicSourceSeeds(
       errors.push(`${label}.lastChecked must use YYYY-MM-DD.`);
     }
 
-    if (status === "deterministic_rule_source" && id && !deterministicRuleSourceIdSet.has(id)) {
-      errors.push(`${label}.status can be deterministic_rule_source only for manually modeled rule sources.`);
-    }
-
-    if (status === "deterministic_rule_source" && url) {
-      const classification = classifyAcademicSource({
-        id: id || "unknown",
-        title: stringValue(seed.title),
-        url,
-        type: type as AcademicSourceType,
-        college: nullableStringValue(seed.college),
-        department: nullableStringValue(seed.department),
-        catalogYear: nullableStringValue(seed.catalogYear),
-        status: "deterministic_rule_source",
-        lastChecked: stringValue(seed.lastChecked),
-        notes: stringValue(seed.notes),
-      });
-      if (classification === "excluded") {
-        errors.push(`${label} is excluded and cannot be deterministic_rule_source.`);
-      }
-    }
   });
-
-  const excludedRuleErrors = assertNoExcludedDeterministicSources(
-    entries.filter(isAcademicSourceSeedLike),
-  );
-  errors.push(...excludedRuleErrors);
 
   return {
     passed: errors.length === 0,
     errors: unique(errors),
   };
-}
-
-export function isDeterministicRuleSource(source: Pick<AcademicSourceSeed, "id" | "status">) {
-  return (
-    source.status === "deterministic_rule_source" &&
-    deterministicRuleSourceIdSet.has(source.id)
-  );
-}
-
-export function assertNoExcludedDeterministicSources(
-  entries: Pick<AcademicSourceSeed, "id" | "url" | "status">[],
-) {
-  const errors: string[] = [];
-
-  for (const source of entries) {
-    if (
-      source.status === "deterministic_rule_source" &&
-      classifyAcademicSource(source.url) === "excluded"
-    ) {
-      errors.push(`${source.id} is excluded and cannot be deterministic_rule_source.`);
-    }
-  }
-
-  return errors;
 }
 
 function parseUrl(value: string) {
@@ -312,24 +248,8 @@ function stringValue(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function nullableStringValue(value: unknown) {
-  return typeof value === "string" ? value.trim() : null;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isAcademicSourceSeedLike(value: unknown): value is AcademicSourceSeed {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    typeof value.id === "string" &&
-    typeof value.url === "string" &&
-    typeof value.status === "string"
-  );
 }
 
 function unique(values: string[]) {

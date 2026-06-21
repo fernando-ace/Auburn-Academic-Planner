@@ -1,113 +1,72 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import test from "node:test";
 
 import { POST } from "../src/app/api/plan/analyze-degreeworks/upload/route.ts";
 
-const testDir = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(testDir, "..");
-const samplePdfPath = path.join(
-  projectRoot,
-  "sources",
-  "auburn",
-  "degreeworks-plan-sample.pdf",
-);
+const plannedPathText = `
+Degree Works Plan
+Plan Description Universal planned path
+Summer 2026
+ACCT 2110 Principles of Financial Accounting 3
+PHIL 1020 Introduction to Ethics 3
+Fall 2026
+MKTG 3310 Principles of Marketing 3
+UNIV 4AA0 University Graduation 0
+Total planned credits 122.0
+`;
 
-test("POST runs both deterministic Degree Works checks from one uploaded PDF", async () => {
-  const response = await POST(await pdfUploadRequest(samplePdfPath));
+test("POST parses a Degree Works-native planned path upload", async () => {
+  const response = await POST(
+    formDataRequest(await pdfFileFromText(plannedPathText, "universal-plan.pdf")),
+  );
   const result = await response.json();
 
   assert.equal(response.status, 200);
-  assert.equal(result.sourceFileName, "degreeworks-plan-sample.pdf");
-  assert.equal(result.selectedTargetPath, "auto");
-  assert.equal(result.parsedCourseCount, 45);
+  assert.equal(result.sourceFileName, "universal-plan.pdf");
+  assert.equal(result.selectedTargetPath, "degreeworks_native");
+  assert.equal(result.documentType, "planned_path");
+  assert.ok(result.parsedCourseCodes.includes("ACCT 2110"));
+  assert.ok(result.parsedCourseCodes.includes("PHIL 1020"));
   assert.equal(result.totalPlannedCredits, 122);
-  assert.match(result.parserConfidence, /^(high|medium|low)$/);
-  assert.ok(Array.isArray(result.parserWarnings));
-  assert.ok(Array.isArray(result.courseStatusRecords));
-  assert.equal(result.courseStatusRecords.length, 45);
-  assert.equal(typeof result.courseStatusCounts.planned, "number");
-  assert.equal(typeof result.courseStatusCounts.unknown, "number");
-  assert.equal(typeof result.detectedSignals.hasApCreditSignal, "boolean");
-  assert.equal(
-    typeof result.detectedSignals.hasInsufficientTextSignal,
-    "boolean",
-  );
-  assert.ok(result.parsedCourseCodes.includes("COMP 5600"));
-  assert.equal(result.aiCertificateCheck.isLikelyComplete, true);
-  assert.equal(result.aiCertificateCheck.advisorVerificationRequired, true);
-  assert.equal(result.aiCertificateCheck.provenance.confidence, "source_backed");
-  assert.equal(
-    result.softwareEngineeringCheck.provenance.sourceId,
-    "auburn-software-engineering-bulletin",
-  );
-  assert.equal(result.prerequisiteCheck.provenance.confidence, "local_model");
-  assert.ok(Array.isArray(result.nextSemesterSuggestions.advisorMilestones));
-  assert.ok(result.gapReport.trustNotes.localModel.length > 0);
-  assert.equal(result.gapReport.bestFitPath, "ai_certificate");
-  assert.equal(result.gapReport.overallStatus, "missing_requirements");
-  assert.ok(
-    result.gapReport.satisfiedHighlights.some((highlight: string) =>
-      highlight.includes("AI Engineering certificate looks likely complete"),
-    ),
-  );
-  assert.equal(result.softwareEngineeringCheck.isLikelyComplete, false);
-  assert.equal(
-    result.softwareEngineeringCheck.advisorVerificationRequired,
-    true,
-  );
-  assert.ok(Array.isArray(result.softwareEngineeringCheck.requirementBlocks));
-  assert.ok(
-    result.softwareEngineeringCheck.requirementBlocks.some(
-      (block: { blockName: string; status: string }) =>
-        block.blockName === "Core Science Sequence" &&
-        block.status === "advisor_review",
-    ),
-  );
-  assert.equal(result.computerScienceCheck.isLikelyComplete, false);
-  assert.equal(result.computerScienceCheck.advisorVerificationRequired, true);
-  assert.ok(Array.isArray(result.computerScienceCheck.requirementBlocks));
-  assert.ok(
-    result.gapReport.missingRequirements.some(
-      (requirement: { area: string; items: string[] }) =>
-        requirement.area === "Software Engineering requirement blocks" &&
-        requirement.items.some((item) => item.includes("Technical Electives")),
-    ),
-  );
-  assert.deepEqual(
-    result.softwareEngineeringCheck.exactRequiredCoursesMissing.map(
-      (course: { code: string }) => course.code,
-    ),
-    ["ENGL 1100", "ENGL 1120", "ENGR 1100", "ELEC 2200"],
-  );
-  assert.ok(
-    result.gapReport.missingRequirements.some(
-      (requirement: { area: string; items: string[] }) =>
-        requirement.area === "Software Engineering" &&
-        requirement.items.some((item) => item.includes("ENGL 1100")) &&
-        requirement.items.some((item) => item.includes("ELEC 2200")),
-    ),
-  );
-  assert.deepEqual(
-    result.computerScienceCheck.exactRequiredCoursesMissing.map(
-      (course: { code: string }) => course.code,
-    ),
-    ["ENGL 1100", "ENGL 1120", "ENGR 1100", "ELEC 2200", "COMP 4200"],
-  );
-  assert.ok(
-    result.gapReport.missingRequirements.some(
-      (requirement: { area: string; items: string[] }) =>
-        requirement.area === "Computer Science" &&
-        requirement.items.some((item) => item.includes("COMP 4200")),
-    ),
-  );
-  assert.ok(
-    result.notes.some((note: string) =>
-      note.includes("not an official degree audit"),
-    ),
-  );
+  assert.ok(Array.isArray(result.semesterPlanAnalysis.terms));
+  assert.equal(result.aiCertificateCheck, undefined);
+  assert.equal(result.softwareEngineeringCheck, undefined);
+  assert.equal(result.computerScienceCheck, undefined);
+  assert.equal(result.prerequisiteCheck, undefined);
+  assert.equal(result.gapReport, undefined);
+  assert.equal(result.nextSemesterSuggestions, undefined);
+  assert.equal(result.draftSemesterPlan, undefined);
+});
+
+test("POST compares planned path to current-progress evidence when provided", async () => {
+  const currentProgressAnalysis = {
+    documentType: "worksheet_audit",
+    stillNeededItems: [
+      {
+        blockName: "Business Major",
+        requirementLabel: "ACCT 2110",
+        neededText: "Still needed: ACCT 2110",
+        requirementType: "specific_course",
+        courseOptions: ["ACCT 2110"],
+      },
+    ],
+    completedCourseCodes: [],
+    preregisteredCourseCodes: [],
+    inProgressCourseCodes: [],
+    transferOrApCourseCodes: [],
+    confidence: "high",
+  };
+  const file = await pdfFileFromText(plannedPathText, "business-plan.pdf");
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("currentProgressAnalysis", JSON.stringify(currentProgressAnalysis));
+
+  const response = await POST(formDataRequest(formData));
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(result.plannedPathCoverage);
+  assert.equal(result.plannedPathCoverage.coveredStillNeededItems.length, 1);
 });
 
 test("POST rejects a request without a file field", async () => {
@@ -118,136 +77,53 @@ test("POST rejects a request without a file field", async () => {
   assert.equal(result.error, 'Upload a PDF file using the "file" form field.');
 });
 
-test("POST includes semester and prerequisite analysis fields", async () => {
-  const response = await POST(await pdfUploadRequest(samplePdfPath));
-  const result = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.equal(result.semesterPlanAnalysis.confidence, "high");
-  assert.ok(Array.isArray(result.semesterPlanAnalysis.terms));
-  assert.ok(result.semesterPlanAnalysis.terms.length >= 2);
-  assert.equal(result.semesterPlanAnalysis.terms[0].label, "Summer 2025");
-  assert.ok(
-    result.semesterPlanAnalysis.terms.some(
-      (term: { label: string; courseCodes: string[] }) =>
-        term.label === "Fall 2025" &&
-        term.courseCodes.includes("COMP 1210"),
-    ),
-  );
-  assert.equal(result.prerequisiteCheck.semesterConfidence, "high");
-  assert.equal(result.prerequisiteCheck.checkedCourseCount, 45);
-  assert.equal(
-    typeof result.prerequisiteCheck.isLikelySequenceValid,
-    "boolean",
-  );
-  assert.ok(Array.isArray(result.prerequisiteCheck.prerequisiteIssues));
-  assert.ok(Array.isArray(result.prerequisiteCheck.advisorReviewItems));
-});
-
-test("POST includes deterministic next semester suggestions", async () => {
-  const response = await POST(await pdfUploadRequest(samplePdfPath));
-  const result = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.ok(result.nextSemesterSuggestions);
-  assert.match(
-    result.nextSemesterSuggestions.targetPath,
-    /^(software_engineering|computer_science|ai_certificate|mixed_or_unclear)$/,
-  );
-  assert.match(result.nextSemesterSuggestions.confidence, /^(high|medium|low)$/);
-  assert.ok(Array.isArray(result.nextSemesterSuggestions.suggestedCourses));
-  assert.ok(
-    result.nextSemesterSuggestions.suggestedCourses.every(
-      (course: {
-        reason?: string;
-        priority?: string;
-        creditHours?: number;
-        availabilityNotes?: string[];
-      }) =>
-        typeof course.reason === "string" &&
-        /^(high|medium|low)$/.test(course.priority ?? "") &&
-        typeof course.creditHours === "number" &&
-        Array.isArray(course.availabilityNotes),
-    ),
-  );
-  assert.ok(Array.isArray(result.nextSemesterSuggestions.advisorQuestions));
-  assert.ok(
-    result.nextSemesterSuggestions.notes.some((note: string) =>
-      note.includes("not registration advice"),
-    ),
-  );
-});
-
-test("POST includes a deterministic draft semester plan", async () => {
-  const response = await POST(await pdfUploadRequest(samplePdfPath));
-  const result = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.ok(result.gapReport);
-  assert.ok(result.nextSemesterSuggestions);
-  assert.ok(result.draftSemesterPlan);
-  assert.match(
-    result.draftSemesterPlan.targetPath,
-    /^(software_engineering|computer_science|ai_certificate|mixed_or_unclear)$/,
-  );
-  assert.ok(Array.isArray(result.draftSemesterPlan.semesters));
-  assert.ok(
-    result.draftSemesterPlan.semesters
-      .flatMap((semester: { plannedCourses: unknown[] }) => semester.plannedCourses)
-      .every(
-        (course: { availabilityNotes?: string[] }) =>
-          Array.isArray(course.availabilityNotes),
-      ),
-  );
-  assert.ok(
-    result.gapReport.nextActions.includes(
-      "Review the draft semester plan with an academic advisor.",
-    ),
-  );
-});
-
-test("POST accepts, propagates, and validates targetPath", async () => {
-  const response = await POST(
-    await pdfUploadRequest(samplePdfPath, "software_engineering"),
-  );
-  const result = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.equal(result.selectedTargetPath, "software_engineering");
-  assert.equal(result.gapReport.bestFitPath, "software_engineering");
-  assert.equal(result.nextSemesterSuggestions.targetPath, "software_engineering");
-  assert.equal(result.draftSemesterPlan.targetPath, "software_engineering");
-  assert.ok(result.aiCertificateCheck);
-  assert.ok(result.softwareEngineeringCheck);
-  assert.ok(result.computerScienceCheck);
-
-  const invalidResponse = await POST(
-    await pdfUploadRequest(samplePdfPath, "invalid_path"),
-  );
-  assert.equal(invalidResponse.status, 400);
-});
-
-async function pdfUploadRequest(pdfPath: string, targetPath?: string) {
-  const pdfData = await readFile(pdfPath);
-  const formData = new FormData();
-  formData.append(
-    "file",
-    new Blob([pdfData], { type: "application/pdf" }),
-    path.basename(pdfPath),
-  );
-  if (targetPath) {
-    formData.append("targetPath", targetPath);
-  }
-
-  return formDataRequest(formData);
+async function pdfFileFromText(text: string, fileName: string) {
+  return new File([makePdf(text)], fileName, { type: "application/pdf" });
 }
 
-function formDataRequest(formData: FormData) {
-  return new Request(
-    "http://localhost/api/plan/analyze-degreeworks/upload",
-    {
-      method: "POST",
-      body: formData,
-    },
-  );
+function formDataRequest(fileOrFormData: File | FormData) {
+  const formData = fileOrFormData instanceof FormData ? fileOrFormData : new FormData();
+
+  if (fileOrFormData instanceof File) {
+    formData.append("file", fileOrFormData);
+  }
+
+  return new Request("http://localhost/api/plan/analyze-degreeworks/upload", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+function makePdf(text: string) {
+  const escaped = text
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line, index) => `BT /F1 10 Tf 40 ${760 - index * 14} Td (${line}) Tj ET`)
+    .join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${escaped.length} >>\nstream\n${escaped}\nendstream`,
+  ];
+  const offsets: number[] = [];
+  let pdf = "%PDF-1.7\n";
+
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.forEach((offset) => {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  });
+  pdf += `trailer << /Root 1 0 R /Size ${objects.length + 1} >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+
+  return pdf;
 }

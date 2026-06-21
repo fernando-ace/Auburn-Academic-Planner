@@ -97,9 +97,6 @@ export function CurrentProgressResultDetails({
                       <p className="mt-2 text-[12px] leading-5 text-slate-500">
                         Advisor caveat: verify term availability, prerequisites, substitutions, and fit for the official audit before registering.
                       </p>
-                      {course.availabilityNotes?.length ? (
-                        <p className="mt-2 text-[12px] leading-5 text-slate-500">{course.availabilityNotes[0]}</p>
-                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -128,7 +125,7 @@ export function CurrentProgressResultDetails({
 
               {nextSteps.notYetRecommended.length > 0 ? (
                 <CollapsibleDetails
-                  description="Courses held out because they appear completed, preregistered, in progress, or blocked by modeled prerequisites."
+                  description="Items held out because Degree Works evidence needs advisor review before choosing a specific course."
                   title="Not suggested as new courses"
                 >
                   <ul className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
@@ -148,7 +145,7 @@ export function CurrentProgressResultDetails({
       {advisorSummarySlot}
 
       <CollapsibleDetails
-        description="Status counts, raw records, AP/transfer evidence, parser diagnostics, local coverage metadata, and full still-needed evidence."
+        description="Status counts, raw records, AP/transfer evidence, parser diagnostics, and full still-needed evidence."
         title="Details and evidence"
       >
         <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
@@ -316,12 +313,6 @@ export function CurrentProgressResultDetails({
                   </li>
                 ))}
               </ul>
-            </ResultSection>
-
-            <ResultSection title="Local rule evidence">
-              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-600">
-                Current local deterministic models are available for selected programs, but the Planning Hub uses Degree Works-native analysis for all readable Auburn audits. Rule coverage details remain in Rule Audit and are not primary student-facing planning modes.
-              </p>
             </ResultSection>
           </div>
         </section>
@@ -593,8 +584,8 @@ function formatSuggestionSource(source: string) {
       return "Still needed options";
     case "incomplete_block":
       return "Incomplete block";
-    case "deterministic_gap":
-      return "Local rule gap";
+    case "degree_works_gap":
+      return "Degree Works gap";
     default:
       return source;
   }

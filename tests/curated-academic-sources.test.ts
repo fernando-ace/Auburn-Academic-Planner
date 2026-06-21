@@ -33,15 +33,12 @@ const expectedEligibleSourceIds = [
   "auburn-pathways-transfer-credit",
 ];
 
-test("fetch planning includes eligible RAG-only seeds and excludes rule sources", () => {
+test("fetch planning includes the curated RAG-only seed inventory", () => {
   const plans = planCuratedAcademicSourceFetches(seeds);
   const plannedIds = new Set(plans.map((plan) => plan.seed.id));
 
   assert.equal(plans.length, 10);
   assert.deepEqual([...plannedIds], expectedEligibleSourceIds);
-  assert.equal(plannedIds.has("auburn-computer-science-bulletin"), false);
-  assert.equal(plannedIds.has("auburn-software-engineering-bulletin"), false);
-  assert.equal(plannedIds.has("auburn-ai-engineering-certificate"), false);
 });
 
 test("fetch planning creates unique complete output paths", () => {
@@ -182,25 +179,4 @@ test("curated validation fails for missing files, empty files, and metadata drif
 
   assert.equal(driftResult.passed, false);
   assert.ok(driftResult.errors.some((error) => error.includes(".title expected")));
-});
-
-test("RAG-only sources cannot become deterministic rule sources automatically", () => {
-  const [plan] = planCuratedAcademicSourceFetches(seeds);
-  const [entry] = buildCuratedAcademicSourceManifest([plan], "2026-06-21");
-  const invalidEntry = {
-    ...entry,
-    status: "deterministic_rule_source",
-  };
-
-  const result = validateCuratedAcademicSources([invalidEntry], seeds, {
-    hasFile: () => true,
-    readText: () => "<html>ok</html>",
-  });
-
-  assert.equal(result.passed, false);
-  assert.ok(
-    result.errors.some((error) =>
-      error.includes("cannot become deterministic_rule_source"),
-    ),
-  );
 });

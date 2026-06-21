@@ -2,10 +2,6 @@ import { validatePdfUpload } from "../../../../../lib/api/pdf-upload-validation.
 import { analyzeCombinedDegreeWorksText } from "../../../../../lib/plan/combined-degreeworks-analysis.ts";
 import type { CurrentDegreeAuditAnalysis } from "../../../../../lib/plan/current-degree-audit-analysis.ts";
 import { comparePlannedPathToCurrentProgress } from "../../../../../lib/plan/planned-path-coverage.ts";
-import {
-  isPlanningTargetPathInput,
-  type PlanningTargetPathInput,
-} from "../../../../../lib/plan/target-path.ts";
 
 export const runtime = "nodejs";
 
@@ -20,20 +16,7 @@ export async function POST(request: Request) {
   }
 
   const uploadedFile = formData.get("file");
-  const targetPathValue = formData.get("targetPath") ?? "auto";
   const currentProgressAnalysisValue = formData.get("currentProgressAnalysis");
-
-  if (!isPlanningTargetPathInput(targetPathValue)) {
-    return Response.json(
-      {
-        error:
-          "targetPath must be auto, software_engineering, computer_science, ai_certificate, or degreeworks_only.",
-      },
-      { status: 400 },
-    );
-  }
-
-  const targetPath: PlanningTargetPathInput = targetPathValue;
 
   const upload = await validatePdfUpload(uploadedFile);
   if (!upload.ok) {
@@ -42,7 +25,6 @@ export async function POST(request: Request) {
 
   const combinedAnalysis = analyzeCombinedDegreeWorksText({
     text: upload.text,
-    targetPath,
   });
   const currentProgressAnalysis = parseCurrentProgressAnalysis(
     currentProgressAnalysisValue,
@@ -57,6 +39,7 @@ export async function POST(request: Request) {
   return Response.json({
     sourceFileName: upload.fileName,
     documentType: "planned_path",
+    selectedTargetPath: "degreeworks_native",
     ...combinedAnalysis,
     ...(plannedPathCoverage ? { plannedPathCoverage } : {}),
     notes: [

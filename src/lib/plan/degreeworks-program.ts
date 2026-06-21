@@ -1,10 +1,5 @@
-import type { PlanningTargetPathInput } from "./target-path.ts";
-
 export type DegreeWorksProgramKey =
-  | "software_engineering"
-  | "computer_science"
-  | "ai_certificate"
-  | "degreeworks_only"
+  | "detected"
   | "unknown";
 
 export type DegreeWorksDetectedProgram = {
@@ -23,13 +18,11 @@ export function detectDegreeWorksProgram({
   program,
   major,
   catalogYear,
-  targetPath = "auto",
 }: {
   text: string;
   program?: string | null;
   major?: string | null;
   catalogYear?: string | null;
-  targetPath?: PlanningTargetPathInput;
 }): DegreeWorksDetectedProgram {
   const normalizedProgram = cleanLabel(program);
   const normalizedMajor = cleanLabel(major);
@@ -41,31 +34,12 @@ export function detectDegreeWorksProgram({
     .toLowerCase();
   const inferredKey = inferProgramKey(joined);
 
-  if (targetPath !== "auto") {
-    return {
-      degree,
-      program: normalizedProgram,
-      major: normalizedMajor,
-      catalogYear: normalizedCatalogYear,
-      displayName: displayNameForTarget(targetPath, {
-        degree,
-        major: normalizedMajor,
-        program: normalizedProgram,
-      }),
-      programKey: targetPath,
-      confidence: targetPath === "degreeworks_only" ? "medium" : "high",
-      source: "target_override",
-    };
-  }
-
+  const detectedLabel = [normalizedProgram, normalizedMajor]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
   const displayName =
-    [normalizedProgram, normalizedMajor].filter(Boolean).join(" ") ||
-    degree ||
-    displayNameForTarget(inferredKey, {
-      degree,
-      major: normalizedMajor,
-      program: normalizedProgram,
-    });
+    detectedLabel || degree || "Unknown program";
 
   return {
     degree,
@@ -73,32 +47,19 @@ export function detectDegreeWorksProgram({
     major: normalizedMajor,
     catalogYear: normalizedCatalogYear,
     displayName,
-    programKey: inferredKey,
+    programKey: inferredKey === "unknown" ? "unknown" : "detected",
     confidence:
       normalizedProgram || normalizedMajor
-        ? inferredKey === "unknown"
-          ? "medium"
-          : "high"
+        ? "high"
         : inferredKey === "unknown"
           ? "low"
-          : "medium",
+          : "high",
     source: normalizedProgram || normalizedMajor ? "worksheet_label" : "keyword_match",
   };
 }
 
 function inferProgramKey(text: string): DegreeWorksProgramKey {
-  if (/\b(?:bswe|software engineering|software engr)\b/i.test(text)) {
-    return "software_engineering";
-  }
-
-  if (/\b(?:csci|computer science)\b/i.test(text)) {
-    return "computer_science";
-  }
-
-  if (/\b(?:ai engineering|artificial intelligence engineering)\b/i.test(text)) {
-    return "ai_certificate";
-  }
-
+  void text;
   return "unknown";
 }
 
@@ -112,28 +73,4 @@ function extractDegree(text: string) {
 
 function cleanLabel(value?: string | null) {
   return value?.replace(/\s+/g, " ").trim() || null;
-}
-
-function displayNameForTarget(
-  targetPath: DegreeWorksProgramKey,
-  labels: { degree: string | null; major: string | null; program: string | null },
-) {
-  if (labels.program || labels.major || labels.degree) {
-    return [labels.program, labels.major, labels.degree]
-      .filter(Boolean)
-      .join(" ");
-  }
-
-  switch (targetPath) {
-    case "software_engineering":
-      return "BSWE Software Engineering";
-    case "computer_science":
-      return "CSCI Computer Science";
-    case "ai_certificate":
-      return "AI Engineering certificate";
-    case "degreeworks_only":
-      return "Degree Works audit only";
-    case "unknown":
-      return "Unknown program";
-  }
 }

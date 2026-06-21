@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import {
@@ -30,10 +30,6 @@ export function createProjectSourceIntegrityReader(
   return {
     hasFile(relativePath) {
       return existsSync(resolve(relativePath));
-    },
-    listRuleFiles() {
-      const directory = resolve("rules/auburn");
-      return existsSync(directory) ? readdirSync(directory) : undefined;
     },
     readText(relativePath) {
       const filePath = resolve(relativePath);
