@@ -40,6 +40,9 @@ These sources are out of scope for academic planning and should not be ingested:
 
 - `sources/manifest.json` is the current Gemini File Search upload manifest.
 - `sources/auburn/academic-source-seeds.json` is a curated local seed list for future Auburn-wide academic expansion.
+- `sources/auburn/curated/manifest.json` is generated only after an explicit curated source fetch.
 - `npm run sources:check-scope` validates the seed list and source classification without fetching live URLs.
+- `npm run sources:fetch:dry-run` shows which RAG-only seed URLs would be fetched.
+- `npm run sources:fetch` fetches only those exact curated URLs and writes local cached HTML files.
 
-The seed list is not a crawler queue. It is a scoped registry of official academic sources that can be reviewed before anything is downloaded, stored, or uploaded.
+The seed list is not a crawler queue. It is a scoped registry of official academic sources that can be reviewed before anything is downloaded, stored, or uploaded. The fetch script does not recursively follow links, does not crawl all of `auburn.edu`, and does not convert RAG-only sources into deterministic Planning Hub rules.

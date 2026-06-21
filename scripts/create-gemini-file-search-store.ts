@@ -8,6 +8,7 @@ import {
   type UploadToFileSearchStoreOperation,
   type UploadToFileSearchStoreResponse,
 } from "@google/genai";
+import { CURATED_ACADEMIC_SOURCE_MANIFEST_PATH } from "../src/lib/sources/curated-academic-sources.ts";
 
 const FILE_SEARCH_STORE_DISPLAY_NAME = "Auburn Academic Planner Sources";
 const POLL_INTERVAL_MS = 5000;
@@ -17,10 +18,16 @@ type ManifestSource = {
   title?: unknown;
   type?: unknown;
   program?: unknown;
+  status?: unknown;
+  college?: unknown;
+  department?: unknown;
   catalogYear?: unknown;
   fileName?: unknown;
   url?: unknown;
   lastChecked?: unknown;
+  seedLastChecked?: unknown;
+  fetchedAt?: unknown;
+  contentType?: unknown;
 };
 
 type ValidSource = {
@@ -28,17 +35,26 @@ type ValidSource = {
   title: string;
   type: string;
   program: string;
+  status: string;
+  college: string;
+  department: string;
   catalogYear: string;
   fileName: string;
   filePath: string;
   url: string;
   lastChecked: string;
+  fetchedAt: string;
+  contentType: string;
 };
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, "..");
 const sourcesDir = path.join(projectRoot, "sources");
 const manifestPath = path.join(sourcesDir, "manifest.json");
+const curatedManifestPath = path.join(
+  projectRoot,
+  ...CURATED_ACADEMIC_SOURCE_MANIFEST_PATH.split("/"),
+);
 
 function loadLocalEnv() {
   for (const fileName of [".env.local", ".env"]) {
@@ -75,19 +91,18 @@ function readManifest() {
     throw new Error(`Missing source manifest: ${manifestPath}`);
   }
 
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as
-    | ManifestSource[]
-    | { sources?: ManifestSource[] };
+  const sourceEntries = readManifestEntries(
+    manifestPath,
+    "sources/manifest.json",
+  );
+  const curatedEntries = existsSync(curatedManifestPath)
+    ? readManifestEntries(
+        curatedManifestPath,
+        CURATED_ACADEMIC_SOURCE_MANIFEST_PATH,
+      )
+    : [];
 
-  const sourceEntries = Array.isArray(manifest) ? manifest : manifest.sources;
-
-  if (!Array.isArray(sourceEntries)) {
-    throw new Error(
-      "sources/manifest.json must contain a top-level array or a top-level sources array.",
-    );
-  }
-
-  const sources = sourceEntries.map((source, index) =>
+  const sources = [...sourceEntries, ...curatedEntries].map((source, index) =>
     normalizeSource(source, index),
   );
 
@@ -100,21 +115,36 @@ function readManifest() {
   return sources;
 }
 
+function readManifestEntries(filePath: string, label: string) {
+  const manifest = JSON.parse(readFileSync(filePath, "utf8")) as
+    | ManifestSource[]
+    | { sources?: ManifestSource[] };
+  const sourceEntries = Array.isArray(manifest) ? manifest : manifest.sources;
+
+  if (!Array.isArray(sourceEntries)) {
+    throw new Error(`${label} must contain a top-level array or a top-level sources array.`);
+  }
+
+  return sourceEntries;
+}
+
 function normalizeSource(source: ManifestSource, index: number): ValidSource {
   const id = requireString(source.id, `sources[${index}].id`);
   const title = requireString(source.title, `sources[${index}].title`);
   const type = requireString(source.type, `sources[${index}].type`);
-  const program = requireString(source.program, `sources[${index}].program`);
-  const catalogYear = requireString(
-    source.catalogYear,
-    `sources[${index}].catalogYear`,
-  );
+  const program = readString(source.program) ?? "";
+  const status = readString(source.status) ?? "";
+  const college = readString(source.college) ?? "";
+  const department = readString(source.department) ?? "";
+  const catalogYear = readString(source.catalogYear) ?? "";
   const fileName = requireString(source.fileName, `sources[${index}].fileName`);
-  const lastChecked = requireString(
-    source.lastChecked,
-    `sources[${index}].lastChecked`,
-  );
+  const lastChecked =
+    readString(source.lastChecked) ??
+    readString(source.seedLastChecked) ??
+    requireString(source.lastChecked, `sources[${index}].lastChecked`);
   const url = readString(source.url) ?? "";
+  const fetchedAt = readString(source.fetchedAt) ?? "";
+  const contentType = readString(source.contentType) ?? "";
 
   const filePath = path.resolve(sourcesDir, fileName);
   const relativePath = path.relative(sourcesDir, filePath);
@@ -138,11 +168,16 @@ function normalizeSource(source: ManifestSource, index: number): ValidSource {
     title,
     type,
     program,
+    status,
+    college,
+    department,
     catalogYear,
     fileName: relativePath.replaceAll(path.sep, "/"),
     filePath,
     url,
     lastChecked,
+    fetchedAt,
+    contentType,
   };
 }
 
@@ -166,9 +201,13 @@ function customMetadata(source: ValidSource): CustomMetadata[] {
     { key: "id", stringValue: source.id },
     { key: "type", stringValue: source.type },
     { key: "program", stringValue: source.program },
+    { key: "status", stringValue: source.status },
+    { key: "college", stringValue: source.college },
+    { key: "department", stringValue: source.department },
     { key: "catalogYear", stringValue: source.catalogYear },
     { key: "url", stringValue: source.url },
     { key: "lastChecked", stringValue: source.lastChecked },
+    { key: "fetchedAt", stringValue: source.fetchedAt },
     { key: "fileName", stringValue: source.fileName },
     { key: "title", stringValue: source.title },
   ].filter((item) => item.stringValue.length > 0);
@@ -263,7 +302,7 @@ async function main() {
       config: {
         displayName: source.title,
         customMetadata: customMetadata(source),
-        mimeType: mimeTypeFor(source.filePath),
+        mimeType: source.contentType || mimeTypeFor(source.filePath),
       },
     });
 

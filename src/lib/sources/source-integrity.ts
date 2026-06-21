@@ -1,3 +1,12 @@
+import {
+  CURATED_ACADEMIC_SOURCE_MANIFEST_PATH,
+  validateCuratedAcademicSources,
+} from "./curated-academic-sources.ts";
+import {
+  ACADEMIC_SOURCE_SEED_PATH,
+  type AcademicSourceSeed,
+} from "./source-scope.ts";
+
 const MAX_SOURCE_AGE_DAYS = 180;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -109,6 +118,7 @@ export function checkSourceIntegrity(
 
   const manifestEntries = manifest as ManifestEntry[];
   validateManifestFreshness(manifestEntries);
+  validateCuratedCache();
 
   const ruleFileNames = reader.listRuleFiles();
   if (!ruleFileNames) {
@@ -181,6 +191,40 @@ export function checkSourceIntegrity(
         warnings.push(`${sourceId} was last checked ${ageDays} days ago; review the local source for freshness.`);
         recommendedFixes.push(`Review ${sourceId} against an approved Auburn source and update lastChecked if still current.`);
       }
+    }
+  }
+
+  function validateCuratedCache() {
+    const curatedText = reader.readText(CURATED_ACADEMIC_SOURCE_MANIFEST_PATH);
+    if (curatedText === undefined) return;
+
+    const seedData = readJson(ACADEMIC_SOURCE_SEED_PATH);
+    if (!Array.isArray(seedData)) {
+      errors.push(`${ACADEMIC_SOURCE_SEED_PATH} must contain a top-level array when curated sources are present.`);
+      recommendedFixes.push(`Fix ${ACADEMIC_SOURCE_SEED_PATH} before validating curated RAG sources.`);
+      return;
+    }
+
+    let curatedManifest: unknown;
+    try {
+      curatedManifest = JSON.parse(curatedText);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unknown JSON error";
+      errors.push(`${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} is not parseable JSON: ${detail}`);
+      recommendedFixes.push(`Regenerate ${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} with npm run sources:fetch.`);
+      return;
+    }
+
+    const result = validateCuratedAcademicSources(
+      curatedManifest,
+      seedData as AcademicSourceSeed[],
+      reader,
+    );
+
+    errors.push(...result.errors);
+    warnings.push(...result.warnings);
+    if (!result.passed) {
+      recommendedFixes.push("Regenerate or review the curated RAG source cache before uploading it.");
     }
   }
 

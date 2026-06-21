@@ -159,7 +159,7 @@ Upload the saved PDF, not a screenshot. The PDF is processed server-side for thi
 - The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists and optionally accepts `startingTermLabel` for term-aware review.
 - The `/rule-audit` page and `GET /api/rules/coverage-audit` route expose a deterministic audit of exact rule coverage, requirement-block confidence, source integrity, supporting models, known limitations, and recommended improvements.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
-- Local validation currently passes `180/180` deterministic tests.
+- Local validation currently passes `200/200` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels and distinguish source-grounded chat explanations from deterministic Planning Hub workflows.
 
 ## Degree Works compatibility fixtures
@@ -301,11 +301,22 @@ The fixtures improve compatibility coverage but cannot model every Degree Works 
 
 Do not add unofficial or stale material unless you clearly label it. The assistant is designed to answer degree-requirement questions only from retrieved Auburn sources.
 
-This project also keeps a separate scoped expansion seed list at `sources/auburn/academic-source-seeds.json`. The seed list is not a crawler queue and is not uploaded by `npm run sources:upload`; it records official Auburn academic sources that are eligible for future review. See `sources/README.md` for the source tiers:
+This project also keeps a separate scoped expansion seed list at `sources/auburn/academic-source-seeds.json`. The seed list is not a crawler queue; it records official Auburn academic sources that are eligible for review before any fetch or upload. See `sources/README.md` for the source tiers:
 
 - Tier 1 deterministic rule sources are official program or certificate pages that have been manually converted into local rule JSON.
 - Tier 2 RAG academic advising sources include Auburn Bulletin academic pages, Courses of Instruction, Core Curriculum, Registrar, Degree Works, transfer credit, AP credit, and college academic requirement pages.
 - Tier 3 excluded sources include athletics, news, marketing, archived pages, unrelated departments, person/student pages, and random non-requirement PDFs.
+
+Curated RAG-only source ingestion is explicit and non-recursive:
+
+```bash
+npm run sources:fetch:dry-run
+npm run sources:fetch
+```
+
+The dry run prints the exact eligible RAG-only seed URLs that would be fetched. The live fetch saves only those exact pages under `sources/auburn/curated/` and writes `sources/auburn/curated/manifest.json`; it does not crawl links or all of `auburn.edu`. When the curated manifest exists, `npm run sources:upload` includes those cached RAG-only pages in the Gemini File Search upload alongside `sources/manifest.json`.
+
+Curated source ingestion expands `/chat` retrieval coverage. It does not expand deterministic `/plan-check`, `/rule-audit`, Software Engineering, Computer Science, or AI certificate checks. A RAG-only page becomes deterministic only after a developer manually creates local rule JSON, provenance, source integrity coverage, and tests.
 
 Validate the scoped seed list locally with:
 
@@ -323,7 +334,7 @@ Run the deterministic local source audit with:
 npm run check:sources
 ```
 
-The command parses `sources/manifest.json`, validates rule source IDs and catalog years, checks that every provenance file exists, requires Auburn bulletin URLs for public program sources, and compares exact required courses with the matching checked-in bulletin HTML. The AI certificate guard also checks for COMP 5600, COMP 5630, COMP 5130, and evidence of the 12-credit-hour requirement.
+The command parses `sources/manifest.json`, validates rule source IDs and catalog years, checks that every provenance file exists, requires Auburn bulletin URLs for public program sources, and compares exact required courses with the matching checked-in bulletin HTML. The AI certificate guard also checks for COMP 5600, COMP 5630, COMP 5130, and evidence of the 12-credit-hour requirement. If `sources/auburn/curated/manifest.json` exists, the command also verifies that curated RAG cache files exist, are non-empty, still match the seed metadata, and are not being treated as deterministic rule sources.
 
 Missing or inconsistent metadata and missing source-backed course evidence fail the command. A valid `lastChecked` date older than 180 days produces a review warning without failing. These checks use only local checked-in files; they never fetch live Auburn pages. The guard helps expose possible rule drift, but the Auburn bulletin, Degree Works, and an academic advisor remain authoritative.
 
@@ -375,14 +386,16 @@ Run:
 ```bash
 npm test
 npm run check:sources
+npm run sources:check-scope
 npm run lint
 npx tsc --noEmit
 npm run build
+npm run validate
 ```
 
 Current validation coverage:
 
-- 180 deterministic tests through `npm test`, including source integrity, upload safety and route errors, rule coverage audit, synthetic planned-path Degree Works fixtures, and synthetic current-progress Worksheet fixtures
+- 200 deterministic tests through `npm test`, including curated academic source ingestion, source integrity, upload safety and route errors, rule coverage audit, synthetic planned-path Degree Works fixtures, and synthetic current-progress Worksheet fixtures
 - `npm run check:sources`
 - `npm run lint`
 - `npx tsc --noEmit`

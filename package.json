@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "sources:upload": "node --no-warnings --experimental-strip-types scripts/create-gemini-file-search-store.ts",
+    "sources:fetch:dry-run": "node --no-warnings --experimental-strip-types scripts/fetch-academic-sources.ts --dry-run",
+    "sources:fetch": "node --no-warnings --experimental-strip-types scripts/fetch-academic-sources.ts",
     "eval:rag": "node --no-warnings --experimental-strip-types scripts/eval-rag.ts",
     "eval:rag:list": "node --no-warnings --experimental-strip-types scripts/eval-rag.ts --list",
     "degreeworks:extract": "node --no-warnings --experimental-strip-types scripts/extract-degreeworks-courses.ts",
