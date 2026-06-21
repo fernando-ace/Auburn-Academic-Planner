@@ -49,15 +49,15 @@
   },
   {
     "id": "auburn-computer-science-online-bulletin",
-    "title": "Computer Science Online Degree Completer Program Bulletin",
-    "url": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/departmentofcomputerscienceandsoftwareengineering/computerscienceonline_major/",
+    "title": "Bachelor of Computer Science (On-line) Bulletin",
+    "url": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/departmentofcomputerscienceandsoftwareengineering/bachelorofcomputerscience_major/",
     "type": "bulletin_major",
     "college": "Samuel Ginn College of Engineering",
     "department": "Computer Science and Software Engineering",
     "catalogYear": "2025-2026",
     "status": "rag_only",
     "lastChecked": "2026-06-21",
-    "notes": "Official Auburn Bulletin page for online BCS completion path; not locally modeled as a deterministic rule source."
+    "notes": "Official Auburn Bulletin page for the Bachelor of Computer Science (On-line) completion path; not locally modeled as a deterministic rule source."
   },
   {
     "id": "auburn-ai-engineering-certificate",
