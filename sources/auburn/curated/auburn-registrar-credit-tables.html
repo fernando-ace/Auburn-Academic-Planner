@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="en"><head>
+<title>Office of the Registrar | Auburn University</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="keywords" content="Auburn University, Auburn, Alabama, War Eagle"/>
+<meta name="description" content="Auburn University, one of the South’s largest universities, is a leader in arts and applied science education, and it brings a tradition of spirit to the responsive career preparation it offers." />
+<meta property="og:url" content="https://auburn.edu/template/2022/examples/basic.vert-nav.php" />
+<meta property="og:title" content="Office of the Registrar | Auburn University" />
+<meta property="og:site_name" content="Auburn University" />
+<meta property="og:description" content="Auburn University, one of the South’s largest universities, is a leader in arts and applied science education, and it brings a tradition of spirit to the responsive career preparation it offers."/>
+<meta property="og:image" content="https://auburn.edu/template/2022/_assets/images/bank/page-preview-samford-03.jpg" />	
+	
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-S96V7Q8DMB"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-S96V7Q8DMB', {'anonymize_ip': true});
+</script>	
+	
+<!-- CSS -->
+<link href="//auburn.edu/template/2022/_assets/css/bootstrap.min.css" rel="stylesheet">
+<link href="//auburn.edu/template/2022/_assets/css/global.css" rel="stylesheet">	
+<link href="https://www.auburn.edu/administration/registrar/css/style_2022.css" rel="stylesheet"/>
+
+<!-- FONTAWESOME -->	
+
+<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />	
+	  
+<!-- Icon -->	
+<link rel="shortcut icon" href="//auburn.edu/template/2022/_assets/images/favicon.ico">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	
+<!-- Aos -->	
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />		
+
+<style type="text/css">
+.header {
+            position: sticky;
+            top: 0;
+        }
+</style>	
+	
+</head>
+	
+<body>
+	
+	<div id="gdpr">
+		<div class="alert row align-items-center" role="complementary">
+			<div class="col gdpr-content">
+				<p class="gdpr-title visually-hidden">Cookie Acknowledgement</p>
+				<p class="gdpr-info">This website uses cookies to collect information to improve your browsing experience. Please review our 
+					<a href="//auburn.edu/privacy">Privacy Statement</a> for more information.
+				</p>
+			</div>
+			
+			<div class="col-sm-3 gdpr-button">
+				<button aria-label="Close" class="close" data-dismiss="alert" id="cookieAcknowledge" type="button">
+					<span aria-hidden="true">I Understand</span>
+				</button>
+			</div>	
+		</div>
+	</div>	
+	<div id="top" role="navigation" aria-label="Main navigation shortcuts">
+		<a href="#" data-bs-toggle="modal" data-bs-target="#au_navigation" class="skipto btn">Skip to Primary Navigation</a>
+		<a href="#page_content" class="skipto btn">Skip to Content</a>
+	</div>
+	
+	<div class="site-header" role="banner" aria-label="Site header">
+		
+		<div class="row align-items-center">
+			
+			<!-- SITE WORDMARK -->
+			<div class="col-9 col-md-4 image header-logo">
+				<a href="//auburn.edu/">	
+				<img src="https://www.auburn.edu/administration/registrar/images/logo_reg.jpg" class="d-print-none" alt="Auburn University Registrar" style="width: 50%;">		
+				<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/formal_horiz/onecolor_black/auburn_formal_h_onecolor_black.png" alt="Auburn University homepage" class="d-none d-print-block" style="width:500px;">	
+				</a>
+			</div>
+			
+			<!-- NAV TOGGLE -->
+			<div class="col-3 col-md-1 nav-toggle d-print-none">
+								
+				<button type="button" id="nav_btn_modal_nav_open" class="btn" style="" data-bs-toggle="modal" data-bs-target="#au_navigation"><span class="visually-hidden">Toggle site navigation</span>
+					
+						<svg xmlns="http://www.w3.org/2000/svg" width="100%" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+							<title>Menu button</title> 
+						<path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>	
+					
+
+					<span class="text">
+						<span class="d-none d-xxl-block">Menu</span>
+					</span>	
+				</button>
+
+			</div>
+		
+			<!-- HEADER LINKS-->
+			<div class="row col-12 col-md-7 links align-items-center d-print-none">
+				<a class="col" href="https://registrar.auburn.edu/">Registrar Office</a>
+				<a class="col" href="https://auaccess.auburn.edu/">AU Access</a>
+				<a id="search_btn1" href="#" class="col" data-bs-toggle="modal" data-bs-target="#au_search">Search</a>
+			</div>
+			
+		</div>
+		
+	</div>
+
+	<!-- Search Modal -->	
+	<div class="modal fade au-search d-print-none" id="au_search" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+		  <div class="modal-dialog modal-fullscreen">
+			<div class="modal-content">
+			  <div class="modal-header">
+				<div class="image col-8 col-sm-4">
+					<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/formal_horiz/white_orange/auburn_formal_h_white_orange.png" alt=""> 
+				</div>
+				<button type="button" class="nav-close" data-bs-dismiss="modal" aria-label="Close">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16"><title>Close the search modal</title><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/></svg>    
+				</button>
+			  </div>
+			  <div class="modal-body row align-items-center justify-content-center">
+
+
+					<div class="col-md-5">
+
+						<div class="col-sm-12 row au-search-links" role="navigation" aria-label="Search links">
+						
+							<div class="col"><a href="https://auburn.edu/map">Campus Map</a></div>
+							<div class="col"><a href="https://auburn.edu/main/sitemap.php">A-Z Index</a></div>
+							<div class="col"><a href="https://auburn.edu/main/people-finder/">People Finder</a></div>
+						
+						</div>
+						
+						<div class="col-sm-12">
+						
+							<form action="https://search.auburn.edu" class="" method="get" role="search">
+								<input class="form-control form-control-lg searchfield" type="text" name="q" aria-label="Auburn University Search"  placeholder="Search Auburn.edu" style="width:100%;">
+
+								<!--<input type="hidden" name="cx" value="006456623919840955604:pinevfah6qm">-->
+								<input type="hidden" name="cx" value="014216842050443004230:s3uijv-e95u">
+								<input type="hidden" name="ie" value="utf-8">
+								<input type="submit" class="visually-hidden-focusable" value="Search"/>
+							</form>
+
+						</div>	
+							
+					</div> 
+
+
+			  </div>     
+			</div>
+		  </div>
+		</div>
+	
+	<!-- Navigation Modal -->
+	<div class="navigation modal fade d-print-none" id="au_navigation" role="navigation" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true" aria-labelledby="sitenav" >
+	  <span id="sitenav" class="visually-hidden">Site navigation</span>
+	  <div class="modal-dialog modal-fullscreen">
+		<div class="modal-content">
+		  <div class="modal-header row align-items-center">
+			
+			<div class="col-9 col-md-4 image logo clearfix">
+				<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/formal_horiz/white_orange/auburn_formal_h_white_orange.png" alt=""> 
+			</div>
+			
+			<div class="col-3 col-md-1 nav-close d-print-none order-sm-last">
+								
+				<button type="button" id="nav_btn_modal_nav_close" class="btn" style="" data-bs-toggle="modal" data-bs-target="#au_navigation"><span class="visually-hidden">Close site navigation</span>
+					
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16"><title>Close the navigation modal</title> <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/></svg>	
+					
+				</button>
+
+			</div>  
+			  
+			<div class="col-12 col-md-7 links align-items-center d-print-none row">
+				<div class="row links audience-links row-cols-3 row-cols-lg-3 row-cols-xl-6">
+				<div class="col"><a href="https://auburn.edu/about/">About <span class="d-none d-xxl-inline" style="padding-left:4%;">Auburn</span></a></div>
+				<div class="col"><a href="https://auburn.edu/administration/">Administration</a></div>
+				<div class="col"><a href="https://auburn.edu/students">Students</a></div>
+				<div class="col"><a href="https://auburn.edu/parents">Parents</a></div>
+				<div class="col"><a href="https://www.alumni.auburn.edu/">Alumni</a></div>
+				<div class="col"><a href="https://auburn.edu/employees">Employees</a></div>
+			</div>  
+			</div>  
+			  
+		  </div>
+		  <div class="modal-body row">
+
+			
+
+			<div class="row links nav-links">
+				<div class="nav-level-1 row">	
+					<div class="col-sm-6 col-lg-3 column">
+						<div class="col-title"><a id="titlelink1" href="#">Academics</a></div>
+						<ul class="nav-level-2 navlinks1">
+							<li><a href="https://auburn.edu/academic/provost">Office of the Provost</a></li>
+							<li><a href="https://auburn.edu/academic/">Colleges</a></li>
+							<li><a href="https://bulletin.auburn.edu/undergraduate/majors/">Majors</a></li>
+							<li><a href="https://bulletin.auburn.edu/Policies/Academic/thecorecurriculum/">Core Curriculum</a></li>
+							<li><a href="https://lib.auburn.edu/">Libraries</a></li>
+							<li><a href="https://auburn.edu/about/academic-calendar/">Academic Calendar</a></li>
+							<li><a href="https://ssbprod.auburn.edu/pls/PROD/bwckschd.p_disp_dyn_sched">Course Schedule</a></li>
+							<li><a href="https://auburn.edu/administration/registrar/calendars.html">Advisement Schedule</a></li>
+							<li><a href="https://auburn.edu/administration/registrar/calendars.html#finalExam">Final Exam Schedule</a></li>
+							<li class="deptlink" >
+								<a href="https://auburn.edu/academic/">Visit Academics</a>	
+							</li>
+
+						</ul>	
+					</div>
+					<div class="col-sm-6 col-lg-3 column">
+						<div class="col-title"><a id="titlelink2" href="#">Admissions</a></div>
+						<ul class="nav-level-2 navlinks2">
+							<li><a href="https://auburn.edu/apply">Apply Now</a></li>
+							<li><a href="https://auburn.edu/admissions/attention-applicants.html">Check Application Status</a></li>
+							<li><a href="https://auburn.edu/admissions">Undergraduate Admissions</a></li>
+							<li><a href="https://graduate.auburn.edu/">Graduate Admissions</a></li>
+							<li><a href="https://pharmacy.auburn.edu/apply/">Pharmacy Admissions</a></li>
+							<li><a href="https://www.vetmed.auburn.edu/prospective-students">Veterinary Medicine Admissions</a></li>
+							<li><a href="https://auburn.edu/online/">Distance Ed</a></li>
+							<li><a href="https://auburn.edu/admissions/acceptedstudents.html">Accepted Students</a></li>
+							<li><a href="https://apply.auburn.edu/register/inquiryform">Request Information</a></li>
+							<li class="deptlink" >
+								<a href="https://auburn.edu/admissions/">Visit Admissions</a>	
+							</li>
+						</ul>
+					</div>	
+					<div class="col-sm-6 col-lg-3 column">
+						<div class="col-title"><a id="titlelink3" href="#">Outreach</a></div>
+						<ul class="nav-level-2 navlinks3">
+							
+							<li><a href="https://auburn.edu/outreach/ops/">Public Service & Community Partnerships</a></li>
+							<li><a href="https://auburn.edu/outreach/opce/">Professional & Continuing Education</a></li>
+							<li><a href="https://auburn.edu/outreach/opce/auburnyouthprograms/index.htm">Youth Programs</a></li>
+							<li><a href="https://auburn.edu/outreach/gedi/">Government & Economic Development</a></li>
+							<li><a href="https://auburn.edu/outreach/olliatauburn/">Osher Lifelong Learning Institute</a></li>
+							<li><a href="https://auburn.edu/outreach/facultyengagement/">Faculty Engagement</a></li>
+							<li><a href="https://auburn.edu/outreach/global/">Outreach Global</a></li>
+							<li><a href="https://auburn.edu/outreach/ceoe/">K-12 Outreach</a></li>
+							<li><a href="https://www.aces.edu/">Extension</a></li>
+							<li class="deptlink" >
+								<a href="https://auburn.edu/outreach/">Visit Outreach</a>	
+							</li>
+						</ul>					
+					</div>
+					<div class="col-sm-6 col-lg-3 column">
+						<div class="col-title"><a id="titlelink4" href="#">Research</a></div>
+						<ul class="nav-level-2 navlinks4">
+							
+							
+							<li><a href="https://cws.auburn.edu/ovpr/pm/adminmain">Research Administration</a></li>
+							<li><a href="https://cws.auburn.edu/ovpr/pm/workwithus">Work with Auburn Research</a></li>
+							<li><a href="https://scholars.proquest.com/gallery/auburn">Find Auburn Expertise</a></li>
+							<li><a href="https://cws.auburn.edu/ovpr/pm/resources">Research Resources</a></li>
+							<li><a href="https://cws.auburn.edu/OVPR/pm/centersinstitutes">Centers & Institutes</a></li>
+							<li><a href="https://cws.auburn.edu/OVPR/pm/graduatestudents">Graduate Research</a></li>
+							<li><a href="https://our.auburn.edu/">Undergraduate Research</a></li>
+							<li><a href="https://ocm.auburn.edu/research-magazine">Auburn Research Magazine</a></li>
+							<li><a href="https://cws.auburn.edu/OVPR/pm/thisisresearch">Research Symposia</a></li>
+							<li class="deptlink" >
+								<a href="https://auburn.edu/research/">Visit Research</a>	
+							</li>
+						</ul>
+					</div>				
+				</div>
+			</div>
+
+<script>
+	$(document).ready(function(){
+		$(".nav-level-2 li a").attr("tabindex", -1);
+		
+		$(".col-title").click(function(){
+			$(this).parent().addClass("active");
+		});
+		
+		$("#titlelink1").click(function(){
+			$(".navlinks1 li a").attr("tabindex", 0);
+		});
+		$("#titlelink2").click(function(){
+			$(".navlinks2 li a").attr("tabindex", 0);
+		});
+		$("#titlelink3").click(function(){
+			$(".navlinks3 li a").attr("tabindex", 0);
+		});
+		$("#titlelink4").click(function(){
+			$(".navlinks4 li a").attr("tabindex", 0);
+		});
+	
+	});
+
+</script>			  
+		  </div>
+		</div>
+	  </div>
+	</div>	
+	
+	
+	<style>
+		/* PAGE SPECIFIC STYLING */
+		.title-container .photo {background:url("https://www.auburn.edu/administration/registrar/images/students19.png"); background-position: center center; background-size:cover;}
+		
+		
+		@media (min-width:576px) {
+			
+		}
+		
+		@media (min-width:768px) {
+			
+		}
+		
+		@media (min-width:992px) {
+			
+		}
+		
+		@media (min-width:1200px) {
+			
+		}
+		
+		@media (min-width:1400px) {
+		}
+		
+				
+	</style>	
+
+
+	<div id="title_container" class="title-container row align-items-center" role="banner" aria-labelledby="page_title">
+		
+	<div class="content col row align-items-center">
+		<div class="col">
+			<h1 id="page_title" class="title">Credit Tables</h1>
+		</div>
+		<div class="angle-right"></div>
+	</div>
+		
+		
+	</div>
+
+	<div id="page_content" class="page-content" role="main">
+
+		<div class="content_row breadcrumbs breadcrumbs_custom" style="padding-top: 20px;">
+		
+			<nav aria-label="breadcrumb">
+			  <ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="https://www.auburn.edu/administration/registrar/index.php">Home</a></li> 
+				<li class="breadcrumb-item active" aria-current="page">Credit Tables</li>
+			  </ol>
+			</nav>
+			
+		</div>	
+
+		<div class="content_row row">
+			
+			<div class=" col">
+				
+
+				<div id="page_content" class="page-content pillars pillars_top">
+				  <div data-aos="fade-right">
+					<h2 id="apTable" class="section-header">Advanced Placement Credit Table</h2>
+					 	<table class="table table-hover">
+						 <thead class="table-dark">
+							<tr >
+							  <th width="134" align="center"><strong>AP TEST</strong></td>
+							<th colspan="4" align="center"><strong>Score on AP Test</strong></td>			</tr>
+						 </thead>
+						<tbody>
+						 <tr style="position: sticky;top: 0; background-color: #0C2340; color: #FFFFFF;" >
+						   <td class="header"><strong>Score</strong></td>
+						   <td class="header"><strong>5</strong></td>
+						   <td class="header"><strong>4</strong></td>
+						   <td class="header"><strong>3</strong></td>
+						   <td class="header"><strong>1-2</strong></td>
+						 </tr>
+							
+						<tr>
+						   <td ><strong> African American Studies </strong></td>
+						   <td > 3 hrs credit for AFRI 2000 </td>
+						   <td > 3 hrs credit for AFRI 2000 </td>
+						   <td >No Credit </td>
+						   <td >No Credit </td>
+						 </tr>
+							
+						 <tr>
+						   <td ><strong> American Government </strong></td>
+						   <td > 3 hrs credit for POLI 1090 </td>
+						   <td > 3 hrs credit for POLI 1090 </td>
+						   <td >No Credit </td>
+						   <td >No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Art History </strong></td>
+						   <td >3 hrs credit ARTS 1610 or 2100 </td>
+						   <td >3 hrs credit ARTS 1610 or 2100 </td>
+						   <td > No Credit</td>
+						   <td >No Credit </td>
+						 </tr>
+						 <tr>
+
+						   <td ><strong> Art Studio - Drawing</strong></td>
+						   <td > 6 hrs credit for ARTS 1110 &amp; 1210</td>
+						   <td > 3 hrs credit for ARTS 1110 </td>
+						   <td >No Credit </td>
+						   <td >No credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Art Studio - 2-D Design</strong></td>
+						   <td > 6 hrs credit for ARTS 1210 &amp; 1110</td>
+						   <td > 3 hrs credit for ARTS 1210</td>
+						   <td >No Credit </td>
+						   <td >No credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Art Studio - 3-D Design</strong></td>
+						   <td > 6 hrs credit for ARTS 1220 &amp; 1210</td>
+						   <td > 3 hrs credit for ARTS 1220 </td>
+						   <td >No Credit </td>
+						   <td >No credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Biology </strong></td>
+						   <td > 8 hrs credit for BIOL 1020, 1021, 1030 &amp; 1031</td>
+						   <td > 8 hrs credit for BIOL 1020, 1021, 1030 &amp; 1031</td>
+						   <td > 4 hrs credit for BIOL 1020 &amp; 1021 </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Business and Personal Finance </strong></td>
+						   <td > 3 hrs credit for FINC 2400</td>
+						   <td > 3 hrs credit for FINC 2400</td>
+						   <td > 3 hrs credit for FINC 2400</td>
+						   <td > No Credit </td>
+						 </tr>	
+						 <tr>
+						   <td ><strong> Chemistry </strong></td>
+						   <td > 8 hrs credit for CHEM 1030, 1031, 1040 &amp; 1041 </td>
+						   <td > 4 hrs credit for CHEM 1030, &amp; 1031 </td>
+						   <td >No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Comparative Government </strong></td>
+						   <td > 3 hrs credit for POLI 3120 </td>
+						   <td > 3 hrs credit for POLI 3120 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Computer Science (A) </strong></td>
+						   <td > 3 hrs credit for COMP 1210 </td>
+						   <td > 3 hrs credit for COMP 1210 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+
+						 <tr>
+						   <td ><strong> Computer Science (Principles)</strong></td>
+						   <td > 3 hrs credit for COMP 2000</td>
+						   <td > 3 hrs credit for COMP 2000</td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Economics (Micro) </strong></td>
+						   <td > 3 hrs credit for ECON 2020 </td>
+						   <td > 3 hrs credit for ECON 2020 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Economics (Macro) </strong></td>
+						   <td > 3 hrs credit for ECON 2030 </td>
+						   <td > 3 hrs credit for ECON 2030 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+
+						 <tr>
+						   <td ><strong>English (Language or Literature) </strong></td>
+						   <td >6 hrs credit for ENGL 1100 and ENGL 1120</td>
+						   <td >3 hrs credit for ENGL 1100 </td>
+						   <td >No Credit </td>
+						   <td >No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Environmental Science </strong></td>
+						   <td >4 hrs SCMH CORE</td>
+						   <td >4 hrs SCMH CORE</td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Foreign Language </strong></td>
+						   <td > 8 lower division hrs equiv. to 1020 &amp; 2010 </td>
+						   <td > 8 lower division hrs equiv. to 1010 &amp; 1020 </td>
+						   <td > 4 lower division hrs equiv. to 1010 </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Human Geography </strong></td>
+						   <td > 3 hrs credit for GEOG 1010 (Global Geography) or 2010 (Cultural Geography) </td>
+						   <td > 3 hrs credit for GEOG 1010 (Global Geography) or 2010 (Cultural Geography) </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> American History </strong></td>
+						   <td > 6 hrs credit for HIST 2010 &amp; 2020 </td>
+						   <td > 6 hrs credit for HIST 2010 & 2020 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> European History </strong></td>
+						   <td > 6 hrs credit for HIST 1010 &amp; 1020 </td>
+						   <td > 6 hrs credit for HIST 1010 & 1020 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> World History </strong></td>
+						   <td > 6 hrs credit for HIST 1010 &amp; 1020 </td>
+						   <td > 6 hrs credit for HIST 1010 & 1020 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td><strong> Math: Calculus AB </strong></td>
+							 
+						   <td> 7 hrs credit for MATH 1130 &amp; 1610 </br></br>
+						   (If a student needs MATH 1150 or 1680 instead of 1610, they may contact us and we can switch those out.) </br></br>
+						   </td>
+	
+						   <td> 7 hrs credit for MATH 1130 &amp; 1610 </br></br>
+						   (If a student needs MATH 1150 or 1680 instead of 1610, they may contact us and we can switch those out.) </br></br>	 
+						   </td>
+						   
+						   <td> 7 hrs credit for MATH 1130 &amp; 1610 </br></br>
+						   (If a student needs MATH 1150 or 1680 instead of 1610, they may contact us and we can switch those out.) </br></br>
+						   </td>
+
+						   <td> No Credit </td>
+						 </tr>
+						 <tr>
+						   <td><strong> Math: Calculus BC </strong></td>
+							 
+						   <td> 11 hrs credit for MATH 1130, MATH 1610 &amp; 1620 </br></br>	
+							   
+						   (If a student needs MATH 1150 or 1680 specifically, they may contact us and we can discuss their options.) </br></br>	
+		   
+						   </td>
+							 
+						   <td>11 hrs credit for MATH 1130, MATH 1610 &amp; 1620 </br></br>
+							
+						   (If a student needs MATH 1150 or 1680 specifically, they may contact us and we can discuss their options.) </br></br>	
+							   
+						   </td>
+							 
+						   <td>11 hrs credit for MATH 1130, MATH 1610 &amp; 1620 </br></br>
+					
+							(If a student needs MATH 1150 or 1680 specifically, they may contact us and we can discuss their options.) </br></br>	
+							
+						   </td>
+							 
+						   <td> No Credit </td>
+						 </tr>		
+						<tr>
+						   <td ><strong> Math: Precalculus </strong></td>
+						   <td > 4 Hours for MATH 1150 </td>
+						   <td > 4 Hours for MATH 1150 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						 <tr>
+						   <td ><strong> Physics B </strong></td>
+						   <td > 8 hrs credit for PHYS 1500 &amp; 1510 </td>
+						   <td > 4 hrs credit for PHYS 1500 </td>
+						   <td >No Credit </td>
+						   <td >No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Physics C Mechanics </strong></td>
+						   <td > 4 hrs credit for PHYS 1600 </td>
+						   <td > 4 hrs credit for PHYS 1600 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Physics C Electricity &amp; Magnetism </strong></td>
+						   <td > May take PHYS 2200. After successfully completing PHYS 2200, the student will receive credit for PHYS 1610</td>
+						   <td > May take PHYS 2200. After successfully completing PHYS 2200, the student will receive credit for PHYS 1610</td>
+						   <td >No Credit </td>
+						   <td >No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong>Physics 1</strong></td>
+						   <td >4 hrs credit for PHYS 1500</td>
+						   <td >4 hrs credit for PHYS 1500</td>
+						   <td >No Credit</td>
+						   <td >No Credit</td>
+						 </tr>
+						 <tr>
+						   <td ><strong>Physics 2</strong></td>
+						   <td >4 hrs credit for PHYS 1510</td>
+						   <td >4 hrs credit for PHYS 1510</td>
+						   <td >No Credit</td>
+						   <td >No Credit</td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Psychology </strong></td>
+						   <td > 3 hrs credit for PSYC 2010 </td>
+						   <td > 3 hrs credit for PSYC 2010 </td>
+						   <td > No Credit </td>
+						   <td > No Credit </td>
+						 </tr>
+						 <tr>
+						   <td ><strong> Statistics </strong></td>
+						   <td > 3 hrs credit for STAT 2510 </td>
+						   <td > 3 hrs credit for STAT 2510 </td>
+						   <td > 3 hrs credit for STAT 2510 </td>
+						   <td > No Credit </td>
+						 </tr>
+					   </tbody>
+					</table>
+
+
+
+		
+					</div>
+					<div data-aos="fade-right">
+					<h2 id="ibTable" class="section-header">International Baccalaureate Credit Table</h2>
+	
+							<table class="table table-hover">
+							  <thead class="table-dark">
+								<tr>
+								  <th align="center" nowrap="nowrap"><strong>IB Test</strong></td>
+								  <th colspan="4" align="center"><strong>Score on IB Test</strong></td>
+								</tr>
+							  </thead>
+							  <tbody>
+							   <tr style="position: sticky;top: 0; background-color: #0C2340; color: #FFFFFF;">
+								 <td class="header"><strong>Score</strong></td>
+								 <td class="header"><strong>7</strong></td>
+								 <td class="header"><strong>6</strong></td>
+								 <td class="header"><strong>5</strong></td>
+								 <td class="header"><strong>4</strong></td>
+							   </tr>
+							   <tr>
+								 <td ><strong>Biology<br />
+					(Higher Level)</strong></td>
+								 <td >8 hrs for BIOL 1020 &amp; 1030 </td>
+								 <td >8 hrs for BIOL 1020 &amp; 1030</td>
+								 <td >8 hrs for BIOL 1020 &amp; 1030</td>
+								 <td >No Credit </td>
+							   </tr>
+							   <tr>
+								 <td ><strong>Chemistry <br> (Higher Level) </strong></td>
+								 <td >8 hrs for CHEM 1030 &amp; 1040 with labs </td>
+								 <td >8 hrs for CHEM 1030 &amp; 1040 with labs </td>
+								 <td >8 hrs for CHEM 1030 &amp; 1040 with labs </td>
+								 <td >No Credit </td>
+							   </tr>
+							   <tr>
+								 <td ><strong>Economics <br> 
+								 (Standard Level) </strong></td>
+								 <td >Credit for ECON 2020 &amp; 2030 </td>
+								 <td >Credit for ECON 2020 &amp; 2030 </td>
+								 <td >No Credit </td>
+								 <td >No Credit </td>
+							   </tr>
+							   <tr>
+								 <td ><strong>Economics <br> (Higher Level) </strong></td>
+								 <td >Credit for ECON 2020 &amp; 2030 </td>
+								 <td >Credit for ECON 2020 &amp; 2030 </td>
+								 <td >Credit for ECON 2020 &amp; 2030 </td>
+								 <td >No Credit </td>
+							   </tr>
+							   <tr>
+								 <td ><strong>English <br> (A1 Higher Level) </strong></td>
+								 <td >6 sem. hrs for ENGL 1100 and ENGL 1120 </td>
+								 <td >3 sem. hrs for ENGL 1100 </td>
+								 <td >3 sem. hrs for ENGL 1100 </td>
+								 <td >No Credit </td>
+							   </tr>
+								
+								<tr>
+								 <td ><strong>Foreign Language <br> (Higher Level) </strong></td>
+								 <td >8 lower division hrs equiv. to 1020 & 2010 </td>
+								 <td >8 lower division hrs equiv. to 1010 & 1020 </td>
+								 <td >4 lower division hrs equiv. to 1010 </td>
+								 <td >4 lower division hrs equiv. to 1010 </td>
+							   </tr>
+								  
+								<tr>
+								 <td ><strong>Foreign Language <br> (Standard Level) </strong></td>
+								 <td >8 lower division hrs equiv. to 1020 & 2010 </td>
+								 <td >8 lower division hrs equiv. to 1010 & 1020 </td>
+								 <td >4 lower division hrs equiv. to 1010 </td>
+								 <td >No Credit </td>
+							   </tr>  
+								  
+							   <tr>
+								 <td ><strong>History <br> (American Higher Level) </strong></td>
+								 <td >6 hrs credit for HIST 2010 &amp; 2020 </td>
+								 <td >6 hrs credit for HIST 2010 &amp; 2020 </td>
+								 <td >No Credit </td>
+								 <td >No Credit </td>
+							   </tr>
+							   <tr>
+								 <td ><strong>History <br> (European Higher Level) </strong></td>
+								 <td >6 hrs credit for HIST 1010 &amp; 1020 </td>
+								 <td >6 hrs credit for HIST 1010 &amp; 1020 </td>
+								 <td >No Credit </td>
+								 <td >No Credit </td>
+							   </tr>
+							   <tr>
+								 <td ><strong>Mathematics - 2020 and before <br> (Higher Level) </strong></td>  
+								 <td >8 hrs credit for MATH 1610 and 1620. </td>
+								 <td >8 hrs credit for MATH 1610 and 1620. </td>
+								 <td >8 hrs credit for MATH 1610 and 1620. </td>
+								 <td >4 hrs credit for MATH 1610. </td>
+							   </tr>
+
+
+								<tr>
+								 <td ><strong>Mathematics - Analysis and Approaches - 2021 and after <br> (Higher Level) </strong></td>  
+								 <td >4 hrs credit for MATH 1610 </td>
+								 <td >4 hrs credit for MATH 1610 </td>
+								 <td >4 hrs credit for MATH 1610 </td>
+								 <td >No Credit</td>
+							   </tr>
+
+
+
+							   <tr>
+								 <td ><strong>Physics <br> (Higher Level) </strong></td>
+								 <td >8 hrs credit for PHYS 1500 &amp; 1510 or be allowed to take PHYS 2200. &nbsp; After successfully completing PHYS 2200, student will receive credit for PHYS 1600 and  PHYS 1610. </td>
+								 <td >8 hrs credit for PHYS 1500 &amp; 1510 or be allowed to take PHYS 2200.&nbsp; After successfully completing PHYS 2200, student will receive credit for PHYS 1600 and  PHYS 1610. </td>
+								 <td >4 hrs credit for PHYS 1500 or 1600 </td>
+								 <td >No Credit </td>
+							   </tr>
+							 </tbody>
+							</table>
+	
+						</div>
+	
+	
+	
+	
+	
+	
+		
+		
+					
+					<br>
+					
+					
+				</div>	
+	
+			</div>
+			
+		</div>
+	
+	</div>	
+	
+
+	<div class="site-footer d-print-none" id="footer" role="contentinfo">
+		<div role="navigation" class="social" aria-label="Social Links">
+			
+			<div class="icons row align-items-center">
+
+				<div class="item facebook col col-xl">
+					<a href="https://www.facebook.com/auburnu" target="_blank">
+						<span class="visually-hidden">Link to Auburn University Facebook page</span>
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-facebook" viewBox="0 0 16 16" alt="" role="img" labelledby="imglabel" alt="Facebook logo">
+							<title id="imglable_facebook">Facebook logo</title>
+						  <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951z"/>
+						</svg>
+					</a>	
+				</div>
+				<div class="item twitter col col-xl">
+					<a href="https://twitter.com/auburnu"  target="_blank">
+						<span class="visually-hidden">Link to Auburn University Twitter account</span>
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-twitter" viewBox="0 0 16 16" alt="" role="img" labelledby="imglabel">
+							<title id="imglable_twitter">Twitter logo</title>
+						  <path d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-.86 13.028h1.36L4.323 2.145H2.865l8.875 11.633Z"/>
+						</svg>
+					</a>	
+				</div>
+				<div class="item instagram col col-xl">
+					<a href="https://instagram.com/auburnu"  target="_blank">
+						<span class="visually-hidden">Link to Auburn University Instagram account</span>
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-instagram" viewBox="0 0 16 16" alt="" role="img" labelledby="imglabel">
+							<title id="imglable_instagram">Instagram logo</title>
+						<path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0h.003zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599.28.28.453.546.598.92.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.47 2.47 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.478 2.478 0 0 1-.92-.598 2.48 2.48 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233 0-2.136.008-2.388.046-3.231.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92.28-.28.546-.453.92-.598.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045v.002zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92zm-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217zm0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334z"/>
+					</svg>
+					</a>	
+				</div>
+				<div class="item linkedin col col-xl">
+					<a href="https://www.linkedin.com/school/auburn-university/" target="_blank">
+						<span class="visually-hidden">Link to Auburn University LinkedIn page</span>
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-linkedin" viewBox="0 0 16 16" alt="" role="img" labelledby="imglabel">
+							<title id="imglable_linkedin">LinkedIn logo</title>
+						  <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"/>
+						</svg>
+					</a>	
+				</div>
+			
+			</div>
+			
+		</div>
+		
+		<div class="row content clearfix align-items-start">
+			
+			<div class="column column-01 col-sm-6 col-xxl-3 row">
+								
+				<div class="logo image">	
+
+					<a href="//auburn.edu" title="link to university homepage">
+					
+					<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/informal_horiz/white_orange/auburn_informal_h_white_orange.png" alt="Auburn University" class="d-xxl-none horiz">
+
+					<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/informal_vert/white_orange/auburn_informal_v_white_orange.png" alt="Auburn Uniaversity" class="d-none d-xxl-block vert">
+					
+					</a>	
+						
+				</div>
+				
+			</div>
+			
+			<div class="column column-02 row col-sm-6 col-xxl-3">
+			
+				
+				<div class="column-title">Contact Us</div>
+				<ul>
+					<li>
+						<div class="col-12 map">
+							<span class="bi bi-pin-map"></span>
+							<a href="https://www.google.com/maps/place/Langdon+Hall,+Auburn,+AL+36849/@32.6053616,-85.4849814,17z/data=!3m1!4b1!4m5!3m4!1s0x888cf31c9189bb33:0x506179a59f0ea4ff!8m2!3d32.6053571!4d-85.4827927">
+							Langdon Hall
+							</a>
+						</div>
+					</li>
+					<li>
+						<div class="col-12 phone">
+							<span class="bi bi-telephone"></span>
+							<a href="tel:3348442544">(334) 844-2544</a>
+						</div>
+					</li>
+					<li>
+						<div class="col-12 feedback">
+							<span class="bi bi-envelope"></span>
+							<a href="https://auburn.edu/websitefeedback/">Website Feedback</a>
+						</div>
+					</li>
+				</ul>
+						</div>
+				
+			<div class="column column-03 row col-sm-6 col-xxl-3">
+			
+				
+				<div class="column-title">Campus Links</div>	
+					<ul>
+						<li><a href="https://www.aum.edu/" target="_blank">Auburn University at Montgomery</a></li>
+						<li><a href="https://www.aces.edu/" target="_blank">Alabama Cooperative Extension System</a></li>
+						<li><a href="https://aaes.auburn.edu/" target="_blank">Alabama Agricultural Experiment Station</a></li>
+						<li><a href="//auburn.edu/about/visitorsguide/">Visitors Guide to Campus</a></li>
+					</ul>
+				
+
+			</div>
+				
+			<div class="column column-03 row col-sm-6 col-xxl-3">
+			
+				<div class="column-title">Resources</div>	
+					<ul>
+						<li><a href="https://auburn.edu/emergency">Campus Safety/Emergency Preparedness</a></li>
+						<li><a href="https://auburn.edu/online/">Distance and Continuing Education</a></li>
+						<li><a href="https://auburn.edu/oit">Office of Information Technology</a></li>
+						<li><a href="https://auburn.edu/covid-resource-center/"><span class="uppercase">Covid</span>-19 Resource Center</a></li>
+						<li><a href="https://auburn.edu/inclusion">Diversity, Equity & Inclusion</a></li>
+									
+					</ul>
+				
+			</div>
+				
+		</div>
+		
+		<div class="subrow" role="navigation" aria-label="Subcontent">
+			<div class="column row">
+				<div class="col-sm-2"><a href="https://auburn.edu/hr">Employment</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/titleix">Title IX</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/accessibility">Accessibility</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/privacy">Privacy Statement</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/main/sitemap.php">A-Z Index</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/copyright">Copyright © <script>date = new Date(); document.write(date.getFullYear());</script></a></div>
+			</div>		</div>
+				
+		<div class="to-top">
+			<a href="#top" class="btn btn-light">
+				<div class="bi bi-arrow-up"></div><span class="visually-hidden">Back to Top</span></a>
+		</div>
+				
+		
+	</div>	
+
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script>
+AOS.init({
+  duration: 3000,
+  once: true,
+});		
+</script>		
+	
+<script>
+
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  
+  ga('create', 'UA-2228003-3', 'auto');  // AU Tracker
+  ga('set', 'anonymizeIp', true); // Anonymize IP
+  ga('send', 'pageview');  
+
+</script>	
+
+<script src="//auburn.edu/template/2022/_assets/js/gdpr-cookies.js"></script>
+<script src="//auburn.edu/template/2022/_assets/js/totop-scrollcheck.js"></script>
+
+
+    <!-- Bootstrap Bundle -->
+    <script src="//auburn.edu/template/2022/_assets/js/bootstrap.bundle.min.js"></script>
+	
+	
+  </body>
+	
+</html>	

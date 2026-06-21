@@ -1,0 +1,965 @@
+<!doctype html>
+<html lang="en"><head>
+<title>Auburn University Office of the Registrar</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="keywords" content="Auburn University, Auburn, Alabama, War Eagle, Degreeworks"/>
+<meta name="description" content="Auburn University has launched Auburn DegreeWorks, a new degree-auditing and degree-tracking tool. Auburn DegreeWorks is an online program that compares your academic achievement to your major requirements as found in the Auburn Bulletin. You can use it to track your academic progress toward a degree, review the requirements you have satisfied, and plan the courses you can take to complete your remaining requirements." />
+<meta property="og:url" content="https://www.auburn.edu/administration/registrar/degreeworks.php" />
+<meta property="og:title" content="DegreeWorks | Auburn University" />
+<meta property="og:site_name" content="DegreeWorks Info | Auburn University" />
+<meta property="og:description" content="Auburn University has launched Auburn DegreeWorks, a new degree-auditing and degree-tracking tool. Auburn DegreeWorks is an online program that compares your academic achievement to your major requirements as found in the Auburn Bulletin. You can use it to track your academic progress toward a degree, review the requirements you have satisfied, and plan the courses you can take to complete your remaining requirements."/>
+	
+<!-- FONTAWESOME -->	
+<link rel="stylesheet" href="//use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">	
+	
+<!-- CSS -->
+<link href="//auburn.edu/template/2022/_assets/css/bootstrap.min.css" rel="stylesheet">
+<link href="//auburn.edu/template/2022/_assets/css/global.css" rel="stylesheet">
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js" type="text/javascript"></script>	
+			
+<link href="https://auburn.edu/academic/provost/facultyjobs/_assets/css/animation-style.css" rel="stylesheet"/>
+<script src="https://auburn.edu/academic/provost/facultyjobs/_assets/js/animation.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<link href="//auburn.edu/template/2022/_assets/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="//auburn.edu/template/2022/_assets/css/global.css" rel="stylesheet"/>
+<link href="https://www.auburn.edu/administration/registrar/css/style-new.css" rel="stylesheet"/>
+	
+	
+<!-- Icon -->	
+<link rel="shortcut icon" href="//auburn.edu/template/2022/_assets/images/favicon.ico">
+
+
+</head>
+<body>
+	
+	<div id="gdpr">
+		<div class="alert row align-items-center" role="complementary">
+			<div class="col gdpr-content">
+				<p class="gdpr-title">Cookie Acknowledgement</p>
+				<p class="gdpr-info">This website uses cookies to collect information to improve your browsing experience. Please review our 
+					<a href="//auburn.edu/privacy">Privacy Statement</a> for more information.
+				</p>
+			</div>
+			
+			<div class="col-sm-3 gdpr-button">
+				<button aria-label="Close" class="close" data-dismiss="alert" id="cookieAcknowledge" type="button">
+					<span aria-hidden="true">I Understand</span>
+				</button>
+			</div>	
+		</div>
+	</div>	
+	<div id="top" role="navigation" aria-label="Main navigation shortcuts">
+		<a href="#" data-bs-toggle="modal" data-bs-target="#au_navigation" class="skipto btn">Skip to Primary Navigation</a>
+		<a href="#page_content" class="skipto btn">Skip to Content</a>
+	</div>
+	
+	<div class="site-header" role="banner" aria-label="Site header">
+		
+		<div class="row align-items-center">
+			
+			<!-- SITE WORDMARK -->
+			<div class="col-9 col-md-4 image header-logo">
+				<a href="//auburn.edu/">
+				<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/formal_horiz/fullcolor/auburn_formal_h_fullcolor.png" class="d-print-none" alt="Auburn University Homepage"> 
+				<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/formal_horiz/onecolor_black/auburn_formal_h_onecolor_black.png" alt="Auburn University print logo" class="d-none d-print-block" style="width:500px;">	
+				</a>
+			</div>
+			
+			<!-- NAV TOGGLE -->
+			<div class="col-3 col-md-1 nav-toggle d-print-none">
+								
+				<button type="button" id="nav_btn_modal_nav_open" class="btn" style="" data-bs-toggle="modal" data-bs-target="#au_navigation"><span class="visually-hidden">Toggle site navigation</span>
+					
+						<svg xmlns="http://www.w3.org/2000/svg" width="100%" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+							<title>Menu button</title> 
+						<path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>	
+					
+
+					<span class="text">
+						<span class="d-none d-xxl-block">Menu</span>
+					</span>	
+				</button>
+
+			</div>
+		
+			<!-- HEADER LINKS-->
+			<div class="row col-12 col-md-7 links align-items-center d-print-none">
+				<a class="col" href="https://registrar.auburn.edu/">Registrar Office</a>
+				<a class="col" href="https://auaccess.auburn.edu/">AU Access</a>
+				<a id="search_btn1" href="#" class="col" data-bs-toggle="modal" data-bs-target="#au_search">Search</a>
+			</div>
+			
+		</div>
+		
+	</div>
+
+	<!-- Search Modal -->	
+	<div class="modal fade au-search d-print-none" id="au_search" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+		  <div class="modal-dialog modal-fullscreen">
+			<div class="modal-content">
+			  <div class="modal-header">
+				<div class="image col-8 col-sm-4">
+					<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/formal_horiz/white_orange/auburn_formal_h_white_orange.png" alt=""> 
+				</div>
+				<button type="button" class="nav-close" data-bs-dismiss="modal" aria-label="Close">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16"><title>Close the search modal</title><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/></svg>    
+				</button>
+			  </div>
+			  <div class="modal-body row align-items-center justify-content-center">
+
+
+					<div class="col-md-5">
+
+						<div class="col-sm-12 row au-search-links" role="navigation" aria-label="Search links">
+						
+							<div class="col"><a href="https://auburn.edu/map">Campus Map</a></div>
+							<div class="col"><a href="https://auburn.edu/main/sitemap.php">A-Z Index</a></div>
+							<div class="col"><a href="https://auburn.edu/main/people-finder/">People Finder</a></div>
+						
+						</div>
+						
+						<div class="col-sm-12">
+						
+							<form action="https://search.auburn.edu" class="" method="get" role="search">
+								<input class="form-control form-control-lg searchfield" type="text" name="q" aria-label="Auburn University Search"  placeholder="Search Auburn.edu" style="width:100%;">
+
+								<!--<input type="hidden" name="cx" value="006456623919840955604:pinevfah6qm">-->
+								<input type="hidden" name="cx" value="014216842050443004230:s3uijv-e95u">
+								<input type="hidden" name="ie" value="utf-8">
+								<input type="submit" class="visually-hidden-focusable" value="Search"/>
+							</form>
+
+						</div>	
+							
+					</div> 
+
+
+			  </div>     
+			</div>
+		  </div>
+		</div>
+	
+	<!-- Navigation Modal -->
+	<div class="navigation modal fade d-print-none" id="au_navigation" role="navigation" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true" aria-labelledby="sitenav" >
+	  <span id="sitenav" class="visually-hidden">Site navigation</span>
+	  <div class="modal-dialog modal-fullscreen">
+		<div class="modal-content">
+		  <div class="modal-header row align-items-center">
+			
+			<div class="col-9 col-md-4 image logo clearfix">
+				<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/formal_horiz/white_orange/auburn_formal_h_white_orange.png" alt=""> 
+			</div>
+			
+			<div class="col-3 col-md-1 nav-close d-print-none order-sm-last">
+								
+				<button type="button" id="nav_btn_modal_nav_close" class="btn" style="" data-bs-toggle="modal" data-bs-target="#au_navigation"><span class="visually-hidden">Close site navigation</span>
+					
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16"><title>Close the navigation modal</title> <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/></svg>	
+					
+				</button>
+
+			</div>  
+			  
+			<div class="col-12 col-md-7 links align-items-center d-print-none row">
+				<div class="row links audience-links row-cols-3 row-cols-lg-3 row-cols-xl-6">
+				<div class="col"><a href="https://auburn.edu/about/">About <span class="d-none d-xxl-inline" style="padding-left:4%;">Auburn</span></a></div>
+				<div class="col"><a href="https://auburn.edu/administration/">Administration</a></div>
+				<div class="col"><a href="https://auburn.edu/students">Students</a></div>
+				<div class="col"><a href="https://auburn.edu/parents">Parents</a></div>
+				<div class="col"><a href="https://www.alumni.auburn.edu/">Alumni</a></div>
+				<div class="col"><a href="https://auburn.edu/employees">Employees</a></div>
+			</div>  
+			</div>  
+			  
+		  </div>
+		  <div class="modal-body row">
+
+			
+
+			<div class="row links nav-links">
+				<div class="nav-level-1 row">	
+					<div class="col-sm-6 col-lg-3 column">
+						<div class="col-title"><a id="titlelink1" href="#">Academics</a></div>
+						<ul class="nav-level-2 navlinks1">
+							<li><a href="https://auburn.edu/academic/provost">Office of the Provost</a></li>
+							<li><a href="https://auburn.edu/academic/">Colleges</a></li>
+							<li><a href="https://bulletin.auburn.edu/undergraduate/majors/">Majors</a></li>
+							<li><a href="https://auburn.edu/administration/registrar/core_curriculum/">Core Curriculum</a></li>
+							<li><a href="https://lib.auburn.edu/">Libraries</a></li>
+							<li><a href="https://auburn.edu/about/academic-calendar/">Academic Calendar</a></li>
+							<li><a href="https://ssbprod.auburn.edu/pls/PROD/bwckschd.p_disp_dyn_sched">Course Schedule</a></li>
+							<li><a href="https://auburn.edu/administration/registrar/calendars.html">Advisement Schedule</a></li>
+							<li><a href="https://auburn.edu/administration/registrar/calendars.html#finalExam">Final Exam Schedule</a></li>
+							<li class="deptlink" >
+								<a href="https://auburn.edu/academic/">Visit Academics</a>	
+							</li>
+
+						</ul>	
+					</div>
+					<div class="col-sm-6 col-lg-3 column">
+						<div class="col-title"><a id="titlelink2" href="#">Admissions</a></div>
+						<ul class="nav-level-2 navlinks2">
+							<li><a href="https://auburn.edu/">Apply Now</a></li>
+							<li><a href="https://auburn.edu/admissions/attention-applicants.html">Check Application Status</a></li>
+							<li><a href="https://auburn.edu/admissions">Undergraduate Admissions</a></li>
+							<li><a href="https://graduate.auburn.edu/">Graduate Admissions</a></li>
+							<li><a href="https://pharmacy.auburn.edu/apply/">Pharmacy Admissions</a></li>
+							<li><a href="https://www.vetmed.auburn.edu/prospective-students">Veterinary Medicine Admissions</a></li>
+							<li><a href="https://auburn.edu/online/">Distance Ed</a></li>
+							<li><a href="https://auburn.edu/admissions/acceptedstudents.html">Accepted Students</a></li>
+							<li><a href="https://apply.auburn.edu/register/inquiryform">Request Information</a></li>
+							<li class="deptlink" >
+								<a href="https://auburn.edu/admissions/">Visit Admissions</a>	
+							</li>
+						</ul>
+					</div>	
+					<div class="col-sm-6 col-lg-3 column">
+						<div class="col-title"><a id="titlelink3" href="#">Outreach</a></div>
+						<ul class="nav-level-2 navlinks3">
+							
+							<li><a href="https://auburn.edu/outreach/ops/">Public Service & Community Partnerships</a></li>
+							<li><a href="https://auburn.edu/outreach/opce/">Professional & Continuing Education</a></li>
+							<li><a href="https://auburn.edu/outreach/opce/auburnyouthprograms/index.htm">Youth Programs</a></li>
+							<li><a href="https://auburn.edu/outreach/gedi/">Government & Economic Development</a></li>
+							<li><a href="https://auburn.edu/outreach/olliatauburn/">Osher Lifelong Learning Institute</a></li>
+							<li><a href="https://auburn.edu/outreach/facultyengagement/">Faculty Engagement</a></li>
+							<li><a href="https://auburn.edu/outreach/global/">Outreach Global</a></li>
+							<li><a href="https://auburn.edu/outreach/ceoe/">K-12 Outreach</a></li>
+							<li><a href="https://www.aces.edu/">Extension</a></li>
+							<li class="deptlink" >
+								<a href="https://auburn.edu/outreach/">Visit Outreach</a>	
+							</li>
+						</ul>					
+					</div>
+					<div class="col-sm-6 col-lg-3 column">
+						<div class="col-title"><a id="titlelink4" href="#">Research</a></div>
+						<ul class="nav-level-2 navlinks4">
+							
+							
+							<li><a href="https://cws.auburn.edu/ovpr/pm/adminmain">Research Administration</a></li>
+							<li><a href="https://cws.auburn.edu/ovpr/pm/workwithus">Work with Auburn Research</a></li>
+							<li><a href="https://scholars.proquest.com/gallery/auburn">Find Auburn Expertise</a></li>
+							<li><a href="https://cws.auburn.edu/ovpr/pm/resources">Research Resources</a></li>
+							<li><a href="https://cws.auburn.edu/OVPR/pm/centersinstitutes">Centers & Institutes</a></li>
+							<li><a href="https://cws.auburn.edu/OVPR/pm/graduatestudents">Graduate Research</a></li>
+							<li><a href="https://our.auburn.edu/">Undergraduate Research</a></li>
+							<li><a href="https://ocm.auburn.edu/research-magazine">Auburn Research Magazine</a></li>
+							<li><a href="https://cws.auburn.edu/OVPR/pm/thisisresearch">Research Symposia</a></li>
+							<li class="deptlink" >
+								<a href="https://auburn.edu/research/">Visit Research</a>	
+							</li>
+						</ul>
+					</div>				
+				</div>
+			</div>
+
+<script>
+	$(document).ready(function(){
+		$(".nav-level-2 li a").attr("tabindex", -1);
+		
+		$(".col-title").click(function(){
+			$(this).parent().addClass("active");
+		});
+		
+		$("#titlelink1").click(function(){
+			$(".navlinks1 li a").attr("tabindex", 0);
+		});
+		$("#titlelink2").click(function(){
+			$(".navlinks2 li a").attr("tabindex", 0);
+		});
+		$("#titlelink3").click(function(){
+			$(".navlinks3 li a").attr("tabindex", 0);
+		});
+		$("#titlelink4").click(function(){
+			$(".navlinks4 li a").attr("tabindex", 0);
+		});
+	
+	});
+
+</script>			  
+		  </div>
+		</div>
+	  </div>
+	</div>	
+	
+	
+<style type="text/css"></style>
+
+<div class="page-content" id="page_content" role="main">
+        
+<link href="_assets/css/style.css" rel="stylesheet"/>	
+	
+<style>
+	
+	.title-container {background-image: url('https://www.auburn.edu/administration/registrar/images/student19.jpg'); background-position: center center; background-size:cover;}
+	
+</style>
+
+<div id="title_container" class="title-container row align-items-center title-bluebar" role="banner" aria-labelledby="page_title">
+	<div class="content col row align-items-center">
+		<div class="col">
+			<h1 id="page_title" class="title">DegreeWorks</h1>
+		</div>
+		<div class="angle-right"></div>
+	</div>
+	<div class="content-feature-slant photo">
+		<div class="slant-container"></div>
+	</div>
+</div>
+	
+	
+	
+<div class="content_row clearfix">
+    
+	<div class="content_container clearfix">
+		
+		<div id="home" data-category="home">
+				<div id="page_content" class="col-12 content-wrapper">
+					<div class="row spacer">
+						<p>Auburn DegreeWorks is a degree-auditing and degree-tracking tool. It is an online program that compares your academic achievement to your major requirements as found in the Auburn Bulletin. You can use it to track your academic progress toward a degree, review the requirements you have satisfied, and plan the courses you can take to complete your remaining requirements.</p>
+						
+						<p>You can also use Auburn DegreeWorks to do a "what if" analysis, that is to see how the courses you have taken fit into a different major.</p>
+						
+						<p>Auburn DegreeWorks provides the basic information you need so that you and your advisor can focus on your goals and plan how to achieve them.</p>
+						
+						<p>For more information about DegreeWorks, visit our <a href="https://www.auburn.edu/administration/registrar/documents/DegreeWorks%20Training%20Manual.pdf" target="_blank">Degree Works Training Manual</a>.</p>
+						
+						<div class="col-12 filter">
+							<a class="icon-blocks" data-filter="data-gov" href="#one">
+								<div class="icon-block">
+									<i class="fas fa-chart-line fa-10x"></i>
+									<h2 class="page-content-sub-heading-key-components">Stay on Track</h2>
+								</div>
+							</a>
+							<a class="icon-blocks" data-filter="salesforce" href="#two">
+								<div class="icon-block">
+									<i class="fas fa-project-diagram fa-10x"></i>
+									<h2 class="page-content-sub-heading-key-components">What If Scenarios</h2>
+								</div>
+							</a>
+							<a class="icon-blocks" data-filter="marketing" href="#three">
+								<div class="icon-block">
+									<i class="fas fa-question-circle fa-10x"></i>
+									<h2 class="page-content-sub-heading-key-components">FAQs</h2>
+								</div>
+							</a>
+						</div>
+					</div>
+					
+					<hr class="orange"/>
+					
+					<div class="col-12 content-wrapper aos-init milestone-container" id="one">
+						<h2>Stay on Track</h2>
+						<p>Auburn DegreeWorks provides an electronic audit of your progress toward a specific degree. The audit will report and track:</p>
+						<ul style="font-size: 20px;">
+							<li>Courses and credit hours earned as applied toward your degree program</li>
+							<li>Catalog requirements in effect when you choose a major</li>
+							<li>All requirements necessary to receive a specific degree</li>
+							<li>Transfer credits used to satisfy degree requirements</li>
+							<li>Courses for which you are currently registered (listed as in-progress or 'IP')</li>
+							<li>Courses that do not apply to specific degree requirements, but do apply toward overall earned hours and cumulative GPA</li>
+						</ul>
+						<p>To learn more about Auburn DegreeWorks, click the links for helpful FAQs. When you are ready to look at your record in Auburn DegreeWorks, head to <a href="https://auaccess.auburn.edu" target="_blank">AUAccess</a> and click on the DegreeWorks icon within the Academic Portals card.</p>
+						
+						<hr class="orange"/>
+					</div>
+					
+				</div>
+			
+			
+				<div class="col-12 content-wrapper aos-init milestone-container" id="two">
+					<h2>What If Scenarios</h2>
+					<div class="accordion" id="accordionExample1">
+
+					  <!-- Item 1 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingOne">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseOne"
+								  aria-expanded="false"
+								  aria-controls="collapseOne">
+							I want to change my major. How can I see what would be required if I made this change?
+						  </button>
+						</h2>
+						<div id="collapseOne"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingOne"
+							 data-bs-parent="#accordionExample1">
+						  <div class="accordion-body">
+							<p>You can use the "What If" option on the Audits tab to do an audit using criteria you select. Please be sure to select a Degree, Catalog term and Major along with any corresponding Minors or Concentrations. The selected major will be moved to the window on the right. To deselect the major from that window, highlight it by clicking on it and then click the REMOVE button located below the window. Once the major is selected, click on the PROCESS AUDIT button to generate "What If" audit.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 2 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingTwo">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseTwo"
+								  aria-expanded="false"
+								  aria-controls="collapseTwo">
+							"What If" audits do not guarantee that you will be able to major in the area you select.
+						  </button>
+						</h2>
+						<div id="collapseTwo"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingTwo"
+							 data-bs-parent="#accordionExample1">
+						  <div class="accordion-body">
+							<p>Should you decide you'd like to change your major, contact your current academic advisor for assistance, new major information and instructions on making the change.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 3 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingThree">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseThree"
+								  aria-expanded="false"
+								  aria-controls="collapseThree">
+							Why am I receiving an error when I run a "What If" scenario?
+						  </button>
+						</h2>
+						<div id="collapseThree"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingThree"
+							 data-bs-parent="#accordionExample1">
+						  <div class="accordion-body">
+							<p>The "What If" tool requires that you make a selection in the "Major" field. Failure to select a major will result in an error.</p>
+						  </div>
+						</div>
+					  </div>
+					</div>
+
+					<hr class="orange"/>
+				</div>
+			
+				<div class="col-12 content-wrapper aos-init milestone-container" id="three">
+					<h2>FAQs</h2>
+					<div class="accordion" id="accordionExample">
+
+					  <!-- Item 1 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingOne">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseOne"
+								  aria-expanded="false"
+								  aria-controls="collapseOne">
+							How does Auburn DegreeWorks work?
+						  </button>
+						</h2>
+						<div id="collapseOne"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingOne"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>The Auburn DegreeWorks audit "reads" all courses completed or accepted as transfer credits at Auburn and shows how those courses have been applied toward your chosen degree, major, and minor, according to the catalog requirements for the year in which you entered Auburn. The report can be viewed online or printed out to be used as a snapshot of where you stand relative to graduation requirements.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 2 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingTwo">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseTwo"
+								  aria-expanded="false"
+								  aria-controls="collapseTwo">
+							Do I still need to see an advisor?
+						  </button>
+						</h2>
+						<div id="collapseTwo"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingTwo"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>YES! Absolutely - Auburn DegreeWorks does not take the place of your advisor. You should always review your degree progress report prior to meeting with an advisor, preparing any questions you may have regarding your requirements. Your academic advisor will use the Auburn DegreeWorks report in the process of advising you about your program.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 3 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingThree">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseThree"
+								  aria-expanded="false"
+								  aria-controls="collapseThree">
+							What do I do if I believe that Auburn DegreeWorks is not applying a course(s) correctly to my degree program?
+						  </button>
+						</h2>
+						<div id="collapseThree"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingThree"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>Your <a href="https://www.auburn.edu/academic/provost/academic-advising/">academic advisor</a> is your first point of contact with questions about your audit. An advisor can answer questions you may have and advise you about your course substitutions and waivers that may be needed and submit the necessary adjustments.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 4 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingFour">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseFour"
+								  aria-expanded="false"
+								  aria-controls="collapseFour">
+							Can I change my major/minor/concentration through Auburn DegreeWorks?
+						  </button>
+						</h2>
+						<div id="collapseFour"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingFour"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>No. Contact your <a href="https://www.auburn.edu/academic/provost/academic-advising/">academic advisor</a> on how to change your major/minor/concentration.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 5 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingFive">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseFive"
+								  aria-expanded="false"
+								  aria-controls="collapseFive">
+							My minor or concentration is missing from my audit - how do I fix this?
+						  </button>
+						</h2>
+						<div id="collapseFive"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingFive"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>If you have not officially declared your minor or concentration, contact your <a href="https://www.auburn.edu/academic/provost/academic-advising/">academic advisor</a>.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 6 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingSix">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseSix"
+								  aria-expanded="false"
+								  aria-controls="collapseSix">
+							Who should I contact if I still have questions or disagree with the audit?
+						  </button>
+						</h2>
+						<div id="collapseSix"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingSix"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>Please contact your academic advisor.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 7 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingSeven">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseSeven"
+								  aria-expanded="false"
+								  aria-controls="collapseSeven">
+							Is my Auburn DegreeWorks Audit the same as my Academic Transcript?
+						  </button>
+						</h2>
+						<div id="collapseSeven"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingSeven"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>No. The Auburn DegreeWorks Audit is an unofficial advisement tool. It is not an Academic Transcript.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 8 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingEight">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseEight"
+								  aria-expanded="false"
+								  aria-controls="collapseEight">
+							Where can I find my Grade-Point Average (GPA)?
+						  </button>
+						</h2>
+						<div id="collapseEight"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingEight"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							 <p>Your major GPA is a calculated GPA based on coursework used to fulfill major requirements. This GPA will appear within the major block requirements of your audit. Additionally, depending upon your college, the major GPA may also include courses that potentially could have been used within the major block but were not needed to fulfill specific requirements.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 9 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingNine">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseNine"
+								  aria-expanded="false"
+								  aria-controls="collapseNine">
+							Can I register for classes in Auburn DegreeWorks?
+						  </button>
+						</h2>
+						<div id="collapseNine"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingNine"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>No. Registration will continue to be accessed through tigeri during scheduled registration dates and time tickets.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 10 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingTen">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseTen"
+								  aria-expanded="false"
+								  aria-controls="collapseTen">
+							How current is my information in Auburn DegreeWorks?
+						  </button>
+						</h2>
+						<div id="collapseTen"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingTen"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>The information in Auburn DegreeWorks is refreshed nightly. Any changes made today will be seen in Auburn DegreeWorks the next day.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 11 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingEleven">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseEleven"
+								  aria-expanded="false"
+								  aria-controls="collapseEleven">
+							Are my grades visible in Auburn DegreeWorks?
+						  </button>
+						</h2>
+						<div id="collapseEleven"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingEleven"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>Yes. Once grades have been posted at the end of the semester or term, they are viewable in Auburn DegreeWorks.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 12 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingTwelve">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseTwelve"
+								  aria-expanded="false"
+								  aria-controls="collapseTwelve">
+							Does Auburn DegreeWorks include my AP credit and transfer work?
+						  </button>
+						</h2>
+						<div id="collapseTwelve"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingTwelve"
+							 data-bs-parent="#accordionExample">
+
+
+						  <div class="accordion-body">
+							<p>Yes. Once AP scores are received from the College Board and credit is granted, they are posted to the student's record and will appear on the audit. Any transfer work articulated by the Office of the Registrar will also appear.</p>
+						  </div>
+						</div>
+					  </div>		
+
+					  <!-- Item 13 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingThirteen">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseThirteen"
+								  aria-expanded="false"
+								  aria-controls="collapseThirteen">
+							How do I know what classes I need to take?
+						  </button>
+						</h2>
+						<div id="collapseThirteen"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingThirteen"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>Check your status! Your audit will outline courses needed to meet degree, major, minor, and/or concentration requirements within specified blocks. You may then use this information to discuss your plan with your academic advisor.</p>
+						  </div>
+						</div>
+					  </div>
+
+					   <!-- Item 14 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingFourteen">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseFourteen"
+								  aria-expanded="false"
+								  aria-controls="collapseFourteen">
+							I'm pursuing two degrees (a BS and a BA). Only one appears on the audit. How can I check the requirements for my other program of study?
+						  </button>
+						</h2>
+						<div id="collapseFourteen"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingFourteen"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>Look at the degree information next to your name at the top of the screen. You'll notice that the degree box has a drop-down arrow. Use this to select your second degree. Once you select on this, an audit with the additional major will display.</p>
+						  </div>
+						</div>
+					  </div>
+
+					  <!-- Item 15 -->
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="headingFiveteen">
+						  <button class="accordion-button collapsed" type="button"
+								  data-bs-toggle="collapse"
+								  data-bs-target="#collapseFiveteen"
+								  aria-expanded="false"
+								  aria-controls="collapseFiveteen">
+							When should I look at my degree audit?
+						  </button>
+						</h2>
+						<div id="collapseFiveteen"
+							 class="accordion-collapse collapse"
+							 aria-labelledby="headingFiveteen"
+							 data-bs-parent="#accordionExample">
+						  <div class="accordion-body">
+							<p>No. This would be a conflict of interest and would not be allowed.</p>
+						  </div>
+						</div>
+					  </div>	
+
+					</div>					
+
+				</div>
+						
+			</div>
+		
+		
+    </div>
+	
+</div>	
+		
+<div class="content_row lastUpdateRow">
+	<div class="content_container">
+		<div class="lastUpdate">
+			Last updated:  July 17, 2023		</div>
+	</div>
+</div>
+
+</div>
+
+
+	<div class="site-footer d-print-none" id="footer" role="contentinfo">
+		
+		<div role="navigation" class="social" aria-label="Social Links">
+			
+			<div class="icons row align-items-center">
+
+				<div class="item facebook col col-xl">
+					<a href="https://www.facebook.com/auburnu" target="_blank">
+						<span class="visually-hidden">Link to Auburn University Facebook page</span>
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-facebook" viewBox="0 0 16 16" alt="" role="img" labelledby="imglabel" alt="Facebook logo">
+							<title id="imglable_facebook">Facebook logo</title>
+						  <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951z"/>
+						</svg>
+					</a>	
+				</div>
+				<div class="item twitter col col-xl">
+					<a href="https://twitter.com/auburnu"  target="_blank">
+						<span class="visually-hidden">Link to Auburn University Twitter account</span>
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-twitter" viewBox="0 0 16 16" alt="" role="img" labelledby="imglabel">
+							<title id="imglable_twitter">Twitter logo</title>
+						  <path d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-.86 13.028h1.36L4.323 2.145H2.865l8.875 11.633Z"/>
+						</svg>
+					</a>	
+				</div>
+				<div class="item instagram col col-xl">
+					<a href="https://instagram.com/auburnu"  target="_blank">
+						<span class="visually-hidden">Link to Auburn University Instagram account</span>
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-instagram" viewBox="0 0 16 16" alt="" role="img" labelledby="imglabel">
+							<title id="imglable_instagram">Instagram logo</title>
+						<path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0h.003zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599.28.28.453.546.598.92.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.47 2.47 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.478 2.478 0 0 1-.92-.598 2.48 2.48 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233 0-2.136.008-2.388.046-3.231.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92.28-.28.546-.453.92-.598.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045v.002zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92zm-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217zm0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334z"/>
+					</svg>
+					</a>	
+				</div>
+				<div class="item linkedin col col-xl">
+					<a href="https://www.linkedin.com/school/auburn-university/" target="_blank">
+						<span class="visually-hidden">Link to Auburn University LinkedIn page</span>
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-linkedin" viewBox="0 0 16 16" alt="" role="img" labelledby="imglabel">
+							<title id="imglable_linkedin">LinkedIn logo</title>
+						  <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"/>
+						</svg>
+					</a>	
+				</div>
+			
+			</div>
+			
+		</div>
+		
+		<div class="row content clearfix align-items-start">
+			
+			<div class="column column-01 col-sm-6 col-xxl-3 row">
+				
+				<div class="logo image">	
+
+					<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/informal_horiz/white_orange/auburn_informal_h_white_orange.png" alt="" class="d-xxl-none horiz">
+
+					<img src="https://auburn.edu/template/2022/_assets/images/logos/auburn/informal_vert/white_orange/auburn_informal_v_white_orange.png" alt="" class="d-none d-xxl-block vert">
+					
+				</div>
+				
+			</div>
+			
+			<div class="column column-02 row col-sm-6 col-xxl-3">
+				
+				<div class="column-title">Contact Us</div>
+				<ul>
+					<li>
+						<div class="col-12 map">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pin-map" viewBox="0 0 16 16">
+								<title>Map icon</title>
+							  <path fill-rule="evenodd" d="M3.1 11.2a.5.5 0 0 1 .4-.2H6a.5.5 0 0 1 0 1H3.75L1.5 15h13l-2.25-3H10a.5.5 0 0 1 0-1h2.5a.5.5 0 0 1 .4.2l3 4a.5.5 0 0 1-.4.8H.5a.5.5 0 0 1-.4-.8l3-4z"/>
+							  <path fill-rule="evenodd" d="M8 1a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4 4a4 4 0 1 1 4.5 3.969V13.5a.5.5 0 0 1-1 0V7.97A4 4 0 0 1 4 3.999z"/>
+							</svg>
+							<a href="https://www.google.com/maps/place/Langdon+Hall,+Auburn,+AL+36849/@32.6053616,-85.4849814,17z/data=!3m1!4b1!4m5!3m4!1s0x888cf31c9189bb33:0x506179a59f0ea4ff!8m2!3d32.6053571!4d-85.4827927">
+							Langdon Hall
+							</a>
+						</div>
+					</li>
+					<li>
+						<div class="col-12 phone">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-telephone-fill" viewBox="0 0 16 16">
+								<title>Telephone icon</title>
+							  <path fill-rule="evenodd" d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.678.678 0 0 0 .178.643l2.457 2.457a.678.678 0 0 0 .644.178l2.189-.547a1.745 1.745 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.634 18.634 0 0 1-7.01-4.42 18.634 18.634 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877L1.885.511z"/>
+							</svg>
+							<a href="tel:3348442544">(334) 844-2544</a>
+						</div>
+					</li>
+					<li>
+						<div class="col-12 feedback">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-envelope" viewBox="0 0 16 16">
+								<title>Envelope Icon</title>
+							  <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4Zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2Zm13 2.383-4.708 2.825L15 11.105V5.383Zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741ZM1 11.105l4.708-2.897L1 5.383v5.722Z"/>
+							</svg>
+							<a href="https://auburn.edu/websitefeedback/">Website Feedback</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			
+			<div class="column column-03 row col-sm-6 col-xxl-3">
+				
+				<div class="column-title">Campus Links</div>	
+					<ul>
+						<li><a href="https://www.aum.edu/" target="_blank">Auburn University at Montgomery</a></li>
+						<li><a href="https://www.aces.edu/" target="_blank">Alabama Cooperative Extension System</a></li>
+						<li><a href="https://aaes.auburn.edu/" target="_blank">Alabama Agricultural Experiment Station</a></li>
+					</ul>
+				
+
+			</div>
+
+			<div class="column column-03 row col-sm-6 col-xxl-3">
+				
+				<div class="column-title">Resources</div>	
+					<ul>
+						<li><a href="https://auburn.edu/emergency">Campus Safety/Emergency Preparedness</a></li>
+						<li><a href="https://auburn.edu/online/">Distance and Continuing Education</a></li>
+						<li><a href="https://auburn.edu/oit">Office of Information Technology</a></li>
+						<li><a href="https://auburn.edu/covid-resource-center/"><span class="uppercase">Covid</span>-19 Resource Center</a></li>
+						<li><a href="https://auburn.edu/inclusion">Diversity, Equity & Inclusion</a></li>
+						
+						
+					</ul>
+				
+
+			</div>
+			
+		</div>
+		
+		<div class="subrow" role="navigation" aria-label="Subcontent">
+			<div class="column row">
+				<div class="col-sm-2"><a href="https://auburn.edu/hr">Employment</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/titleix">Title IX</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/accessibility">Accessibility</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/privacy">Privacy Statement</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/main/sitemap.php">A-Z Index</a></div>
+				<div class="col-sm-2"><a href="https://auburn.edu/copyright">Copyright © 2022</a></div>
+			</div>
+		</div>
+				
+		<div class="to-top">
+			<a href="#top" class="btn btn-light">
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up" viewBox="0 0 16 16">
+					<title>Back to top arrow</title>
+			  <path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/>
+			</svg><br/><span class="visually-hidden">Back to Top</span></a>
+		</div>
+		
+	</div>	
+	
+	
+<script>
+
+function GATC(){
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  
+  ga('create', 'UA-2228003-3', 'auto');  // AU Tracker
+  ga('set', 'anonymizeIp', true); // Anonymize IP
+  ga('send', 'pageview');  
+  
+};
+
+</script>	
+
+<script src="//auburn.edu/template/2022/_assets/js/gdpr-cookies.js"></script>
+<script src="//auburn.edu/template/2022/_assets/js/totop-scrollcheck.js"></script>
+
+
+    <!-- Bootstrap Bundle -->
+    <script src="//auburn.edu/template/2022/_assets/js/bootstrap.bundle.min.js"></script>
+	
+	
+  </body>
+	
+</html>
+
+</body>
+</html>
