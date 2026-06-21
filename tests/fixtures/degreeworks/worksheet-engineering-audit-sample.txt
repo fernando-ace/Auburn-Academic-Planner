@@ -1,0 +1,29 @@
+Auburn University Degree Works Worksheet
+Student name Redacted Student
+Student ID ****2222
+Degree Bachelor of Civil Engineering
+Audit date 02/11/2026 11:00 AM
+Program BCIV Civil Engineering
+Major Civil Engineering - CIVL
+Catalog year 2025-2026
+Credits required 126
+Credits applied 88
+Unmet conditions for this set of requirements: 38 Credits needed
+Bachelor of Civil Engineering INCOMPLETE
+
+Complete See Pre Engineering Courses Below
+Satisfied by: ENGR 1110 Introduction to Engineering Grade A Credits 2 Term Fall 2024
+Satisfied by: MATH 1610 Calculus I Grade A Credits 4 Term Fall 2024
+Satisfied by: CHEM 1030 Fundamentals Chemistry I Grade B Credits 3 Term Fall 2024
+
+Incomplete See Civil Engineering Major Courses Below
+Still needed: 3 Credits in CIVL 3110
+Still needed: 3 Credits in CIVL 3220 or 3230
+
+Incomplete See Engineering Approved Electives Below
+Still needed: 6 Credits in CIVL 4140 or CIVL 4150 or CIVL 4160
+
+Preregistered
+CIVL 3110 Structural Analysis Credits 3 Term Fall 2026
+
+Disclaimer: This audit is a guide and is not official graduation certification.

@@ -939,11 +939,11 @@ export function ChatWorkspace() {
                   <div className="mx-auto mt-5 flex max-w-xl gap-3 rounded-lg border border-[#03244d]/15 bg-[#eef4fa] p-3 text-left text-[13px] leading-5 text-[#03244d]">
                     <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
                     <p>
-                      Deterministic Planning Hub checks currently focus on CSSE paths where local rule models exist. Use{" "}
+                      Planning Hub starts from Degree Works audits for any Auburn program with readable PDF text, and adds CSSE catalog checks only as optional enrichment. Use{" "}
                       <Link className="font-semibold text-[#b84300] underline underline-offset-2" href="/plan-check">
                         Planning Hub
                       </Link>{" "}
-                      for those reports, and verify answers outside deterministic coverage with the Auburn Bulletin and an advisor.
+                      for current-progress or planned-path reports, and verify academic decisions with Degree Works, the Auburn Bulletin, and an advisor.
                     </p>
                   </div>
                 </section>

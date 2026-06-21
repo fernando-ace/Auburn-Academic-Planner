@@ -507,3 +507,133 @@ export function CombinedDegreeWorksParsedDetails({
     </CollapsibleDetails>
   );
 }
+
+export function PlannedPathCoverageCard({
+  result,
+}: {
+  result: CombinedDegreeWorksUploadResult;
+}) {
+  const coverage = result.plannedPathCoverage;
+
+  if (!coverage) {
+    return null;
+  }
+
+  return (
+    <section className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+            Compare Planned Path to Current Progress
+          </p>
+          <h2 className="mt-2 text-[20px] font-semibold leading-7 text-slate-950">
+            Planned-path coverage
+          </h2>
+          <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
+            Matches planned courses against Degree Works-native Still needed
+            items from the current Worksheet audit. Advisor verification is
+            required before relying on coverage.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3 lg:w-[32rem]">
+          <CoverageMetric label="Covered" value={coverage.coveredStillNeededItems.length} />
+          <CoverageMetric label="Partial" value={coverage.partiallyCoveredStillNeededItems.length} />
+          <CoverageMetric label="Uncovered" value={coverage.uncoveredStillNeededItems.length} />
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4">
+        <CoverageList
+          emptyText="No exact Still needed items were fully covered by planned-path courses."
+          items={coverage.coveredStillNeededItems}
+          title="Covered Still needed items"
+        />
+        <CoverageList
+          emptyText="No partially covered Still needed items were found."
+          items={coverage.partiallyCoveredStillNeededItems}
+          title="Partially covered Still needed items"
+        />
+        <CoverageList
+          emptyText="No uncovered exact or option-list Still needed items were found."
+          items={coverage.uncoveredStillNeededItems}
+          title="Uncovered Still needed items"
+        />
+
+        {coverage.plannedButUnmatchedCourses.length > 0 ? (
+          <ResultSection title="Planned but unmatched courses">
+            <div className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              {coverage.plannedButUnmatchedCourses.slice(0, 20).map((code) => (
+                <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-700" key={code}>
+                  {code}
+                </span>
+              ))}
+            </div>
+          </ResultSection>
+        ) : null}
+
+        {coverage.advisorReviewItems.length > 0 || coverage.notes.length > 0 ? (
+          <ResultSection title="Coverage notes">
+            <ul className="space-y-2 rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
+              {[...coverage.advisorReviewItems, ...coverage.notes].map((note) => (
+                <li className="flex gap-2 text-[13px] leading-5 text-slate-700" key={note}>
+                  <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-[#b84300]" size={15} />
+                  <span>{note}</span>
+                </li>
+              ))}
+            </ul>
+          </ResultSection>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function CoverageMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function CoverageList({
+  emptyText,
+  items,
+  title,
+}: {
+  emptyText: string;
+  items: NonNullable<CombinedDegreeWorksUploadResult["plannedPathCoverage"]>["coveredStillNeededItems"];
+  title: string;
+}) {
+  return (
+    <ResultSection title={title}>
+      {items.length > 0 ? (
+        <div className="grid gap-2">
+          {items.map((item) => (
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${item.blockName}-${item.requirementLabel}-${item.reason}`}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-slate-950">{item.requirementLabel}</span>
+                {item.matchedCourses.map((code) => (
+                  <span className="rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-1 text-[12px] font-semibold text-emerald-800" key={code}>
+                    {code}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2 text-[13px] leading-5 text-slate-700">{item.reason}</p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-500">{item.neededText}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+          {emptyText}
+        </p>
+      )}
+    </ResultSection>
+  );
+}

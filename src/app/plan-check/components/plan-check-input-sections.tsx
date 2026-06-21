@@ -15,9 +15,11 @@ export function DegreeWorksWorkflowUploadSection({
   selectedFile,
   selectedTargetPath,
   validationError,
+  hasCurrentProgressResult = false,
 }: {
   mode: PlanCheckWorkflowMode;
   isLoading: boolean;
+  hasCurrentProgressResult?: boolean;
   onAnalyze: MouseEventHandler<HTMLButtonElement>;
   onFileChange: ChangeEventHandler<HTMLInputElement>;
   onModeChange: (mode: PlanCheckWorkflowMode) => void;
@@ -66,7 +68,9 @@ export function DegreeWorksWorkflowUploadSection({
             <p className="mt-2 text-[14px] leading-6 text-slate-600">
               {isCurrentProgress
                 ? "Upload your Degree Works Worksheet audit to see where you stand right now and what to discuss taking next semester."
-                : "Upload a Degree Works Plan PDF to test whether a proposed multi-semester plan supports your graduation path and target timeline."}
+                : hasCurrentProgressResult
+                  ? "Upload a Degree Works Plan PDF to validate a future graduation path and compare it against your Current Progress still-needed requirements."
+                  : "Upload a Degree Works Plan PDF to validate a future graduation path."}
             </p>
             <p className="mt-2 text-[13px] leading-5 text-slate-500">
               {isCurrentProgress
@@ -145,12 +149,13 @@ export function DegreeWorksWorkflowUploadSection({
           <div className="w-full rounded-lg border border-slate-200 bg-slate-50/80 p-4">
             <label className="text-[13px] font-semibold leading-5 text-slate-700" htmlFor="combined-degreeworks-target-path">Planning target</label>
             <select className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15" disabled={isLoading} id="combined-degreeworks-target-path" onChange={(event) => onTargetPathChange(event.target.value as PlanningTargetPathInput)} value={selectedTargetPath}>
-              <option value="auto">Auto</option>
+              <option value="auto">Auto-detected program</option>
               <option value="software_engineering">Software Engineering</option>
               <option value="computer_science">Computer Science</option>
               <option value="ai_certificate">AI Engineering certificate</option>
+              <option value="degreeworks_only">Other / use Degree Works audit only</option>
             </select>
-            <p className="mt-2 text-[12px] leading-5 text-slate-500">Focuses the planning reports; all three detailed checks still run.</p>
+            <p className="mt-2 text-[12px] leading-5 text-slate-500">Auto-detected program is recommended. Local catalog checks appear as enrichment when available.</p>
             <label className="mt-3 block text-[13px] font-semibold leading-5 text-slate-700" htmlFor="combined-degreeworks-pdf">Degree Works PDF</label>
             <input accept="application/pdf" className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus:border-[#dd550c] focus:outline-none focus:ring-4 focus:ring-[#dd550c]/15" disabled={isLoading} id="combined-degreeworks-pdf" onChange={onFileChange} type="file" />
             <p className="mt-2 text-[12px] leading-5 text-slate-500">
@@ -163,7 +168,11 @@ export function DegreeWorksWorkflowUploadSection({
             {validationError ? <p className="mt-2 text-[13px] font-medium leading-5 text-orange-700" role="alert">{validationError}</p> : null}
             <button className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#dd550c] px-4 py-2 text-center text-[14px] font-semibold leading-5 text-white shadow-sm transition hover:bg-[#b84300] disabled:cursor-not-allowed disabled:bg-slate-300" disabled={isLoading} onClick={onAnalyze} type="button">
               {isLoading ? <Loader2 aria-hidden="true" className="animate-spin" size={17} /> : null}
-              {isCurrentProgress ? "Check Current Progress" : "Check Planned Path"}
+              {isCurrentProgress
+                ? "Check Current Progress"
+                : hasCurrentProgressResult
+                  ? "Compare Planned Path to Current Progress"
+                  : "Check Planned Path"}
             </button>
           </div>
         </div>

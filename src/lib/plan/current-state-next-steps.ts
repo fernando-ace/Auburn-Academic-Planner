@@ -31,7 +31,11 @@ export type CurrentStateSuggestedCourse = {
   title?: string;
   reason: string;
   priority: "high" | "medium" | "low";
-  source: "still_needed" | "incomplete_block" | "deterministic_gap";
+  source:
+    | "still_needed"
+    | "still_needed_options"
+    | "incomplete_block"
+    | "deterministic_gap";
   advisorVerificationRequired: true;
   availabilityConfidence?: string;
   availabilityNotes?: string[];
@@ -49,19 +53,34 @@ export type CurrentStateVerificationItem = {
   reason: string;
 };
 
+export type CurrentStateAdvisorMilestone = {
+  label: string;
+  reason: string;
+};
+
 export type CurrentStateNextSteps = {
   targetPath:
     | "software_engineering"
     | "computer_science"
     | "ai_certificate"
+    | "degreeworks_only"
     | "mixed_or_unclear";
   confidence: DegreeWorksParserConfidence;
   suggestedCourses: CurrentStateSuggestedCourse[];
+  advisorMilestones: CurrentStateAdvisorMilestone[];
   verificationItems: CurrentStateVerificationItem[];
   notYetRecommended: { code: string; reason: string }[];
   advisorQuestions: string[];
   notes: string[];
 };
+
+type CurrentStateSuggestionCandidate = Omit<
+  CurrentStateSuggestedCourse,
+  | "advisorVerificationRequired"
+  | "availabilityConfidence"
+  | "availabilityNotes"
+  | "planningNotes"
+>;
 
 const maxSuggestedCourses = 5;
 
@@ -172,14 +191,30 @@ export function buildCurrentStateNextSteps({
     }
   }
 
-  const candidateCourses = [
-    ...audit.stillNeededCourseCodes.map((code) => ({
-      code,
-      reason:
-        "Degree Works lists this course or requirement in Still needed evidence.",
-      priority: "high" as const,
-      source: "still_needed" as const,
-    })),
+  const stillNeededCandidates: CurrentStateSuggestionCandidate[] =
+    audit.stillNeededItems.flatMap((item): CurrentStateSuggestionCandidate[] =>
+      item.requirementType === "specific_course"
+        ? item.courseOptions.map((code) => ({
+            code,
+            reason:
+              "Degree Works lists this exact course in Still needed evidence.",
+            priority: "high" as const,
+            source: "still_needed" as const,
+          }))
+        : item.requirementType === "course_options" && item.courseOptions.length > 0
+          ? [
+              {
+                code: item.courseOptions.join(" or "),
+                reason: `Degree Works lists an option set for ${item.requirementLabel}; ask an advisor which option fits this requirement.`,
+                priority: "medium" as const,
+                source: "still_needed_options" as const,
+              },
+            ]
+          : [],
+    );
+
+  const candidateCourses: CurrentStateSuggestionCandidate[] = [
+    ...stillNeededCandidates,
     ...deterministicMissingCourses({
       aiCertificateCheck,
       computerScienceCheck,
@@ -197,6 +232,23 @@ export function buildCurrentStateNextSteps({
 
   const suggestedCourses: CurrentStateSuggestedCourse[] = [];
   const seenSuggestions = new Set<string>();
+  const advisorMilestones = audit.stillNeededItems
+    .filter((item) => item.requirementType === "graduation_milestone")
+    .map((item) => ({
+      label: item.requirementLabel,
+      reason: `${item.neededText} appears to be a Degree Works milestone or nonstandard requirement; verify timing and completion with an advisor.`,
+    }));
+  const stillNeededAdvisorReviewItems = audit.stillNeededItems
+    .filter((item) =>
+      ["credit_hours_from_list", "block_reference", "advisor_review"].includes(
+        item.requirementType,
+      ),
+    )
+    .map((item) =>
+      item.requirementType === "credit_hours_from_list"
+        ? `${item.requirementLabel} is a credit-hour option list; discuss approved options with an advisor instead of selecting one automatically.`
+        : `${item.requirementLabel} needs advisor review: ${item.neededText}`,
+    );
 
   for (const candidate of candidateCourses) {
     if (seenSuggestions.has(candidate.code)) {
@@ -204,28 +256,36 @@ export function buildCurrentStateNextSteps({
     }
     seenSuggestions.add(candidate.code);
 
-    if (completed.has(candidate.code)) {
+    const candidateOptions = candidate.code.includes(" or ")
+      ? candidate.code.split(/\s+or\s+/i).map((code) => code.trim())
+      : [candidate.code];
+
+    if (candidateOptions.some((code) => completed.has(code))) {
       notYetRecommended.push({
         code: candidate.code,
-        reason: `${candidate.code} appears completed or AP/transfer-satisfied in the worksheet; verify applicability instead of adding it again.`,
+        reason: `${candidate.code} includes a course that appears completed or AP/transfer-satisfied in the worksheet; verify applicability instead of adding it again.`,
       });
       continue;
     }
 
-    if (verifyInstead.has(candidate.code)) {
+    const verificationMatch = candidateOptions.find((code) => verifyInstead.has(code));
+    if (verificationMatch) {
       notYetRecommended.push({
         code: candidate.code,
-        reason: `${candidate.code} appears ${formatVerificationStatus(
-          verifyInstead.get(candidate.code)?.status,
+        reason: `${verificationMatch} appears ${formatVerificationStatus(
+          verifyInstead.get(verificationMatch)?.status,
         )}; verify registration/completion or applicability instead of adding it as a new suggestion.`,
       });
       continue;
     }
 
-    const missingPrerequisites = getModeledMissingPrerequisites(
-      candidate.code,
-      audit.currentApplicableCourseCodes,
-    );
+    const missingPrerequisites =
+      candidate.source === "still_needed_options"
+        ? []
+        : getModeledMissingPrerequisites(
+            candidate.code,
+            audit.currentApplicableCourseCodes,
+          );
 
     if (missingPrerequisites.length > 0) {
       notYetRecommended.push({
@@ -244,10 +304,12 @@ export function buildCurrentStateNextSteps({
     targetPath: resolvedTargetPath,
     confidence: audit.confidence,
     suggestedCourses: suggestedCourses.slice(0, maxSuggestedCourses),
+    advisorMilestones: dedupeMilestones(advisorMilestones),
     verificationItems: Array.from(verifyInstead.values()).slice(0, 12),
     notYetRecommended: dedupeByCode(notYetRecommended),
     advisorQuestions: [
       "Which Still needed courses should I prioritize next semester?",
+      "Which Degree Works option-list or elective requirements should I discuss before choosing a course?",
       "Should preregistered courses be treated as already handled for registration planning?",
       "Do AP, transfer, or Fall Through courses change the remaining requirement list?",
       "Do these suggested courses satisfy prerequisites and catalog rules for my official program?",
@@ -256,8 +318,10 @@ export function buildCurrentStateNextSteps({
     notes: [
       "These are current-progress discussion items, not registration advice or an official graduation plan.",
       "Completed and AP/transfer-satisfied courses are not suggested again.",
+      "Degree Works option lists are shown for advisor discussion instead of choosing one automatically.",
       "Preregistered and in-progress courses are listed for verification instead of new recommendations.",
       "Course availability, prerequisites, substitutions, exceptions, and advisor approval may change these suggestions.",
+      ...dedupe(stillNeededAdvisorReviewItems).slice(0, 5),
     ],
   };
 }
@@ -306,6 +370,17 @@ export function buildCurrentProgressAdvisorSummary({
     );
   }
 
+  if (audit.stillNeededItems.some((item) => item.courseOptions.length > 1)) {
+    lines.push(
+      "",
+      "Still needed option sets to discuss:",
+      ...audit.stillNeededItems
+        .filter((item) => item.courseOptions.length > 1)
+        .slice(0, 5)
+        .map((item) => `- ${item.requirementLabel}: ${item.neededText}`),
+    );
+  }
+
   if (nextSteps.suggestedCourses.length > 0) {
     lines.push(
       "",
@@ -313,6 +388,14 @@ export function buildCurrentProgressAdvisorSummary({
       ...nextSteps.suggestedCourses
         .slice(0, 5)
         .map((course) => `- ${course.code}: ${course.reason}`),
+    );
+  }
+
+  if (nextSteps.advisorMilestones.length > 0) {
+    lines.push(
+      "",
+      "Milestones to verify:",
+      ...nextSteps.advisorMilestones.slice(0, 5).map((item) => `- ${item.reason}`),
     );
   }
 
@@ -402,10 +485,7 @@ function deterministicMissingCourses({
 }
 
 function enrichSuggestion(
-  suggestion: Omit<
-    CurrentStateSuggestedCourse,
-    "advisorVerificationRequired" | "availabilityConfidence" | "availabilityNotes" | "planningNotes"
-  >,
+  suggestion: CurrentStateSuggestionCandidate,
 ): CurrentStateSuggestedCourse {
   const constraints = attachCoursePlanningConstraints(suggestion.code, "Next Semester");
 
@@ -496,6 +576,17 @@ function dedupeByCode(items: { code: string; reason: string }[]) {
       return false;
     }
     seen.add(item.code);
+    return true;
+  });
+}
+
+function dedupeMilestones(items: CurrentStateAdvisorMilestone[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.label)) {
+      return false;
+    }
+    seen.add(item.label);
     return true;
   });
 }

@@ -547,6 +547,8 @@ function formatGapBestFitPath(path: GapReportBestFitPath) {
       return "Software Engineering";
     case "computer_science":
       return "Computer Science";
+    case "degreeworks_only":
+      return "Degree Works audit only";
     case "mixed_or_unclear":
       return "Mixed or unclear";
   }

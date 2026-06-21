@@ -7,6 +7,14 @@ import {
 } from "./degreeworks-external-credit.ts";
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
 import type { DegreeWorksDocumentType } from "./degreeworks-document-type.ts";
+import {
+  detectDegreeWorksProgram,
+  type DegreeWorksDetectedProgram,
+} from "./degreeworks-program.ts";
+import {
+  parseDegreeWorksStillNeededItems,
+  type DegreeWorksStillNeededItem,
+} from "./degreeworks-still-needed.ts";
 
 export type CurrentDegreeAuditBlockStatus =
   | "complete"
@@ -46,6 +54,7 @@ export type CurrentDegreeAuditRequirementBlock = {
 
 export type CurrentDegreeAuditAnalysis = {
   documentType: "worksheet_audit";
+  detectedProgram: DegreeWorksDetectedProgram;
   studentProgram?: string;
   major?: string;
   catalogYear?: string;
@@ -55,6 +64,7 @@ export type CurrentDegreeAuditAnalysis = {
   creditsNeeded?: number | null;
   degreeStatus?: "complete" | "incomplete" | "unknown";
   requirementBlocks: CurrentDegreeAuditRequirementBlock[];
+  stillNeededItems: DegreeWorksStillNeededItem[];
   courseStatusRecords: CurrentDegreeAuditCourseStatusRecord[];
   externalCreditRecords: ExternalCreditRecord[];
   externalCreditCounts: ExternalCreditCounts;
@@ -173,9 +183,19 @@ export function analyzeCurrentDegreeAuditText(
     normalizedText,
     stillNeededText,
   );
+  const stillNeededItems = buildStillNeededItems({
+    globalStillNeededText: stillNeededText,
+    requirementBlocks,
+  });
   const courseStatusRecords = Array.from(recordsByCode.values()).sort((left, right) =>
     left.code.localeCompare(right.code),
   );
+  const detectedProgram = detectDegreeWorksProgram({
+    text: normalizedText,
+    program: studentProgram,
+    major,
+    catalogYear,
+  });
 
   if (normalizedText.length < 500 || courseStatusRecords.length < 5) {
     parserWarnings.push(
@@ -197,6 +217,7 @@ export function analyzeCurrentDegreeAuditText(
 
   return {
     documentType: "worksheet_audit",
+    detectedProgram,
     ...(studentProgram ? { studentProgram } : {}),
     ...(major ? { major } : {}),
     ...(catalogYear ? { catalogYear } : {}),
@@ -206,6 +227,7 @@ export function analyzeCurrentDegreeAuditText(
     creditsNeeded: creditsNeeded ?? null,
     degreeStatus,
     requirementBlocks,
+    stillNeededItems,
     courseStatusRecords,
     externalCreditRecords,
     externalCreditCounts,
@@ -231,12 +253,23 @@ export function emptyCurrentDegreeAuditAnalysis(
 } {
   return {
     documentType,
+    detectedProgram: {
+      degree: null,
+      program: null,
+      major: null,
+      catalogYear: null,
+      displayName: "Unknown program",
+      programKey: "unknown",
+      confidence: "low",
+      source: "unknown",
+    },
     auditDate: null,
     creditsRequired: null,
     creditsApplied: null,
     creditsNeeded: null,
     degreeStatus: "unknown",
     requirementBlocks: [],
+    stillNeededItems: [],
     courseStatusRecords: [],
     externalCreditRecords: [],
     externalCreditCounts: { advanced_placement: 0, transfer: 0, other: 0 },
@@ -427,6 +460,28 @@ function extractRequirementBlocks(
   return blocks.slice(0, 20);
 }
 
+function buildStillNeededItems({
+  globalStillNeededText,
+  requirementBlocks,
+}: {
+  globalStillNeededText: string[];
+  requirementBlocks: CurrentDegreeAuditRequirementBlock[];
+}) {
+  const blockItems = requirementBlocks.flatMap((block) =>
+    parseDegreeWorksStillNeededItems({
+      blockName: block.name,
+      stillNeededText: block.stillNeededText,
+    }),
+  );
+  const seen = new Set(blockItems.map((item) => item.neededText));
+  const globalItems = parseDegreeWorksStillNeededItems({
+    blockName: "Worksheet unmet requirements",
+    stillNeededText: globalStillNeededText.filter((item) => !seen.has(item)),
+  });
+
+  return [...blockItems, ...globalItems].slice(0, 40);
+}
+
 function buildBlockNotes(evidence: string, stillNeededText: string[]) {
   return [
     /advisor|approval|approved/i.test(evidence)
@@ -502,7 +557,7 @@ function extractNumericLabel(text: string, label: string) {
 
 function extractLabelText(text: string, label: string) {
   const match = new RegExp(
-    `\\b${escapeRegExp(label)}\\b\\s*:?\\s*([A-Za-z0-9][A-Za-z0-9 &/.-]{1,80})`,
+    `\\b${escapeRegExp(label)}\\b\\s*:?\\s*([A-Za-z0-9][A-Za-z0-9 &/.-]{1,80}?)(?=\\s+\\b(?:Program|Major|Catalog year|Credits required|Credits applied|Audit date|Degree)\\b|$)`,
     "i",
   ).exec(text);
 

@@ -19,6 +19,7 @@ export type NextSemesterTargetPath =
   | "software_engineering"
   | "computer_science"
   | "ai_certificate"
+  | "degreeworks_only"
   | "mixed_or_unclear";
 
 export type NextSemesterTargetPathInput = PlanningTargetPathInput;
@@ -317,6 +318,10 @@ function collectSuggestionsForTarget({
     return collectAiCertificateSuggestions(aiCertificateCheck, courseStatuses);
   }
 
+  if (targetPath === "degreeworks_only") {
+    return { suggestedCourses: [], notYetRecommended: [] };
+  }
+
   if (targetPath === "software_engineering") {
     return collectDegreeSuggestions({
       degreeName: "Software Engineering",
@@ -598,6 +603,8 @@ function formatTargetPath(path: NextSemesterTargetPath) {
   switch (path) {
     case "ai_certificate":
       return "AI Engineering certificate";
+    case "degreeworks_only":
+      return "Degree Works audit only";
     case "software_engineering":
       return "Software Engineering";
     case "computer_science":

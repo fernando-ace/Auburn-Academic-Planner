@@ -16,7 +16,7 @@ import type { DraftSemesterPlan } from "@/lib/plan/draft-semester-plan";
 import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
 import { CollapsibleDetails, EmptyState } from "@/components/ui-primitives";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
-import { CombinedDegreeWorksParsedDetails } from "./components/combined-analysis-details";
+import { CombinedDegreeWorksParsedDetails, PlannedPathCoverageCard } from "./components/combined-analysis-details";
 import { CurrentProgressResultDetails } from "./components/current-progress-details";
 import { DegreeProgressCheckSection } from "./components/degree-progress-check-section";
 import {
@@ -236,6 +236,7 @@ export default function PlanCheckPage() {
   async function runCombinedDegreeWorksUploadPlanCheck(
     file: File,
     targetPath: PlanningTargetPathInput,
+    currentProgressAnalysis?: CurrentDegreeWorksUploadResult["currentProgressAnalysis"],
   ) {
     if (isCombinedDegreeWorksLoading) {
       return;
@@ -251,6 +252,12 @@ export default function PlanCheckPage() {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("targetPath", targetPath);
+    if (currentProgressAnalysis) {
+      formData.append(
+        "currentProgressAnalysis",
+        JSON.stringify(currentProgressAnalysis),
+      );
+    }
 
     try {
       const response = await fetch(combinedDegreeWorksUploadEndpoint, {
@@ -1003,6 +1010,7 @@ export default function PlanCheckPage() {
       void runCombinedDegreeWorksUploadPlanCheck(
         selectedCombinedDegreeWorksPdfFile,
         selectedPlanningTargetPath,
+        currentDegreeWorksResult?.currentProgressAnalysis,
       );
     }
   }
@@ -1204,6 +1212,7 @@ export default function PlanCheckPage() {
         selectedFile={selectedCombinedDegreeWorksPdfFile}
         selectedTargetPath={selectedPlanningTargetPath}
         validationError={combinedDegreeWorksUploadValidationError}
+        hasCurrentProgressResult={Boolean(currentDegreeWorksResult)}
       />
 
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:py-7">
@@ -1366,6 +1375,7 @@ export default function PlanCheckPage() {
 
           {combinedDegreeWorksResult ? (
             <>
+              <PlannedPathCoverageCard result={combinedDegreeWorksResult} />
               <GapReportCard
                 gapReport={combinedDegreeWorksResult.gapReport}
                 selectedTargetPath={combinedDegreeWorksResult.selectedTargetPath}

@@ -28,6 +28,7 @@ export type GapReportBestFitPath =
   | "ai_certificate"
   | "software_engineering"
   | "computer_science"
+  | "degreeworks_only"
   | "mixed_or_unclear";
 
 export type GapReportMissingRequirement = {
@@ -143,8 +144,9 @@ export function buildGapReport({
             ),
           ]
         : []),
-      prerequisiteCheck.provenance,
-      coursePlanningMetadataProvenance,
+      ...(targetPath === "degreeworks_only"
+        ? []
+        : [prerequisiteCheck.provenance, coursePlanningMetadataProvenance]),
     ]),
     nextActions: buildNextActions({
       overallStatus,
@@ -465,8 +467,10 @@ function buildSummaryBullets({
   const pathProgress =
     bestFitPath === "ai_certificate"
       ? aiCertificateCheck.isLikelyComplete
-        ? "The AI Engineering certificate appears likely complete in the uploaded plan."
-        : "The AI Engineering certificate still needs course or elective review."
+      ? "The AI Engineering certificate appears likely complete in the uploaded plan."
+      : "The AI Engineering certificate still needs course or elective review."
+      : bestFitPath === "degreeworks_only"
+        ? "The report is using Degree Works-native audit evidence only."
       : bestFitPath === "software_engineering"
         ? `Software Engineering has ${softwareEngineeringCheck.exactRequiredCoursesMissing.length} exact required course(s) missing in the local model.`
         : bestFitPath === "computer_science"
@@ -504,8 +508,12 @@ function buildAdvisorReviewItems({
     ...parserWarnings,
     ...buildSignalReviewItems(detectedSignals),
     ...buildCourseStatusReviewItems(courseStatusRecords),
-    ...prerequisiteCheck.prerequisiteIssues.map((issue) => issue.message),
-    ...prerequisiteCheck.advisorReviewItems,
+    ...(targetPath === "degreeworks_only"
+      ? []
+      : [
+          ...prerequisiteCheck.prerequisiteIssues.map((issue) => issue.message),
+          ...prerequisiteCheck.advisorReviewItems,
+        ]),
     ...(targetPath === "auto" || targetPath === "software_engineering"
       ? softwareEngineeringCheck.requirementBlocks
       .filter((block) => block.status !== "satisfied")
@@ -754,6 +762,8 @@ export function formatBestFitPath(path: GapReportBestFitPath) {
   switch (path) {
     case "ai_certificate":
       return "AI Engineering certificate";
+    case "degreeworks_only":
+      return "Degree Works audit only";
     case "software_engineering":
       return "Software Engineering";
     case "computer_science":

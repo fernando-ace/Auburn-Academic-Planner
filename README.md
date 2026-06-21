@@ -1,6 +1,6 @@
 # Auburn Academic Planner
 
-Auburn Academic Planner is a first prototype of a source-grounded academic planning assistant for Auburn CSSE students. It focuses on Software Engineering, Computer Science, and the Artificial Intelligence Engineering certificate.
+Auburn Academic Planner is a first prototype of a source-grounded academic planning assistant for Auburn students. The Planning Hub works from Degree Works audits for any Auburn degree when the PDF provides usable text, with deeper local catalog enrichment currently available for Software Engineering, Computer Science, and the Artificial Intelligence Engineering certificate.
 
 The app is intentionally limited: it does not implement login, payments, automatic registration, official degree audits, or multi-school support. It helps students prepare for advising conversations and does not replace Auburn academic advisors.
 
@@ -111,7 +111,7 @@ Upload the saved PDF, not a screenshot. The PDF is processed server-side for thi
 
 - The assistant is designed around official Auburn sources.
 - Sources are shown when RAG retrieves material.
-- Certificate, Software Engineering degree progress, and Computer Science degree progress logic are checked by deterministic local rules.
+- Current Progress is Degree Works-native for all Auburn programs with readable Worksheet/Audit PDFs; Software Engineering, Computer Science, and AI certificate logic are optional deterministic enrichments when local rules apply.
 - Deterministic rule results include inspectable provenance: catalog year, source ID/title, checked-in source file or Auburn bulletin URL when available, an evidence label, and a confidence classification.
 - `source_backed` means the rule is transcribed from the checked-in Auburn bulletin source; `local_model` means conservative locally maintained prerequisite or availability logic; `advisor_review_required` means the app intentionally cannot resolve the requirement authoritatively.
 - Provenance improves trust by making the origin and limits of each check visible without implying that local rules replace the official bulletin, Degree Works, or an advisor.
@@ -122,10 +122,10 @@ Upload the saved PDF, not a screenshot. The PDF is processed server-side for thi
 - Uploaded PDFs are processed transiently in memory for course extraction and are not permanently stored.
 - All PDF upload routes reject files larger than 10 MiB, files without a PDF signature, unreadable or empty PDFs, and documents with more than 1,000,000 extracted characters. Validation errors are returned with user-friendly `400`, `413`, or `422` responses.
 - Uploaded PDF checks are deterministic and do not call Gemini.
-- The target selector changes only focused planning outputs. It does not skip or hide the detailed AI certificate, Software Engineering, or Computer Science checks.
+- The planning target selector defaults to auto-detection. Software Engineering, Computer Science, and AI certificate options request optional catalog enrichment; `Other / use Degree Works audit only` keeps the result Degree Works-native.
 - Current Progress uses Degree Works Worksheet/Audit PDFs and preserves status-aware current standing. Completed, preregistered, in-progress, AP/transfer satisfied, Fall Through/non-degree-applicable, still-needed, and unknown course evidence is kept separate. AP and transfer credits are also detected from Degree Works `Satisfied by:` lines when the worksheet provides readable evidence.
-- Current Progress suggestions prioritize Degree Works `Still needed` lines and incomplete blocks, but completed courses are not suggested again. Preregistered and in-progress courses appear as verification items instead of new recommendations.
-- Planned Path uses Degree Works Plan PDFs to validate a proposed future multi-semester graduation path. It focuses on timeline feasibility, semester load, prerequisites, unresolved blocks, parser evidence, and advisor-review items.
+- Current Progress suggestions prioritize structured Degree Works `Still needed` lines and incomplete blocks, but completed courses are not suggested again. Preregistered and in-progress courses appear as verification items instead of new recommendations. Option lists and credit-hour elective lists remain advisor-review items unless Degree Works evidence is clear.
+- Planned Path uses Degree Works Plan PDFs to validate a proposed future multi-semester graduation path. When Current Progress has been uploaded too, Planned Path comparison matches plan courses against Degree Works-native still-needed requirements from the Worksheet audit.
 - Degree Works PDF results include parser confidence, parser warnings, and detected AP, transfer, substitution, exception, in-progress, or insufficient-text signals when the extracted text suggests extra advisor review is needed.
 - Degree Works course status interpretation is deterministic and conservative. It can label courses as completed, in progress, planned, transfer/AP, substituted/waived, missing, or unknown when nearby extracted text provides enough evidence.
 - Unknown or unclear course statuses require advisor verification. Status interpretation helps prepare questions; it does not replace Degree Works, the Registrar, or academic advisors.
@@ -151,15 +151,15 @@ Upload the saved PDF, not a screenshot. The PDF is processed server-side for thi
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - The AI Engineering certificate checker can evaluate local course lists without using Gemini quota.
 - `/plan-check` is the Planning Hub. It defaults to `Current Progress`, the recommended path for most students, which analyzes a Worksheet/Audit PDF for current standing and next-semester advisor discussion without calling Gemini or permanently storing the PDF.
-- `Current Progress` results lead with worksheet credits, degree status, status buckets, friendly AP/transfer credit labels, still-needed courses, current-state suggestions, verification items, parser diagnostics, and a copyable Advisor Meeting Summary.
-- `Planned Path` keeps the existing combined Degree Works Plan PDF behavior for proposed future graduation plans: it analyzes one uploaded plan PDF once, focuses planning reports on the selected target, shows shared parser and course-status details, and still runs all three detailed checkers.
+- `Current Progress` results lead with detected program, available enrichments, worksheet credits, degree status, status buckets, friendly AP/transfer credit labels, structured still-needed items, current-state suggestions, verification items, parser diagnostics, and a copyable Advisor Meeting Summary.
+- `Planned Path` keeps the existing combined Degree Works Plan PDF behavior for proposed future graduation plans: it analyzes one uploaded plan PDF once, focuses planning reports on the selected target, shows shared parser and course-status details, and can compare the plan against Current Progress still-needed requirements.
 - Planned Path results lead with the Gap Report, next-semester suggestions, draft semester timeline, and copyable Advisor Meeting Summary; parser evidence, program audits, and manual checks remain available in secondary expandable sections.
 - The Software Engineering degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The Computer Science degree checker can evaluate pasted plans, the sample Degree Works plan, a separate uploaded Degree Works PDF, or the combined upload result against deterministic local rules, including parsed course count, total planned credits, required credits, missing exact courses, alternative course groups, structured requirement blocks, parser diagnostics, and advisor verification status.
 - The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists and optionally accepts `startingTermLabel` for term-aware review.
 - The `/rule-audit` page and `GET /api/rules/coverage-audit` route expose a deterministic audit of exact rule coverage, requirement-block confidence, source integrity, supporting models, known limitations, and recommended improvements.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
-- Local validation currently passes `202/202` deterministic tests.
+- Local validation currently passes `210/210` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels and distinguish source-grounded chat explanations from deterministic Planning Hub workflows.
 
 ## Degree Works compatibility fixtures
@@ -168,6 +168,9 @@ The deterministic regression suite includes synthetic extracted-text fixtures un
 
 - clean planned-course text and term labels;
 - Worksheet current-progress audits with credits required/applied/needed, complete and incomplete blocks, and Still needed lines;
+- non-CSSE engineering, business, and liberal arts/sciences Worksheet examples for Degree Works-native parsing without local catalog rules;
+- structured option-list, credit-hour elective, block-reference, and milestone Still needed requirements;
+- planned-path comparison against Current Progress still-needed requirements;
 - preregistered Worksheet courses that should be verified rather than suggested again;
 - Worksheet AP/transfer `Satisfied by:` evidence and Fall Through/non-degree-applicable evidence;
 - low-confidence Worksheet text;

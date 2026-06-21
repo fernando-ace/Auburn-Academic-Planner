@@ -108,6 +108,28 @@ test("current-progress upload route includes external AP and transfer records", 
   );
 });
 
+test("current-progress upload route returns universal native analysis and enrichment metadata", async () => {
+  const worksheetText = await readFile(
+    path.join(fixtureDirectory, "worksheet-business-audit-sample.txt"),
+    "utf8",
+  );
+  const response = await currentPost(
+    formDataRequest(
+      "http://localhost/api/plan/analyze-degreeworks-current/upload",
+      await pdfFileFromText(worksheetText, "worksheet-business.pdf"),
+      "degreeworks_only",
+    ),
+  );
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(result.detectedProgram.program, "BSBA Business Administration");
+  assert.equal(result.availableEnrichments.length, 0);
+  assert.ok(result.degreeWorksNativeAnalysis.stillNeededItems.length > 0);
+  assert.ok(result.catalogEnrichmentResults);
+  assert.equal(result.currentStateNextSteps.targetPath, "degreeworks_only");
+});
+
 test("existing planned-path upload route still returns combined planned result", async () => {
   const response = await plannedPost(
     formDataRequest(
@@ -128,14 +150,67 @@ test("existing planned-path upload route still returns combined planned result",
   assert.ok(result.nextSemesterSuggestions);
 });
 
+test("planned-path upload route can compare against current progress evidence", async () => {
+  const worksheetText = await readFile(
+    path.join(fixtureDirectory, "worksheet-business-audit-sample.txt"),
+    "utf8",
+  );
+  const currentResponse = await currentPost(
+    formDataRequest(
+      "http://localhost/api/plan/analyze-degreeworks-current/upload",
+      await pdfFileFromText(worksheetText, "worksheet-business.pdf"),
+      "degreeworks_only",
+    ),
+  );
+  const currentResult = await currentResponse.json();
+  const response = await plannedPost(
+    formDataRequest(
+      "http://localhost/api/plan/analyze-degreeworks/upload",
+      await pdfFileFromText(
+        "Degree Works Plan Description Business plan Total planned credits 120 Fall 2026 ACCT 2110 PHIL 1020 FREE 9999",
+        "business-plan.pdf",
+      ),
+      "degreeworks_only",
+      currentResult.currentProgressAnalysis,
+    ),
+  );
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(result.plannedPathCoverage);
+  assert.ok(
+    result.plannedPathCoverage.coveredStillNeededItems.some(
+      (item: { matchedCourses: string[] }) =>
+        item.matchedCourses.includes("ACCT 2110"),
+    ),
+  );
+  assert.ok(
+    result.plannedPathCoverage.coveredStillNeededItems.some(
+      (item: { matchedCourses: string[] }) =>
+        item.matchedCourses.includes("PHIL 1020"),
+    ),
+  );
+});
+
 async function pdfFileFromText(text: string, fileName: string) {
   return new File([makePdf(text)], fileName, { type: "application/pdf" });
 }
 
-function formDataRequest(url: string, file: File) {
+function formDataRequest(
+  url: string,
+  file: File,
+  targetPath = "software_engineering",
+  currentProgressAnalysis?: unknown,
+) {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("targetPath", "software_engineering");
+  formData.append("targetPath", targetPath);
+  if (currentProgressAnalysis) {
+    formData.append(
+      "currentProgressAnalysis",
+      JSON.stringify(currentProgressAnalysis),
+    );
+  }
 
   return new Request(url, {
     method: "POST",

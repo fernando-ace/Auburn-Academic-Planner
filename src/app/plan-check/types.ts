@@ -10,10 +10,14 @@ import type {
   DegreeWorksDocumentType,
   DegreeWorksDocumentTypeDetection,
 } from "@/lib/plan/degreeworks-document-type";
+import type { DegreeWorksAvailableEnrichment } from "@/lib/plan/degreeworks-enrichments";
+import type { DegreeWorksDetectedProgram } from "@/lib/plan/degreeworks-program";
+import type { DegreeWorksStillNeededItem } from "@/lib/plan/degreeworks-still-needed";
 import type { DegreeWorksCourseStatusCounts, DegreeWorksCourseStatusRecord } from "@/lib/plan/degreeworks-course-status";
 import type { DraftSemesterPlan } from "@/lib/plan/draft-semester-plan";
 import type { DegreeWorksSemesterExtraction } from "@/lib/plan/degreeworks-semesters";
 import type { GapReport } from "@/lib/plan/gap-report";
+import type { PlannedPathCoverage } from "@/lib/plan/planned-path-coverage";
 import type {
   NextSemesterSuggestedCourse as SharedNextSemesterSuggestedCourse,
   NextSemesterSuggestions as SharedNextSemesterSuggestions,
@@ -110,6 +114,7 @@ export type CombinedDegreeWorksUploadResult = {
   documentType?: "planned_path";
   selectedTargetPath: PlanningTargetPathInput;
   sourceFileName: string;
+  plannedPathCoverage?: PlannedPathCoverage;
   parsedCourseCount: number;
   parsedCourseCodes: string[];
   totalPlannedCredits: number | null;
@@ -158,9 +163,28 @@ export type CurrentDegreeWorksUploadResult = {
   sourceFileName: string;
   documentType: DegreeWorksDocumentType;
   documentTypeDetection: DegreeWorksDocumentTypeDetection;
+  detectedProgram: DegreeWorksDetectedProgram;
+  degreeWorksNativeAnalysis: {
+    detectedProgram: DegreeWorksDetectedProgram;
+    creditsRequired?: number | null;
+    creditsApplied?: number | null;
+    creditsNeeded?: number | null;
+    degreeStatus?: "complete" | "incomplete" | "unknown";
+    incompleteBlocks: CurrentDegreeAuditAnalysis["requirementBlocks"];
+    stillNeededItems: DegreeWorksStillNeededItem[];
+    currentStateSuggestions: CurrentStateNextSteps | null;
+    advisorQuestions: string[];
+    advisorMeetingSummary: string;
+  };
+  availableEnrichments: DegreeWorksAvailableEnrichment[];
   currentProgressAnalysis: CurrentDegreeAuditAnalysis;
   currentStateGapReport: CurrentStateGapReport;
   currentStateNextSteps: CurrentStateNextSteps;
+  catalogEnrichmentResults?: {
+    aiCertificateCheck?: PlanCheckResult;
+    softwareEngineeringCheck?: SoftwareEngineeringPlanCheckResult;
+    computerScienceCheck?: ComputerSciencePlanCheckResult;
+  };
   advisorMeetingSummary: string;
   parserDiagnostics: {
     parserWarnings: string[];

@@ -3,6 +3,7 @@ export const planningTargetPaths = [
   "software_engineering",
   "computer_science",
   "ai_certificate",
+  "degreeworks_only",
 ] as const;
 
 export type PlanningTargetPathInput = (typeof planningTargetPaths)[number];

@@ -9,6 +9,7 @@ import {
   buildCurrentStateGapReport,
   buildCurrentStateNextSteps,
 } from "../src/lib/plan/current-state-next-steps.ts";
+import { comparePlannedPathToCurrentProgress } from "../src/lib/plan/planned-path-coverage.ts";
 import { checkAiEngineeringCertificate } from "../src/lib/rules/ai-certificate.ts";
 import { checkComputerScienceDegree } from "../src/lib/rules/computer-science-degree.ts";
 import { checkSoftwareEngineeringDegree } from "../src/lib/rules/software-engineering-degree.ts";
@@ -163,4 +164,140 @@ test("current-state suggestions exclude completed courses", async () => {
 
   assert.ok(!nextSteps.suggestedCourses.some((course) => course.code === "COMP 1210"));
   assert.ok(nextSteps.suggestedCourses.some((course) => course.code === "ELEC 2200"));
+});
+
+test("detects a non-CSSE program and parses universal still-needed items", async () => {
+  const analysis = await analyzeFixture("worksheet-business-audit-sample.txt");
+
+  assert.equal(analysis.detectedProgram.program, "BSBA Business Administration");
+  assert.equal(analysis.detectedProgram.programKey, "unknown");
+  assert.equal(analysis.detectedProgram.catalogYear, "2025-2026");
+  assert.ok(
+    analysis.stillNeededItems.some(
+      (item) =>
+        item.requirementType === "course_options" &&
+        item.courseOptions.includes("PHIL 1110") &&
+        item.courseOptions.includes("PHIL 1020") &&
+        item.courseOptions.includes("PHIL 1027"),
+    ),
+  );
+  assert.ok(
+    analysis.stillNeededItems.some(
+      (item) =>
+        item.requirementType === "credit_hours_from_list" &&
+        item.courseOptions.includes("FINC 3610") &&
+        item.courseOptions.includes("MNGT 3100"),
+    ),
+  );
+  assert.ok(
+    analysis.stillNeededItems.some(
+      (item) => item.requirementType === "graduation_milestone",
+    ),
+  );
+  assert.ok(
+    analysis.stillNeededItems.some(
+      (item) => item.requirementType === "block_reference",
+    ),
+  );
+});
+
+test("parses non-CSSE engineering and liberal arts worksheet fixtures", async () => {
+  const engineering = await analyzeFixture("worksheet-engineering-audit-sample.txt");
+  const liberalArts = await analyzeFixture("worksheet-liberal-arts-audit-sample.txt");
+
+  assert.equal(engineering.detectedProgram.program, "BCIV Civil Engineering");
+  assert.ok(
+    engineering.stillNeededItems.some((item) =>
+      item.courseOptions.includes("CIVL 3110"),
+    ),
+  );
+  assert.ok(
+    engineering.stillNeededItems.some(
+      (item) => item.requirementType === "credit_hours_from_list",
+    ),
+  );
+  assert.equal(liberalArts.detectedProgram.major, "Political Science - POLI");
+  assert.ok(
+    liberalArts.stillNeededItems.some((item) =>
+      item.courseOptions.includes("POLI 3000"),
+    ),
+  );
+  assert.ok(
+    liberalArts.stillNeededItems.some(
+      (item) => item.requirementType === "block_reference",
+    ),
+  );
+});
+
+test("builds Degree Works-native suggestions for a non-CSSE worksheet without catalog rules", async () => {
+  const analysis = await analyzeFixture("worksheet-business-audit-sample.txt");
+  const nextSteps = buildCurrentStateNextSteps({
+    audit: analysis,
+    aiCertificateCheck: checkAiEngineeringCertificate(
+      analysis.currentApplicableCourseCodes,
+    ),
+    softwareEngineeringCheck: checkSoftwareEngineeringDegree({
+      courseCodes: analysis.currentApplicableCourseCodes,
+      totalPlannedCredits: analysis.creditsApplied ?? null,
+    }),
+    computerScienceCheck: checkComputerScienceDegree({
+      courseCodes: analysis.currentApplicableCourseCodes,
+      totalPlannedCredits: analysis.creditsApplied ?? null,
+    }),
+    targetPath: "degreeworks_only",
+  });
+
+  assert.equal(nextSteps.targetPath, "degreeworks_only");
+  assert.ok(
+    nextSteps.suggestedCourses.some((course) => course.code === "ACCT 2110"),
+  );
+  assert.ok(
+    nextSteps.suggestedCourses.some(
+      (course) =>
+        course.source === "still_needed_options" &&
+        course.code.includes("PHIL 1110"),
+    ),
+  );
+  assert.ok(
+    !nextSteps.suggestedCourses.some((course) => course.code === "MKTG 3310"),
+  );
+  assert.ok(
+    nextSteps.notYetRecommended.some((course) => course.code === "MKTG 3310"),
+  );
+  assert.ok(nextSteps.advisorMilestones.length > 0);
+  assert.ok(
+    nextSteps.notes.some((note) => note.includes("credit-hour option list")),
+  );
+});
+
+test("compares planned path coverage against current audit still-needed items", async () => {
+  const analysis = await analyzeFixture("worksheet-business-audit-sample.txt");
+  const coverage = comparePlannedPathToCurrentProgress({
+    currentAudit: analysis,
+    plannedCourseCodes: ["ACCT 2110", "PHIL 1020", "FREE 9999"],
+  });
+
+  assert.ok(
+    coverage.coveredStillNeededItems.some(
+      (item) =>
+        item.requirementLabel === "ACCT 2110" &&
+        item.matchedCourses.includes("ACCT 2110"),
+    ),
+  );
+  assert.ok(
+    coverage.coveredStillNeededItems.some((item) =>
+      item.matchedCourses.includes("PHIL 1020"),
+    ),
+  );
+  assert.ok(
+    coverage.partiallyCoveredStillNeededItems.some(
+      (item) => item.requirementLabel === "MKTG 3310",
+    ),
+  );
+  assert.ok(
+    coverage.advisorReviewItems.some((item) =>
+      item.includes("credit-hour option list"),
+    ),
+  );
+  assert.ok(coverage.plannedButUnmatchedCourses.includes("FREE 9999"));
 });

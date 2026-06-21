@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Auburn Academic Planner",
   description:
-    "A source-grounded academic planning assistant for Auburn CSSE students.",
+    "A source-grounded academic planning assistant for Auburn students.",
 };
 
 export default function RootLayout({

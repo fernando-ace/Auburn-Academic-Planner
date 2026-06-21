@@ -4,6 +4,7 @@ import {
   emptyCurrentDegreeAuditAnalysis,
 } from "../../../../../lib/plan/current-degree-audit-analysis.ts";
 import { detectDegreeWorksDocumentType } from "../../../../../lib/plan/degreeworks-document-type.ts";
+import { getAvailableDegreeWorksEnrichments } from "../../../../../lib/plan/degreeworks-enrichments.ts";
 import {
   buildCurrentProgressAdvisorSummary,
   buildCurrentStateGapReport,
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          "targetPath must be auto, software_engineering, computer_science, or ai_certificate.",
+          "targetPath must be auto, software_engineering, computer_science, ai_certificate, or degreeworks_only.",
       },
       { status: 400 },
     );
@@ -61,6 +62,23 @@ export async function POST(request: Request) {
       selectedTargetPath: targetPath,
       documentType: documentTypeDetection.documentType,
       documentTypeDetection,
+      detectedProgram: currentProgressAnalysis.detectedProgram,
+      degreeWorksNativeAnalysis: {
+        detectedProgram: currentProgressAnalysis.detectedProgram,
+        creditsRequired: currentProgressAnalysis.creditsRequired,
+        creditsApplied: currentProgressAnalysis.creditsApplied,
+        creditsNeeded: currentProgressAnalysis.creditsNeeded,
+        degreeStatus: currentProgressAnalysis.degreeStatus,
+        incompleteBlocks: [],
+        stillNeededItems: [],
+        currentStateSuggestions: null,
+        advisorQuestions: [
+          "Can you confirm which Degree Works document I should use for current standing?",
+        ],
+        advisorMeetingSummary:
+          "Advisor Meeting Summary\n\nThe uploaded PDF was not confidently detected as a Degree Works Worksheet audit. Re-export the Worksheet audit PDF for Current Progress, or use Planned Path for a Degree Works Plan PDF.",
+      },
+      availableEnrichments: [],
       currentProgressAnalysis,
       currentStateGapReport: {
         overallStatus: "insufficient_data",
@@ -83,6 +101,7 @@ export async function POST(request: Request) {
         targetPath: "mixed_or_unclear",
         confidence: "low",
         suggestedCourses: [],
+        advisorMilestones: [],
         verificationItems: [],
         notYetRecommended: [],
         advisorQuestions: [],
@@ -136,9 +155,31 @@ export async function POST(request: Request) {
     selectedTargetPath: targetPath,
     documentType: "worksheet_audit",
     documentTypeDetection,
+    detectedProgram: currentProgressAnalysis.detectedProgram,
+    degreeWorksNativeAnalysis: {
+      detectedProgram: currentProgressAnalysis.detectedProgram,
+      creditsRequired: currentProgressAnalysis.creditsRequired,
+      creditsApplied: currentProgressAnalysis.creditsApplied,
+      creditsNeeded: currentProgressAnalysis.creditsNeeded,
+      degreeStatus: currentProgressAnalysis.degreeStatus,
+      incompleteBlocks: currentStateGapReport.incompleteBlocks,
+      stillNeededItems: currentProgressAnalysis.stillNeededItems,
+      currentStateSuggestions: currentStateNextSteps,
+      advisorQuestions: currentStateGapReport.advisorQuestions,
+      advisorMeetingSummary,
+    },
+    availableEnrichments: getAvailableDegreeWorksEnrichments({
+      detectedProgram: currentProgressAnalysis.detectedProgram,
+      targetPath,
+    }),
     currentProgressAnalysis,
     currentStateGapReport,
     currentStateNextSteps,
+    catalogEnrichmentResults: {
+      aiCertificateCheck,
+      softwareEngineeringCheck,
+      computerScienceCheck,
+    },
     aiCertificateCheck,
     softwareEngineeringCheck,
     computerScienceCheck,

@@ -23,6 +23,7 @@ export type DraftSemesterPlanTargetPath =
   | "software_engineering"
   | "computer_science"
   | "ai_certificate"
+  | "degreeworks_only"
   | "mixed_or_unclear";
 
 export type DraftSemesterPlanTargetPathInput = NextSemesterTargetPathInput;
@@ -336,6 +337,8 @@ function collectCandidates({
         ? computerScienceCheck.exactRequiredCoursesMissing
         : resolvedTargetPath === "ai_certificate"
           ? aiCertificateCheck.requiredCoursesMissing
+          : resolvedTargetPath === "degreeworks_only"
+            ? []
           : [
               ...softwareEngineeringCheck.exactRequiredCoursesMissing,
               ...computerScienceCheck.exactRequiredCoursesMissing,
@@ -405,11 +408,13 @@ function buildInitialAdvisorReviewItems({
       ? requirementBlockResults.softwareEngineering
       : resolvedTargetPath === "computer_science"
         ? requirementBlockResults.computerScience
-        : resolvedTargetPath === "ai_certificate"
+      : resolvedTargetPath === "ai_certificate"
+        ? []
+        : resolvedTargetPath === "degreeworks_only"
           ? []
-          : [
-              ...requirementBlockResults.softwareEngineering,
-              ...requirementBlockResults.computerScience,
+        : [
+            ...requirementBlockResults.softwareEngineering,
+            ...requirementBlockResults.computerScience,
             ];
   const unresolvedBlocks = relevantBlocks.filter(
     (block) => block.status !== "satisfied",
@@ -453,6 +458,7 @@ function getDraftConfidence({
   if (
     normalizedCourseCodes.length === 0 ||
     resolvedTargetPath === "mixed_or_unclear" ||
+    resolvedTargetPath === "degreeworks_only" ||
     nextSemesterSuggestions.confidence === "low" ||
     semesters.length === 0 ||
     unplacedCourses.length > 0

@@ -92,7 +92,7 @@ function parseRequest(body: unknown) {
   if (!isPlanningTargetPathInput(targetPath)) {
     return {
       ok: false as const,
-      error: "targetPath must be software_engineering, computer_science, ai_certificate, or auto.",
+      error: "targetPath must be software_engineering, computer_science, ai_certificate, degreeworks_only, or auto.",
     };
   }
 

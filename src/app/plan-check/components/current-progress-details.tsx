@@ -6,6 +6,7 @@ import type {
   CurrentDegreeAuditCourseStatusRecord,
 } from "@/lib/plan/current-degree-audit-analysis";
 import type { ExternalCreditRecord } from "@/lib/plan/degreeworks-external-credit";
+import { formatAvailableEnrichment } from "@/lib/plan/degreeworks-enrichments";
 import {
   buildExternalCreditAwareBucketItems,
   findExternalCreditRecordForCode,
@@ -40,6 +41,8 @@ export function CurrentProgressResultDetails({
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:w-[32rem]">
+            <Metric label="Detected program" value={analysis.detectedProgram.displayName} />
+            <Metric label="Planning target" value={formatPlanningTarget(result.selectedTargetPath)} />
             <Metric label="Document type" value={formatDocumentType(result.documentType)} />
             <Metric label="Degree status" value={analysis.degreeStatus ?? "unknown"} />
             <Metric label="Credits required" value={analysis.creditsRequired ?? "Unknown"} />
@@ -59,6 +62,25 @@ export function CurrentProgressResultDetails({
                 </li>
               ))}
             </ul>
+          </ResultSection>
+
+          <ResultSection title="Additional catalog checks available">
+            {result.availableEnrichments.length > 0 ? (
+              <div className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                {result.availableEnrichments.map((enrichment) => (
+                  <span
+                    className="rounded-sm border border-[#dd550c]/25 bg-white px-2 py-1 text-[12px] font-semibold text-slate-700"
+                    key={enrichment}
+                  >
+                    {formatAvailableEnrichment(enrichment)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+                No local catalog enrichment is available for this detected program; Degree Works-native analysis still powers this summary.
+              </p>
+            )}
           </ResultSection>
 
           <ResultSection title="Course status buckets">
@@ -136,6 +158,22 @@ export function CurrentProgressResultDetails({
                 </div>
               ) : null}
 
+              {nextSteps.advisorMilestones.length > 0 ? (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[14px] font-semibold text-slate-800">
+                    Advisor milestones
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {nextSteps.advisorMilestones.map((item) => (
+                      <li className="flex gap-2 text-[13px] leading-5 text-slate-700" key={`${item.label}-${item.reason}`}>
+                        <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-[#b84300]" size={15} />
+                        <span>{item.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               {nextSteps.notYetRecommended.length > 0 ? (
                 <CollapsibleDetails
                   description="Courses held out because they appear completed, preregistered, in progress, or blocked by modeled prerequisites."
@@ -185,6 +223,39 @@ export function CurrentProgressResultDetails({
               ) : (
                 <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
                   No incomplete worksheet blocks were parsed.
+                </p>
+              )}
+            </ResultSection>
+
+            <ResultSection title="Structured still-needed items">
+              {analysis.stillNeededItems.length > 0 ? (
+                <div className="grid gap-2">
+                  {analysis.stillNeededItems.map((item) => (
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${item.blockName}-${item.requirementLabel}-${item.neededText}`}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-slate-950">{item.requirementLabel}</span>
+                        <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold uppercase text-slate-600">
+                          {formatRequirementType(item.requirementType)}
+                        </span>
+                        <span className="text-[12px] text-slate-500">{item.confidence} confidence</span>
+                        {typeof item.creditAmount === "number" ? (
+                          <span className="text-[12px] text-slate-500">{item.creditAmount} credit/class amount</span>
+                        ) : null}
+                      </div>
+                      <p className="mt-2 text-[13px] leading-5 text-slate-700">{item.neededText}</p>
+                      {item.courseOptions.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {item.courseOptions.map((code) => (
+                            <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-700" key={code}>{code}</span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+                  No structured Still needed items were parsed.
                 </p>
               )}
             </ResultSection>
@@ -476,12 +547,50 @@ function formatSuggestionSource(source: string) {
   switch (source) {
     case "still_needed":
       return "Still needed";
+    case "still_needed_options":
+      return "Still needed options";
     case "incomplete_block":
       return "Incomplete block";
     case "deterministic_gap":
       return "Local rule gap";
     default:
       return source;
+  }
+}
+
+function formatRequirementType(type: string) {
+  switch (type) {
+    case "specific_course":
+      return "Exact course";
+    case "course_options":
+      return "Options";
+    case "credit_hours_from_list":
+      return "Credit-hour list";
+    case "block_reference":
+      return "Block reference";
+    case "graduation_milestone":
+      return "Milestone";
+    case "advisor_review":
+      return "Advisor review";
+    default:
+      return type.replaceAll("_", " ");
+  }
+}
+
+function formatPlanningTarget(target: string) {
+  switch (target) {
+    case "auto":
+      return "Auto-detected program";
+    case "software_engineering":
+      return "Software Engineering";
+    case "computer_science":
+      return "Computer Science";
+    case "ai_certificate":
+      return "AI Engineering certificate";
+    case "degreeworks_only":
+      return "Other / Degree Works audit only";
+    default:
+      return target;
   }
 }
 
