@@ -909,7 +909,7 @@ export function ChatWorkspace() {
         <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           <div className="hidden h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 lg:flex">
             <p className="text-[13px] font-medium text-slate-500">
-              Ask about CSSE requirements
+              Ask about Auburn academic requirements
             </p>
             <button
               className="inline-flex h-8 items-center gap-2 rounded-md border border-slate-200 px-3 text-[13px] font-semibold text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] xl:hidden"
@@ -932,19 +932,18 @@ export function ChatWorkspace() {
                     Source-grounded advising conversations
                   </h2>
                   <p className="mx-auto mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
-                    Ask about Auburn Software Engineering, Computer Science, or
-                    the Artificial Intelligence Engineering certificate.
-                    Answers include retrieved sources, confidence, and advisor
-                    verification guidance.
+                    Ask about Auburn academic requirements from source-grounded
+                    academic materials. Answers include retrieved sources,
+                    confidence, and advisor verification guidance.
                   </p>
                   <div className="mx-auto mt-5 flex max-w-xl gap-3 rounded-lg border border-[#03244d]/15 bg-[#eef4fa] p-3 text-left text-[13px] leading-5 text-[#03244d]">
                     <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
                     <p>
-                      Chat provides source-grounded explanations. Use{" "}
+                      Deterministic Planning Hub checks currently focus on CSSE paths where local rule models exist. Use{" "}
                       <Link className="font-semibold text-[#b84300] underline underline-offset-2" href="/plan-check">
                         Planning Hub
                       </Link>{" "}
-                      for Current Progress audits, Planned Path validation, and deterministic requirement reports.
+                      for those reports, and verify answers outside deterministic coverage with the Auburn Bulletin and an advisor.
                     </p>
                   </div>
                 </section>

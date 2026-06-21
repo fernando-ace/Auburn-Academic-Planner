@@ -301,6 +301,20 @@ The fixtures improve compatibility coverage but cannot model every Degree Works 
 
 Do not add unofficial or stale material unless you clearly label it. The assistant is designed to answer degree-requirement questions only from retrieved Auburn sources.
 
+This project also keeps a separate scoped expansion seed list at `sources/auburn/academic-source-seeds.json`. The seed list is not a crawler queue and is not uploaded by `npm run sources:upload`; it records official Auburn academic sources that are eligible for future review. See `sources/README.md` for the source tiers:
+
+- Tier 1 deterministic rule sources are official program or certificate pages that have been manually converted into local rule JSON.
+- Tier 2 RAG academic advising sources include Auburn Bulletin academic pages, Courses of Instruction, Core Curriculum, Registrar, Degree Works, transfer credit, AP credit, and college academic requirement pages.
+- Tier 3 excluded sources include athletics, news, marketing, archived pages, unrelated departments, person/student pages, and random non-requirement PDFs.
+
+Validate the scoped seed list locally with:
+
+```bash
+npm run sources:check-scope
+```
+
+The scope check validates local seed metadata and classification rules only. It never fetches live Auburn URLs.
+
 ### Check local source integrity
 
 Run the deterministic local source audit with:
