@@ -101,11 +101,11 @@ export default async function RuleAuditPage() {
                 See exactly where the planner can—and cannot—be trusted.
               </h2>
               <p className="mt-3 text-[15px] leading-7 text-slate-600">
-                This page audits local deterministic enrichments. The Planning
-                Hub can still use Degree Works-native analysis for Auburn
-                programs without local rule models, while this audit separates
-                exact source-backed requirements from conservative local models
-                and blocks that still need human verification.
+                This page audits currently modeled local enrichments. The
+                Planning Hub still supports Degree Works-native analysis for
+                other Auburn programs. This audit separates exact source-backed
+                requirements from conservative local models and blocks that
+                still need human verification.
               </p>
             </div>
             <div className="mt-6 grid gap-px overflow-hidden rounded-md border border-slate-200 bg-slate-200 sm:grid-cols-3">

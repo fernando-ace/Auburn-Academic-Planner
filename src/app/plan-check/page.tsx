@@ -520,9 +520,11 @@ export default function PlanCheckPage() {
             </>
           ) : !currentDegreeWorksResult ? (
             <EmptyState>
-              Upload a Degree Works Worksheet audit for Current Progress, upload
-              a Degree Works Plan PDF for Planned Path, or compare Planned Path
-              against Current Progress to see deterministic advisor-safe results.
+              Upload a Degree Works Worksheet audit for Current Progress. Upload
+              a Degree Works Plan PDF for Planned Path. Works from Degree
+              Works-native requirements for any Auburn program with readable
+              PDF text. Local catalog enrichments are optional and only appear
+              when available.
             </EmptyState>
           ) : null}
 

@@ -80,16 +80,20 @@ type PlanCheckResult = {
 };
 
 const exampleQuestions = [
-  "What are the Software Engineering degree requirements?",
-  "How does Computer Science differ from Software Engineering?",
-  "What courses count toward the AI Engineering certificate?",
-  "Which prerequisites should I verify before planning senior-year CSSE courses?",
+  "How does Auburn handle transfer credit?",
+  "What is Degree Works used for?",
+  "How do Auburn core curriculum requirements work?",
+  "How do AP credits show up in Degree Works?",
+  "What should I verify with my advisor before registration?",
+  "What is the difference between Current Progress and Planned Path?",
 ];
 
-const programs = [
-  "Software Engineering",
-  "Computer Science",
-  "Artificial Intelligence Engineering certificate",
+const planningTopics = [
+  "Degree Works audits",
+  "Transfer and AP credit",
+  "Core curriculum",
+  "Registration planning",
+  "Advisor questions",
 ];
 
 const advisorNote =
@@ -449,7 +453,7 @@ function PlanCheckCard() {
   );
 }
 
-function ProgramPanel({
+function PlanningTopicsPanel({
   onSelect,
 }: {
   onSelect: (question: string) => void;
@@ -466,7 +470,7 @@ function ProgramPanel({
               Explore topics
             </p>
             <p className="text-[12px] font-medium text-slate-500">
-              Programs and example questions
+              Auburn planning and common questions
             </p>
           </div>
         </div>
@@ -475,15 +479,15 @@ function ProgramPanel({
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
         <section>
           <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-            Programs
+            Planning topics
           </h2>
           <div className="mt-3 space-y-2">
-            {programs.map((program) => (
+            {planningTopics.map((topic) => (
               <div
                 className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-[13px] font-medium leading-5 text-slate-700"
-                key={program}
+                key={topic}
               >
-                {program}
+                {topic}
               </div>
             ))}
           </div>
@@ -493,7 +497,7 @@ function ProgramPanel({
 
         <section>
           <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-            Ask about CSSE requirements
+            Ask about Auburn planning
           </h2>
           <div className="mt-3 space-y-2">
             {exampleQuestions.map((question) => (
@@ -852,7 +856,7 @@ export function ChatWorkspace() {
       <header className="flex h-14 shrink-0 items-center justify-between bg-[#03244d] px-3 text-white shadow-sm sm:px-4 lg:h-16 lg:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <button
-            aria-label="Open program menu"
+            aria-label="Open planning topics"
             className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-white/20 text-white lg:hidden"
             onClick={() => setLeftOpen(true)}
             type="button"
@@ -867,7 +871,7 @@ export function ChatWorkspace() {
               Auburn Academic Planner
             </h1>
             <p className="truncate text-[12px] text-white/70 lg:hidden">
-              Ask about CSSE requirements
+              Academic Planning Assistant
             </p>
           </div>
         </div>
@@ -886,7 +890,7 @@ export function ChatWorkspace() {
           </Link>
           <div className="hidden items-center gap-2 text-[13px] font-medium text-white/90 xl:flex">
             <MessageSquareText aria-hidden="true" size={18} />
-            CSSE Academic Planning Assistant
+            Academic Planning Assistant
           </div>
           <button
             aria-label="Open sources"
@@ -901,7 +905,7 @@ export function ChatWorkspace() {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[256px_minmax(0,1fr)_320px]">
         <div className="hidden min-h-0 lg:block">
-          <ProgramPanel
+          <PlanningTopicsPanel
             onSelect={(question) => void submitQuestion(question)}
           />
         </div>
@@ -929,21 +933,28 @@ export function ChatWorkspace() {
                     <MessageSquareText aria-hidden="true" size={23} />
                   </div>
                   <h2 className="mt-4 text-[20px] font-semibold leading-7 text-slate-950 sm:text-[22px]">
-                    Source-grounded advising conversations
+                    Source-grounded academic planning conversations
                   </h2>
                   <p className="mx-auto mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
-                    Ask about Auburn academic requirements from source-grounded
-                    academic materials. Answers include retrieved sources,
-                    confidence, and advisor verification guidance.
+                    Ask about Auburn academic requirements, transfer credit,
+                    Degree Works, core curriculum, registration planning, and
+                    program requirements from source-grounded academic
+                    materials. Answers include retrieved sources, confidence,
+                    and advisor verification guidance.
                   </p>
                   <div className="mx-auto mt-5 flex max-w-xl gap-3 rounded-lg border border-[#03244d]/15 bg-[#eef4fa] p-3 text-left text-[13px] leading-5 text-[#03244d]">
                     <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
                     <p>
-                      Planning Hub starts from Degree Works audits for any Auburn program with readable PDF text, and adds CSSE catalog checks only as optional enrichment. Use{" "}
+                      Planning Hub works from Degree Works audits for Auburn
+                      programs with readable PDF text. Local catalog
+                      enrichments appear when reviewed local rules are
+                      available. Use{" "}
                       <Link className="font-semibold text-[#b84300] underline underline-offset-2" href="/plan-check">
                         Planning Hub
                       </Link>{" "}
-                      for current-progress or planned-path reports, and verify academic decisions with Degree Works, the Auburn Bulletin, and an advisor.
+                      for current-progress or planned-path reports. Verify
+                      academic decisions with Degree Works, the Auburn
+                      Bulletin, and an advisor.
                     </p>
                   </div>
                 </section>
@@ -971,14 +982,14 @@ export function ChatWorkspace() {
           <div className="shrink-0 border-t border-slate-200 bg-white px-3 py-3 sm:px-4 lg:px-5">
             <form className="mx-auto flex w-full max-w-3xl gap-2 sm:gap-3" onSubmit={handleSubmit}>
               <label className="sr-only" htmlFor="chat-input">
-                Ask about CSSE requirements
+                Ask about Auburn academic requirements
               </label>
               <input
                 className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-[14px] text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15 sm:h-12 sm:px-4"
                 disabled={isLoading}
                 id="chat-input"
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder="Ask about CSSE requirements..."
+                placeholder="Ask about Auburn academic requirements..."
                 type="text"
                 value={draft}
               />
@@ -1000,8 +1011,8 @@ export function ChatWorkspace() {
       </div>
 
       {leftOpen ? (
-        <MobileDrawer title="Programs" onClose={() => setLeftOpen(false)}>
-          <ProgramPanel
+        <MobileDrawer title="Planning topics" onClose={() => setLeftOpen(false)}>
+          <PlanningTopicsPanel
             onSelect={(question) => {
               setLeftOpen(false);
               void submitQuestion(question);
