@@ -93,6 +93,20 @@ test("uses metadata fallback for short or code-like source previews", () => {
   );
 });
 
+test("removes orphaned HTML attribute fragments from source previews", () => {
+  const separatorPreview = cleanSourcePreview(
+    'class="separator"> Student Affairs Student Business &&#8203; Account Services Veterans Resource Center Archived Bulletins </',
+  );
+  const hrefPreview = cleanSourcePreview(
+    'href="https://cws.auburn.edu/ovpr/pm/resources">Research Resources Centers & Institutes Graduate Research Undergraduate Research Auburn',
+  );
+
+  assert.doesNotMatch(separatorPreview, /class=|&#|<|>/i);
+  assert.match(separatorPreview, /Student Affairs Student Business Account Services/);
+  assert.doesNotMatch(hrefPreview, /href=|<|>/i);
+  assert.match(hrefPreview, /Research Resources Centers/);
+});
+
 test("caps long source previews without cutting the final word", () => {
   const result = cleanSourcePreview(
     "Software Engineering curriculum requirements include mathematics, science, computing, engineering, and university core courses that students should review with an academic advisor before registration decisions.",

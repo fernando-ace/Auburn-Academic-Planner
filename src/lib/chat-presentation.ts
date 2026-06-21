@@ -56,7 +56,19 @@ function decodeCommonHtmlEntities(value: string) {
   return value.replace(
     /&(amp|gt|lt|nbsp|quot|#39);/gi,
     (entity) => entities[entity.toLowerCase()] ?? " ",
-  );
+  ).replace(/&#(?:x[0-9a-f]+|\d+);/gi, " ");
+}
+
+function stripHtmlExtractionFragments(value: string) {
+  return value
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(
+      /(?:^|\s)[a-z][a-z0-9:-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s=>]+)\s*>?/gi,
+      " ",
+    )
+    .replace(/<\/?|>/g, " ")
+    .replace(/\s*&+\s*/g, " ");
 }
 
 export function sanitizeAssistantMarkdown(value: string) {
@@ -72,9 +84,7 @@ export function cleanSourcePreview(value?: string, maxLength = 240) {
     return SOURCE_PREVIEW_FALLBACK;
   }
 
-  const cleaned = decodeCommonHtmlEntities(value)
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
+  const cleaned = stripHtmlExtractionFragments(decodeCommonHtmlEntities(value))
     .replace(/==+\s*(?:start|end)\s+of\s+(?:pdf|ocr|page[^=]*)==+/gi, " ")
     .replace(/(?:^|\s)(?:[-=]{2,}\s*)?page\s+\d+(?:\s+of\s+\d+)?(?:\s*[-=]{2,})?(?=\s|$)/gi, " ")
     .replace(/\s+/g, " ")
