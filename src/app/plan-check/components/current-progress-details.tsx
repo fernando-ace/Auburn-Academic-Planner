@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { CollapsibleDetails } from "@/components/ui-primitives";
 import type {
@@ -6,7 +7,6 @@ import type {
   CurrentDegreeAuditCourseStatusRecord,
 } from "@/lib/plan/current-degree-audit-analysis";
 import type { ExternalCreditRecord } from "@/lib/plan/degreeworks-external-credit";
-import { formatAvailableEnrichment } from "@/lib/plan/degreeworks-enrichments";
 import {
   buildExternalCreditAwareBucketItems,
   findExternalCreditRecordForCode,
@@ -15,13 +15,22 @@ import type { CurrentDegreeWorksUploadResult } from "../types";
 import { ResultSection } from "./result-cards";
 
 export function CurrentProgressResultDetails({
+  advisorSummarySlot,
   result,
 }: {
+  advisorSummarySlot?: ReactNode;
   result: CurrentDegreeWorksUploadResult;
 }) {
   const analysis = result.currentProgressAnalysis;
   const nextSteps = result.currentStateNextSteps;
   const gapReport = result.currentStateGapReport;
+  const attentionIncompleteBlocks = gapReport.incompleteBlocks.slice(0, 3);
+  const attentionStillNeededItems = analysis.stillNeededItems.slice(0, 5);
+  const attentionVerificationItems = nextSteps.verificationItems.slice(0, 4);
+  const hasExternalCreditWarning =
+    analysis.externalCreditRecords.length > 0 ||
+    analysis.nonDegreeApplicableCourseCodes.length > 0;
+  const visibleSuggestions = nextSteps.suggestedCourses.slice(0, 6);
 
   return (
     <div className="grid gap-5">
@@ -32,7 +41,7 @@ export function CurrentProgressResultDetails({
               Current Progress
             </p>
             <h2 className="mt-2 text-[22px] font-semibold leading-8 text-slate-950">
-              Worksheet audit summary
+              Current Progress Summary
             </h2>
             <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
               Status-aware current standing from a Degree Works Worksheet audit.
@@ -40,20 +49,17 @@ export function CurrentProgressResultDetails({
               required.
             </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:w-[32rem]">
+          <div className="grid gap-2 sm:grid-cols-2 lg:w-[30rem]">
             <Metric label="Detected program" value={analysis.detectedProgram.displayName} />
-            <Metric label="Planning target" value={formatPlanningTarget(result.selectedTargetPath)} />
-            <Metric label="Document type" value={formatDocumentType(result.documentType)} />
             <Metric label="Degree status" value={analysis.degreeStatus ?? "unknown"} />
-            <Metric label="Credits required" value={analysis.creditsRequired ?? "Unknown"} />
             <Metric label="Credits applied" value={analysis.creditsApplied ?? "Unknown"} />
             <Metric label="Credits needed" value={analysis.creditsNeeded ?? "Unknown"} />
-            <Metric label="Parser confidence" value={analysis.confidence} />
+            <Metric label="Audit confidence" value={analysis.confidence} />
           </div>
         </div>
 
         <div className="mt-4 grid gap-4">
-          <ResultSection title="Current-state summary">
+          <ResultSection title="Current Progress Summary">
             <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
               {gapReport.summaryBullets.map((bullet) => (
                 <li className="flex gap-2 text-[13px] leading-5 text-slate-700" key={bullet}>
@@ -64,71 +70,74 @@ export function CurrentProgressResultDetails({
             </ul>
           </ResultSection>
 
-          <ResultSection title="Additional catalog checks available">
-            {result.availableEnrichments.length > 0 ? (
-              <div className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-                {result.availableEnrichments.map((enrichment) => (
-                  <span
-                    className="rounded-sm border border-[#dd550c]/25 bg-white px-2 py-1 text-[12px] font-semibold text-slate-700"
-                    key={enrichment}
-                  >
-                    {formatAvailableEnrichment(enrichment)}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
-                No local catalog enrichment is available for this detected program; Degree Works-native analysis still powers this summary.
-              </p>
-            )}
-          </ResultSection>
+          <ResultSection title="What needs attention">
+            <div className="grid gap-3">
+              {attentionIncompleteBlocks.length > 0 ? (
+                <AttentionGroup title="Top incomplete blocks">
+                  {attentionIncompleteBlocks.map((block) => (
+                    <li className="text-[13px] leading-5 text-slate-700" key={block.name}>
+                      <span className="font-semibold text-slate-950">{block.name}</span>
+                      {block.stillNeededText[0] ? `: ${block.stillNeededText[0]}` : ""}
+                    </li>
+                  ))}
+                </AttentionGroup>
+              ) : null}
 
-          <ResultSection title="Course status buckets">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <CourseCodeBucket
-                codes={analysis.completedCourseCodes}
-                externalCreditRecords={analysis.externalCreditRecords}
-                title="Completed"
-              />
-              <CourseCodeBucket
-                codes={analysis.preregisteredCourseCodes}
-                externalCreditRecords={analysis.externalCreditRecords}
-                title="Preregistered"
-              />
-              <CourseCodeBucket
-                codes={analysis.inProgressCourseCodes}
-                externalCreditRecords={analysis.externalCreditRecords}
-                title="In progress"
-              />
-              <ExternalCreditBucket records={analysis.externalCreditRecords} />
-              <CourseCodeBucket
-                codes={analysis.nonDegreeApplicableCourseCodes}
-                externalCreditRecords={analysis.externalCreditRecords}
-                linkedCourseVerb="associated with"
-                title="Fall Through/non-degree"
-              />
-              <CourseCodeBucket
-                codes={analysis.stillNeededCourseCodes}
-                externalCreditRecords={analysis.externalCreditRecords}
-                title="Still needed"
-              />
+              {attentionStillNeededItems.length > 0 ? (
+                <AttentionGroup title="Top still-needed requirements">
+                  {attentionStillNeededItems.map((item) => (
+                    <li className="text-[13px] leading-5 text-slate-700" key={`${item.blockName}-${item.requirementLabel}-${item.neededText}`}>
+                      <span className="font-semibold text-slate-950">{item.requirementLabel}</span>
+                      <span className="text-slate-500"> ({formatRequirementType(item.requirementType)})</span>: {item.neededText}
+                    </li>
+                  ))}
+                </AttentionGroup>
+              ) : null}
+
+              {attentionVerificationItems.length > 0 ? (
+                <AttentionGroup title="Preregistered or current courses to verify">
+                  {attentionVerificationItems.map((item) => (
+                    <li className="text-[13px] leading-5 text-slate-700" key={`${item.code}-${item.status}`}>
+                      {item.reason}
+                    </li>
+                  ))}
+                </AttentionGroup>
+              ) : null}
+
+              {hasExternalCreditWarning ? (
+                <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-[13px] leading-5 text-amber-900">
+                  <AlertCircle aria-hidden="true" className="mt-0.5 shrink-0" size={15} />
+                  <span>
+                    AP/transfer or Fall Through evidence was detected. Confirm applicability in Degree Works and with an advisor before relying on it.
+                  </span>
+                </div>
+              ) : null}
+
+              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] leading-5 text-slate-500">
+                Showing the highest-priority items here. View all details in the collapsed evidence section below.
+              </p>
             </div>
           </ResultSection>
 
-          <ResultSection title="Current-progress next steps">
+          <ResultSection title="What to discuss taking next">
             <div className="grid gap-3">
-              {nextSteps.suggestedCourses.length > 0 ? (
+              {visibleSuggestions.length > 0 ? (
                 <div className="grid gap-2">
-                  {nextSteps.suggestedCourses.map((course) => (
+                  {visibleSuggestions.map((course) => (
                     <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${course.code}-${course.source}`}>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-slate-950">{course.code}</span>
                         <span className="rounded-sm border border-[#dd550c]/25 bg-[#fff7f1] px-2 py-1 text-[12px] font-semibold uppercase text-[#9b3900]">
                           {course.priority}
                         </span>
-                        <span className="text-[12px] text-slate-500">{formatSuggestionSource(course.source)}</span>
+                        <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-600">
+                          {formatSuggestionSource(course.source)}
+                        </span>
                       </div>
                       <p className="mt-2 text-[13px] leading-5 text-slate-700">{course.reason}</p>
+                      <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                        Advisor caveat: verify term availability, prerequisites, substitutions, and fit for the official audit before registering.
+                      </p>
                       {course.availabilityNotes?.length ? (
                         <p className="mt-2 text-[12px] leading-5 text-slate-500">{course.availabilityNotes[0]}</p>
                       ) : null}
@@ -141,22 +150,6 @@ export function CurrentProgressResultDetails({
                   items and advisor questions.
                 </p>
               )}
-
-              {nextSteps.verificationItems.length > 0 ? (
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-                  <p className="text-[14px] font-semibold text-amber-950">
-                    Verify registration/completion or applicability
-                  </p>
-                  <ul className="mt-3 space-y-2">
-                    {nextSteps.verificationItems.map((item) => (
-                      <li className="flex gap-2 text-[13px] leading-5 text-amber-900" key={`${item.code}-${item.status}`}>
-                        <AlertCircle aria-hidden="true" className="mt-0.5 shrink-0" size={15} />
-                        <span>{item.reason}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
 
               {nextSteps.advisorMilestones.length > 0 ? (
                 <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -193,12 +186,46 @@ export function CurrentProgressResultDetails({
         </div>
       </section>
 
+      {advisorSummarySlot}
+
       <CollapsibleDetails
-        description="Requirement blocks, raw course statuses, parser diagnostics, and advisor-safe notes."
-        title="Current-progress evidence"
+        description="Status counts, raw records, AP/transfer evidence, parser diagnostics, local coverage metadata, and full still-needed evidence."
+        title="Details and evidence"
       >
         <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
           <div className="grid gap-4">
+            <ResultSection title="Detailed course evidence">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <CourseCodeBucket
+                  codes={analysis.completedCourseCodes}
+                  externalCreditRecords={analysis.externalCreditRecords}
+                  title="Completed"
+                />
+                <CourseCodeBucket
+                  codes={analysis.preregisteredCourseCodes}
+                  externalCreditRecords={analysis.externalCreditRecords}
+                  title="Preregistered"
+                />
+                <CourseCodeBucket
+                  codes={analysis.inProgressCourseCodes}
+                  externalCreditRecords={analysis.externalCreditRecords}
+                  title="In progress"
+                />
+                <ExternalCreditBucket records={analysis.externalCreditRecords} />
+                <CourseCodeBucket
+                  codes={analysis.nonDegreeApplicableCourseCodes}
+                  externalCreditRecords={analysis.externalCreditRecords}
+                  linkedCourseVerb="associated with"
+                  title="Fall Through/non-degree"
+                />
+                <CourseCodeBucket
+                  codes={analysis.stillNeededCourseCodes}
+                  externalCreditRecords={analysis.externalCreditRecords}
+                  title="Still needed"
+                />
+              </div>
+            </ResultSection>
+
             <ResultSection title="Incomplete blocks">
               {gapReport.incompleteBlocks.length > 0 ? (
                 <div className="grid gap-2">
@@ -281,9 +308,30 @@ export function CurrentProgressResultDetails({
                 ))}
               </ul>
             </ResultSection>
+
+            <ResultSection title="Local rule evidence">
+              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-600">
+                Current local deterministic models are available for selected programs, but the Planning Hub uses Degree Works-native analysis for all readable Auburn audits. Rule coverage details remain in Rule Audit and are not primary student-facing planning modes.
+              </p>
+            </ResultSection>
           </div>
         </section>
       </CollapsibleDetails>
+    </div>
+  );
+}
+
+function AttentionGroup({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <p className="text-[14px] font-semibold text-slate-800">{title}</p>
+      <ul className="mt-2 space-y-2">{children}</ul>
     </div>
   );
 }
@@ -574,33 +622,5 @@ function formatRequirementType(type: string) {
       return "Advisor review";
     default:
       return type.replaceAll("_", " ");
-  }
-}
-
-function formatPlanningTarget(target: string) {
-  switch (target) {
-    case "auto":
-      return "Auto-detected program";
-    case "software_engineering":
-      return "Software Engineering";
-    case "computer_science":
-      return "Computer Science";
-    case "ai_certificate":
-      return "AI Engineering certificate";
-    case "degreeworks_only":
-      return "Other / Degree Works audit only";
-    default:
-      return target;
-  }
-}
-
-function formatDocumentType(documentType: string) {
-  switch (documentType) {
-    case "worksheet_audit":
-      return "Worksheet audit";
-    case "planned_path":
-      return "Planned path";
-    default:
-      return "Unknown";
   }
 }

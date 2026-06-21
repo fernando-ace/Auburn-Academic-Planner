@@ -73,6 +73,7 @@ test("extracts preregistered courses without treating them as new suggestions", 
   assert.ok(
     !nextSteps.suggestedCourses.some((course) => course.code === "COMP 3220"),
   );
+  assert.ok(nextSteps.suggestedCourses.length <= 5);
   assert.ok(
     nextSteps.notYetRecommended.some(
       (course) =>
@@ -267,6 +268,37 @@ test("builds Degree Works-native suggestions for a non-CSSE worksheet without ca
   assert.ok(nextSteps.advisorMilestones.length > 0);
   assert.ok(
     nextSteps.notes.some((note) => note.includes("credit-hour option list")),
+  );
+});
+
+test("auto current-state suggestions stay Degree Works-native and capped", async () => {
+  const analysis = await analyzeFixture("worksheet-current-audit-sample.txt");
+  const nextSteps = buildCurrentStateNextSteps({
+    audit: analysis,
+    aiCertificateCheck: checkAiEngineeringCertificate(
+      analysis.currentApplicableCourseCodes,
+    ),
+    softwareEngineeringCheck: checkSoftwareEngineeringDegree({
+      courseCodes: analysis.currentApplicableCourseCodes,
+      totalPlannedCredits: analysis.creditsApplied ?? null,
+    }),
+    computerScienceCheck: checkComputerScienceDegree({
+      courseCodes: analysis.currentApplicableCourseCodes,
+      totalPlannedCredits: analysis.creditsApplied ?? null,
+    }),
+    targetPath: "auto",
+  });
+
+  assert.ok(nextSteps.suggestedCourses.length <= 5);
+  assert.ok(
+    nextSteps.suggestedCourses.every(
+      (course) => course.source !== "deterministic_gap",
+    ),
+  );
+  assert.ok(
+    !nextSteps.suggestedCourses.some((course) =>
+      analysis.completedCourseCodes.includes(course.code),
+    ),
   );
 });
 

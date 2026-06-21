@@ -2,7 +2,7 @@
 
 Auburn Academic Planner helps Auburn students interpret Degree Works audits, compare planned paths, ask source-grounded academic questions, and prepare for advisor meetings.
 
-The app works from Degree Works-native evidence for any Auburn program when the uploaded PDF contains readable text. Local catalog enrichments are currently available for Software Engineering, Computer Science, and the Artificial Intelligence Engineering certificate.
+The Planning Hub works from Degree Works-native evidence for any Auburn program when the uploaded PDF contains readable text. Local deterministic models remain internal coverage and diagnostics for selected programs, not primary student-facing planning modes.
 
 It does not replace Degree Works, the Auburn Bulletin, or academic advisors. It is an advising-preparation tool, not an official Auburn audit, registration system, or final academic judgment.
 
@@ -74,7 +74,7 @@ Upload the saved PDF, not a screenshot. The PDF is processed server-side for thi
 
 - Advisor-safe scope: Auburn Academic Planner helps students prepare for advising conversations. It does not replace Degree Works, the Auburn Bulletin, the Registrar, or academic advisors, and it does not provide registration automation or official degree audits.
 - Degree Works-native analysis: `Current Progress` works from readable Worksheet/Audit PDFs for any Auburn program, while `Planned Path` works from readable Degree Works Plan PDFs. Planned Path comparison uses Current Progress still-needed evidence when both workflows have been uploaded.
-- Local catalog enrichments: Software Engineering, Computer Science, and Artificial Intelligence Engineering certificate checks add deterministic local catalog context when applicable. These enrichments are optional and are labeled separately from Degree Works-native evidence.
+- Local deterministic coverage: selected local rule models exist for implementation coverage and diagnostics, but the Planning Hub uses Degree Works-native analysis as the primary workflow for all readable Auburn audits.
 - Upload privacy and safety: PDF upload routes process files transiently in memory and do not permanently store uploaded PDFs. They reject oversized files, non-PDF signatures, unreadable or empty PDFs, and documents with excessive extracted text. Uploaded PDF checks are deterministic and do not call Gemini.
 - Parser limitations: Degree Works PDFs can include AP credit, transfer credit, substitutions, exceptions, hidden sections, in-progress coursework, electives, prerequisites, standing requirements, and semester ordering that still require advisor review. Unknown or unclear statuses remain `unknown` or advisor-review items instead of being overclaimed.
 - Rule provenance and source integrity: Deterministic rule results expose source IDs, catalog years, evidence labels, and confidence classifications. `source_backed` means checked-in Auburn source evidence supports the rule, `local_model` means conservative locally maintained logic, and `advisor_review_required` means the app intentionally cannot resolve the requirement authoritatively. `npm run check:sources` uses local checked-in files only; it does not fetch live Auburn pages or prove that local material is currently official.
@@ -85,10 +85,10 @@ Upload the saved PDF, not a screenshot. The PDF is processed server-side for thi
 - `/chat` supports Auburn source-grounded advising questions through Gemini File Search.
 - Assistant answers show retrieved sources, confidence, and an advisor verification note.
 - `/plan-check` is the Planning Hub. It defaults to `Current Progress`, the recommended path for most students, and analyzes any readable Auburn Degree Works Worksheet/Audit PDF for current standing and advisor discussion without calling Gemini or permanently storing the PDF.
-- `Current Progress` results lead with detected program, available enrichments, worksheet credits, degree status, status buckets, friendly AP/transfer credit labels, structured still-needed items, current-state suggestions, verification items, parser diagnostics, and a copyable Advisor Meeting Summary.
-- `Planned Path` analyzes one uploaded Degree Works Plan PDF, focuses planning reports on the selected target, shows shared parser and course-status details, and can compare the plan against Current Progress still-needed requirements.
-- Planned Path results lead with the Gap Report, next-semester suggestions, draft semester timeline, and copyable Advisor Meeting Summary; parser evidence and optional local enrichment details remain available in secondary sections.
-- Local deterministic enrichments currently exist for Software Engineering, Computer Science, and the Artificial Intelligence Engineering certificate, including exact-course checks, requirement-block review, draft planning support, and advisor-verification labels where local evidence is incomplete.
+- `Current Progress` results lead with Current Progress Summary, What needs attention, What to discuss taking next, a copyable Advisor Meeting Summary, then collapsed details and evidence.
+- `Planned Path` analyzes one uploaded Degree Works Plan PDF, focuses planning reports on Degree Works-native path evidence, shows shared parser details secondarily, and can compare the plan against Current Progress still-needed requirements.
+- Planned Path results lead with the Gap Report, next-semester suggestions, draft semester timeline, and copyable Advisor Meeting Summary; parser evidence remains available in secondary sections.
+- Local deterministic models currently exist for selected programs, including exact-course checks, requirement-block review, draft planning support, and advisor-verification labels where local evidence is incomplete. These are documented as rule coverage rather than normal Planning Hub modes.
 - Secondary standalone APIs and older manual/sample checkers remain available for developer verification, but they are not the main Planning Hub experience.
 - The `/rule-audit` page and `GET /api/rules/coverage-audit` route expose a deterministic audit of exact rule coverage, requirement-block confidence, source integrity, supporting models, known limitations, and recommended improvements.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.

@@ -23,15 +23,15 @@ test("Planning Hub page no longer renders CSSE manual check cards", async () => 
   assert.doesNotMatch(pageSource, /DegreeProgressCheckSection/);
 });
 
-test("Rule Audit copy frames checked rules as local enrichments", async () => {
+test("Rule Audit copy frames checked rules as local deterministic coverage", async () => {
   const pageSource = await readFile(
     path.join(projectRoot, "src", "app", "rule-audit", "page.tsx"),
     "utf8",
   );
 
-  assert.match(pageSource, /audits currently modeled local enrichments/i);
-  assert.match(pageSource, /Degree Works-native analysis/);
-  assert.match(pageSource, /other Auburn programs/);
+  assert.match(pageSource, /Current local deterministic models are available for selected\s+programs/);
+  assert.match(pageSource, /Planning Hub uses Degree Works-native\s+analysis for all readable Auburn audits/);
+  assert.match(pageSource, /coverage audit/);
 });
 
 test("Chat workspace uses Auburn-wide default product copy", async () => {
@@ -75,13 +75,13 @@ test("Planning Hub broad copy stays Degree Works-native and universal-first", as
 
   assert.doesNotMatch(broadCopy, /CSSE catalog checks/);
   assert.match(inputSectionSource, /Auto-detected program/);
-  assert.match(inputSectionSource, /Use Degree Works audit only/);
-  assert.match(inputSectionSource, /Software Engineering local enrichment/);
-  assert.match(inputSectionSource, /Computer Science local enrichment/);
-  assert.match(inputSectionSource, /AI certificate local enrichment/);
+  assert.doesNotMatch(inputSectionSource, /Use Degree Works audit only/);
+  assert.doesNotMatch(inputSectionSource, /Software Engineering local enrichment/);
+  assert.doesNotMatch(inputSectionSource, /Computer Science local enrichment/);
+  assert.doesNotMatch(inputSectionSource, /AI certificate local enrichment/);
   assert.match(
     inputSectionSource,
-    /Degree Works-native analysis works for readable Auburn audits/,
+    /Degree Works-native analysis is used for all readable Auburn audits/,
   );
   assert.match(
     pageSource,
@@ -89,11 +89,32 @@ test("Planning Hub broad copy stays Degree Works-native and universal-first", as
   );
   assert.match(
     pageSource,
-    /Local catalog enrichments are optional and only appear\s+when available/,
+    /Local deterministic models are documented as secondary\s+rule coverage/,
   );
 });
 
-test("Rule Audit and result details can still mention modeled local programs", async () => {
+test("Current Progress source leads with action summary before collapsed evidence", async () => {
+  const currentProgressDetailsSource = await readFile(
+    path.join(
+      projectRoot,
+      "src",
+      "app",
+      "plan-check",
+      "components",
+      "current-progress-details.tsx",
+    ),
+    "utf8",
+  );
+
+  assert.match(currentProgressDetailsSource, /Current Progress Summary/);
+  assert.match(currentProgressDetailsSource, /What needs attention/);
+  assert.match(currentProgressDetailsSource, /What to discuss taking next/);
+  assert.match(currentProgressDetailsSource, /Details and evidence/);
+  assert.match(currentProgressDetailsSource, /Detailed course evidence/);
+  assert.doesNotMatch(currentProgressDetailsSource, /ResultSection title="Course status buckets"/);
+});
+
+test("Rule Audit and collapsed diagnostics can still mention modeled local programs", async () => {
   const audit = buildRuleCoverageAudit();
   const auditedProgramNames = audit.programs.map((program) => program.programName);
 
@@ -121,8 +142,9 @@ test("Rule Audit and result details can still mention modeled local programs", a
     "utf8",
   );
 
-  assert.match(planCheckPageSource, /Software Engineering degree progress result/);
-  assert.match(planCheckPageSource, /Computer Science degree progress result/);
-  assert.match(planCheckPageSource, /AI Engineering certificate result/);
+  assert.doesNotMatch(planCheckPageSource, /Software Engineering degree progress result/);
+  assert.doesNotMatch(planCheckPageSource, /Computer Science degree progress result/);
+  assert.doesNotMatch(planCheckPageSource, /AI Engineering certificate result/);
   assert.match(currentProgressDetailsSource, /Detected program/);
+  assert.match(currentProgressDetailsSource, /Local rule evidence/);
 });

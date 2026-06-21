@@ -12,7 +12,7 @@ import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
 
 import { buildAdvisorMeetingSummary } from "@/lib/plan/advisor-meeting-summary";
 import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
-import { CollapsibleDetails, EmptyState } from "@/components/ui-primitives";
+import { EmptyState } from "@/components/ui-primitives";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
 import { CombinedDegreeWorksParsedDetails, PlannedPathCoverageCard } from "./components/combined-analysis-details";
 import { CurrentProgressResultDetails } from "./components/current-progress-details";
@@ -21,7 +21,6 @@ import {
   type PlanCheckWorkflowMode,
 } from "./components/plan-check-input-sections";
 import { DraftSemesterPlanCard, GapReportCard, NextSemesterSuggestionsCard } from "./components/planning-cards";
-import { DegreeProgressResultCard, ResultCard } from "./components/result-cards";
 import type {
   CombinedDegreeWorksUploadResult,
   ComputerSciencePlanCheckResult,
@@ -40,8 +39,6 @@ export default function PlanCheckPage() {
     useState<File | null>(null);
   const [selectedWorkflowMode, setSelectedWorkflowMode] =
     useState<PlanCheckWorkflowMode>("current_progress");
-  const [selectedPlanningTargetPath, setSelectedPlanningTargetPath] =
-    useState<PlanningTargetPathInput>("auto");
   const [result, setResult] = useState<PlanCheckResult | null>(null);
   const [softwareEngineeringResult, setSoftwareEngineeringResult] =
     useState<SoftwareEngineeringPlanCheckResult | null>(null);
@@ -279,12 +276,12 @@ export default function PlanCheckPage() {
     if (selectedWorkflowMode === "current_progress") {
       void runCurrentDegreeWorksUploadPlanCheck(
         selectedCombinedDegreeWorksPdfFile,
-        selectedPlanningTargetPath,
+        "auto",
       );
     } else {
       void runCombinedDegreeWorksUploadPlanCheck(
         selectedCombinedDegreeWorksPdfFile,
-        selectedPlanningTargetPath,
+        "auto",
         currentDegreeWorksResult?.currentProgressAnalysis,
       );
     }
@@ -422,9 +419,7 @@ export default function PlanCheckPage() {
           setSelectedWorkflowMode(mode);
           setCombinedDegreeWorksUploadValidationError(null);
         }}
-        onTargetPathChange={setSelectedPlanningTargetPath}
         selectedFile={selectedCombinedDegreeWorksPdfFile}
-        selectedTargetPath={selectedPlanningTargetPath}
         validationError={combinedDegreeWorksUploadValidationError}
         hasCurrentProgressResult={Boolean(currentDegreeWorksResult)}
       />
@@ -466,16 +461,18 @@ export default function PlanCheckPage() {
           ) : null}
 
           {currentDegreeWorksResult ? (
-            <>
-              <CurrentProgressResultDetails result={currentDegreeWorksResult} />
-              {advisorMeetingSummary ? (
+            <CurrentProgressResultDetails
+              advisorSummarySlot={
+                advisorMeetingSummary ? (
                 <AdvisorMeetingSummary
                   copyStatus={advisorSummaryCopyStatus}
                   onCopySummary={copyAdvisorMeetingSummary}
                   summary={advisorMeetingSummary}
                 />
-              ) : null}
-            </>
+                ) : null
+              }
+              result={currentDegreeWorksResult}
+            />
           ) : null}
 
           {combinedDegreeWorksResult ? (
@@ -506,69 +503,15 @@ export default function PlanCheckPage() {
             </>
           ) : null}
 
-          {combinedDegreeWorksResult && result ? (
-            <>
-              <h2 className="mb-3 text-[18px] font-semibold leading-7 text-slate-950">
-                AI Engineering certificate result
-              </h2>
-              <CollapsibleDetails
-                description="Certificate requirements, course status, provenance, and advisor-review evidence."
-                title="AI Engineering certificate details"
-              >
-                <ResultCard result={result} showUploadedPdfDetails={false} />
-              </CollapsibleDetails>
-            </>
-          ) : !currentDegreeWorksResult ? (
+          {combinedDegreeWorksResult ? null : !currentDegreeWorksResult ? (
             <EmptyState>
               Upload a Degree Works Worksheet audit for Current Progress. Upload
               a Degree Works Plan PDF for Planned Path. Works from Degree
               Works-native requirements for any Auburn program with readable
-              PDF text. Local catalog enrichments are optional and only appear
-              when available.
+              PDF text. Local deterministic models are documented as secondary
+              rule coverage, not primary student-facing planning modes.
             </EmptyState>
           ) : null}
-
-          <div className="mt-5">
-            {combinedDegreeWorksResult && softwareEngineeringResult ? (
-              <h2 className="mb-3 text-[18px] font-semibold leading-7 text-slate-950">
-                Software Engineering degree progress result
-              </h2>
-            ) : null}
-
-            {combinedDegreeWorksResult && softwareEngineeringResult ? (
-              <CollapsibleDetails
-                description="Degree requirements, requirement blocks, prerequisites, provenance, and advisor-review evidence."
-                title="Software Engineering degree details"
-              >
-                <DegreeProgressResultCard
-                  degreeName="Software Engineering"
-                  result={softwareEngineeringResult}
-                  showUploadedPdfDetails={false}
-                />
-              </CollapsibleDetails>
-            ) : null}
-          </div>
-
-          <div className="mt-5">
-            {combinedDegreeWorksResult && computerScienceResult ? (
-              <h2 className="mb-3 text-[18px] font-semibold leading-7 text-slate-950">
-                Computer Science degree progress result
-              </h2>
-            ) : null}
-
-            {combinedDegreeWorksResult && computerScienceResult ? (
-              <CollapsibleDetails
-                description="Degree requirements, requirement blocks, prerequisites, provenance, and advisor-review evidence."
-                title="Computer Science degree details"
-              >
-                <DegreeProgressResultCard
-                  degreeName="Computer Science"
-                  result={computerScienceResult}
-                  showUploadedPdfDetails={false}
-                />
-              </CollapsibleDetails>
-            ) : null}
-          </div>
         </section>
       </div>
     </main>

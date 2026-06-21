@@ -201,7 +201,9 @@ export function buildCurrentStateNextSteps({
             priority: "high" as const,
             source: "still_needed" as const,
           }))
-        : item.requirementType === "course_options" && item.courseOptions.length > 0
+        : item.requirementType === "course_options" &&
+            item.courseOptions.length > 0 &&
+            item.courseOptions.length <= 3
           ? [
               {
                 code: item.courseOptions.join(" or "),
@@ -215,19 +217,21 @@ export function buildCurrentStateNextSteps({
 
   const candidateCourses: CurrentStateSuggestionCandidate[] = [
     ...stillNeededCandidates,
-    ...deterministicMissingCourses({
-      aiCertificateCheck,
-      computerScienceCheck,
-      resolvedTargetPath,
-      softwareEngineeringCheck,
-    }).map((course) => ({
-      code: course.code,
-      title: course.title,
-      reason:
-        "The local deterministic requirement check still shows this course as a gap.",
-      priority: "medium" as const,
-      source: "deterministic_gap" as const,
-    })),
+    ...(targetPath === "auto" || targetPath === "degreeworks_only"
+      ? []
+      : deterministicMissingCourses({
+          aiCertificateCheck,
+          computerScienceCheck,
+          resolvedTargetPath,
+          softwareEngineeringCheck,
+        }).map((course) => ({
+          code: course.code,
+          title: course.title,
+          reason:
+            "The local deterministic requirement check still shows this course as a secondary gap.",
+          priority: "medium" as const,
+          source: "deterministic_gap" as const,
+        }))),
   ];
 
   const suggestedCourses: CurrentStateSuggestedCourse[] = [];
@@ -242,11 +246,15 @@ export function buildCurrentStateNextSteps({
     .filter((item) =>
       ["credit_hours_from_list", "block_reference", "advisor_review"].includes(
         item.requirementType,
-      ),
+      ) ||
+      (item.requirementType === "course_options" &&
+        item.courseOptions.length > 3),
     )
     .map((item) =>
       item.requirementType === "credit_hours_from_list"
         ? `${item.requirementLabel} is a credit-hour option list; discuss approved options with an advisor instead of selecting one automatically.`
+        : item.requirementType === "course_options"
+          ? `${item.requirementLabel} has several Degree Works options; discuss the best option with an advisor instead of treating the full list as courses to take.`
         : `${item.requirementLabel} needs advisor review: ${item.neededText}`,
     );
 
