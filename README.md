@@ -159,7 +159,7 @@ Upload the saved PDF, not a screenshot. The PDF is processed server-side for thi
 - The standalone `POST /api/plan/draft-semester-plan` route generates the same deterministic draft shape for manually entered AI certificate, Software Engineering, or Computer Science course lists and optionally accepts `startingTermLabel` for term-aware review.
 - The `/rule-audit` page and `GET /api/rules/coverage-audit` route expose a deterministic audit of exact rule coverage, requirement-block confidence, source integrity, supporting models, known limitations, and recommended improvements.
 - The Advisor Meeting Summary turns the focused gap report and planning results into short copyable preparation notes while the page retains complete detailed results.
-- Local validation currently passes `200/200` deterministic tests.
+- Local validation currently passes `202/202` deterministic tests.
 - Desktop and mobile chat layouts include program and source panels and distinguish source-grounded chat explanations from deterministic Planning Hub workflows.
 
 ## Degree Works compatibility fixtures
@@ -395,7 +395,7 @@ npm run validate
 
 Current validation coverage:
 
-- 200 deterministic tests through `npm test`, including curated academic source ingestion, source integrity, upload safety and route errors, rule coverage audit, synthetic planned-path Degree Works fixtures, and synthetic current-progress Worksheet fixtures
+- 202 deterministic tests through `npm test`, including curated academic source ingestion, source integrity, upload safety and route errors, rule coverage audit, synthetic planned-path Degree Works fixtures, and synthetic current-progress Worksheet fixtures
 - `npm run check:sources`
 - `npm run lint`
 - `npx tsc --noEmit`

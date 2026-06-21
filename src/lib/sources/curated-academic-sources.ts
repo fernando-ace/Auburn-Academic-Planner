@@ -43,6 +43,23 @@ export type CuratedAcademicSourceValidationReader = {
   readText(relativePath: string): string | undefined;
 };
 
+export function formatCuratedAcademicSourceDryRun(
+  plans: CuratedAcademicSourceFetchPlan[],
+) {
+  const lines = [
+    "Curated academic source fetch plan",
+    `Eligible RAG-only sources: ${plans.length}`,
+  ];
+
+  for (const [index, plan] of plans.entries()) {
+    lines.push(
+      `Source ${String(index + 1).padStart(2, "0")}/${String(plans.length).padStart(2, "0")}: id=${plan.seed.id} | url=${plan.seed.url} | outputPath=${plan.outputPath}`,
+    );
+  }
+
+  return lines.join("\n");
+}
+
 export function planCuratedAcademicSourceFetches(
   seeds: AcademicSourceSeed[],
 ): CuratedAcademicSourceFetchPlan[] {

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   buildCuratedAcademicSourceManifest,
   CURATED_ACADEMIC_SOURCE_MANIFEST_PATH,
+  formatCuratedAcademicSourceDryRun,
   planCuratedAcademicSourceFetches,
 } from "../src/lib/sources/curated-academic-sources.ts";
 import {
@@ -33,14 +34,9 @@ async function main() {
 
   const plans = planCuratedAcademicSourceFetches(seeds);
 
-  console.log("Curated academic source fetch plan");
+  console.log(formatCuratedAcademicSourceDryRun(plans));
   console.log(`Seed file: ${ACADEMIC_SOURCE_SEED_PATH}`);
-  console.log(`Eligible RAG-only sources: ${plans.length}`);
   console.log(`Mode: ${dryRun ? "dry-run" : "fetch"}`);
-
-  for (const plan of plans) {
-    console.log(`- ${plan.seed.id}: ${plan.seed.url} -> ${plan.outputPath}`);
-  }
 
   if (dryRun) {
     console.log("Dry run complete. No files were written and no URLs were fetched.");

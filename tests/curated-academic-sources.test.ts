@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   buildCuratedAcademicSourceManifest,
+  formatCuratedAcademicSourceDryRun,
   planCuratedAcademicSourceFetches,
   validateCuratedAcademicSources,
   type CuratedAcademicSourceManifestEntry,
@@ -19,16 +20,45 @@ const projectRoot = process.cwd();
 const seeds = JSON.parse(
   readFileSync(path.join(projectRoot, ...ACADEMIC_SOURCE_SEED_PATH.split("/")), "utf8"),
 ) as AcademicSourceSeed[];
+const expectedEligibleSourceIds = [
+  "auburn-undergraduate-majors-index",
+  "auburn-courses-of-instruction-index",
+  "auburn-computer-science-online-bulletin",
+  "auburn-csse-department-bulletin",
+  "auburn-engineering-undergraduate-majors",
+  "auburn-core-curriculum",
+  "auburn-registrar-degreeworks",
+  "auburn-registrar-credit-tables",
+  "auburn-transfer-credit-policy",
+  "auburn-pathways-transfer-credit",
+];
 
 test("fetch planning includes eligible RAG-only seeds and excludes rule sources", () => {
   const plans = planCuratedAcademicSourceFetches(seeds);
   const plannedIds = new Set(plans.map((plan) => plan.seed.id));
 
-  assert.ok(plannedIds.has("auburn-undergraduate-majors-index"));
-  assert.ok(plannedIds.has("auburn-registrar-degreeworks"));
+  assert.equal(plans.length, 10);
+  assert.deepEqual([...plannedIds], expectedEligibleSourceIds);
   assert.equal(plannedIds.has("auburn-computer-science-bulletin"), false);
   assert.equal(plannedIds.has("auburn-software-engineering-bulletin"), false);
   assert.equal(plannedIds.has("auburn-ai-engineering-certificate"), false);
+});
+
+test("fetch planning creates unique complete output paths", () => {
+  const plans = planCuratedAcademicSourceFetches(seeds);
+  const ids = plans.map((plan) => plan.seed.id);
+  const outputPaths = plans.map((plan) => plan.outputPath);
+
+  assert.equal(new Set(ids).size, expectedEligibleSourceIds.length);
+  assert.equal(new Set(outputPaths).size, expectedEligibleSourceIds.length);
+
+  for (const plan of plans) {
+    assert.equal(plan.outputPath, `sources/auburn/curated/${plan.seed.id}.html`);
+    assert.match(plan.outputPath, /^sources\/auburn\/curated\/[a-z0-9-]+\.html$/);
+    assert.equal(plan.outputPath.includes(" "), false);
+    assert.equal(plan.outputPath.includes("undefined"), false);
+    assert.ok(plan.outputPath.length > "sources/auburn/curated/.html".length);
+  }
 });
 
 test("dry run prints the fetch plan without fetching URLs", () => {
@@ -46,6 +76,27 @@ test("dry run prints the fetch plan without fetching URLs", () => {
   assert.match(output, /Curated academic source fetch plan/);
   assert.match(output, /Mode: dry-run/);
   assert.match(output, /Dry run complete\. No files were written and no URLs were fetched\./);
+});
+
+test("dry run text includes every eligible source exactly once", () => {
+  const plans = planCuratedAcademicSourceFetches(seeds);
+  const output = formatCuratedAcademicSourceDryRun(plans);
+  const sourceLines = output
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("Source "));
+
+  assert.equal(sourceLines.length, expectedEligibleSourceIds.length);
+  assert.match(output, /Eligible RAG-only sources: 10/);
+
+  for (const id of expectedEligibleSourceIds) {
+    const matchingLines = sourceLines.filter((line) => line.includes(`id=${id} |`));
+    assert.equal(matchingLines.length, 1, id);
+
+    const line = matchingLines[0];
+    assert.match(line, / \| url=https:\/\/.+ \| outputPath=sources\/auburn\/curated\/[a-z0-9-]+\.html$/);
+    assert.equal(line.includes("outputPath=sources/auburn/curated/.html"), false);
+    assert.equal(line.includes("outputPath=sources/auburn/curated/auburn- "), false);
+  }
 });
 
 test("excluded sources cannot be planned for curated fetch", () => {
