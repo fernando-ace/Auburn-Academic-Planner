@@ -14,7 +14,7 @@ import { buildAdvisorMeetingSummary } from "@/lib/plan/advisor-meeting-summary";
 import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
 import { EmptyState } from "@/components/ui-primitives";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
-import { CombinedDegreeWorksParsedDetails, PlannedPathCoverageCard } from "./components/combined-analysis-details";
+import { CombinedDegreeWorksParsedDetails, PlannedPathCoverageCard, PlannedPathOverviewCard } from "./components/combined-analysis-details";
 import { CurrentProgressResultDetails } from "./components/current-progress-details";
 import {
   DegreeWorksWorkflowUploadSection,
@@ -287,6 +287,18 @@ export default function PlanCheckPage() {
     }
   }
 
+  function clearDegreeWorksAnalysis() {
+    setSelectedCombinedDegreeWorksPdfFile(null);
+    setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
+    setResult(null);
+    setSoftwareEngineeringResult(null);
+    setComputerScienceResult(null);
+    setCombinedDegreeWorksError(null);
+    setCombinedDegreeWorksUploadValidationError(null);
+    setAdvisorSummaryCopyStatus(null);
+  }
+
   function copyAdvisorMeetingSummary() {
     if (!advisorMeetingSummary) {
       return;
@@ -358,6 +370,31 @@ export default function PlanCheckPage() {
       combinedDegreeWorksError ||
       isCombinedDegreeWorksLoading,
   );
+  const analyzedFileSummary = currentDegreeWorksResult
+    ? {
+        workflowType: "Current Progress",
+        fileName: currentDegreeWorksResult.sourceFileName,
+        detectedProgram:
+          currentDegreeWorksResult.currentProgressAnalysis.detectedProgram.displayName,
+        creditsSummary: formatCurrentProgressCredits(
+          currentDegreeWorksResult.currentProgressAnalysis.creditsApplied,
+          currentDegreeWorksResult.currentProgressAnalysis.creditsRequired,
+          currentDegreeWorksResult.currentProgressAnalysis.creditsNeeded,
+        ),
+      }
+    : combinedDegreeWorksResult
+      ? {
+          workflowType: "Planned Path",
+          fileName: combinedDegreeWorksResult.sourceFileName,
+          detectedProgram: formatSelectedPlanningTarget(
+            combinedDegreeWorksResult.selectedTargetPath,
+          ),
+          creditsSummary:
+            typeof combinedDegreeWorksResult.totalPlannedCredits === "number"
+              ? `${combinedDegreeWorksResult.totalPlannedCredits} planned credits`
+              : null,
+        }
+      : undefined;
 
   return (
     <main className="min-h-dvh bg-slate-100 text-slate-950">
@@ -411,9 +448,12 @@ export default function PlanCheckPage() {
       </div>
 
       <DegreeWorksWorkflowUploadSection
+        analyzedFileSummary={analyzedFileSummary}
         mode={selectedWorkflowMode}
+        hasAnalysisResult={Boolean(currentDegreeWorksResult || combinedDegreeWorksResult)}
         isLoading={isCombinedDegreeWorksLoading}
         onAnalyze={checkCombinedDegreeWorksUploadedPdf}
+        onClearAnalysis={clearDegreeWorksAnalysis}
         onFileChange={handleCombinedDegreeWorksPdfFileChange}
         onModeChange={(mode) => {
           setSelectedWorkflowMode(mode);
@@ -477,6 +517,7 @@ export default function PlanCheckPage() {
 
           {combinedDegreeWorksResult ? (
             <>
+              <PlannedPathOverviewCard result={combinedDegreeWorksResult} />
               <PlannedPathCoverageCard result={combinedDegreeWorksResult} />
               <GapReportCard
                 gapReport={combinedDegreeWorksResult.gapReport}
@@ -516,4 +557,31 @@ export default function PlanCheckPage() {
       </div>
     </main>
   );
+}
+
+function formatCurrentProgressCredits(
+  applied?: number | null,
+  required?: number | null,
+  remaining?: number | null,
+) {
+  const appliedText = typeof applied === "number" ? applied : "unknown";
+  const requiredText = typeof required === "number" ? required : "unknown";
+  const remainingText = typeof remaining === "number" ? remaining : "unknown";
+
+  return `${appliedText} applied / ${requiredText} required / ${remainingText} remaining`;
+}
+
+function formatSelectedPlanningTarget(targetPath: PlanningTargetPathInput) {
+  switch (targetPath) {
+    case "ai_certificate":
+      return "AI Engineering certificate";
+    case "software_engineering":
+      return "Software Engineering";
+    case "computer_science":
+      return "Computer Science";
+    case "degreeworks_only":
+      return "Degree Works audit";
+    case "auto":
+      return "Auto-detected program";
+  }
 }

@@ -46,6 +46,9 @@ export function AdvisorMeetingSummary({
           {copyStatus}
         </p>
       ) : null}
+      <p className="mt-2 text-[12px] leading-5 text-slate-500">
+        More details are available in the expanded evidence section.
+      </p>
       </div>
     </section>
   );

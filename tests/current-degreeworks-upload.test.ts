@@ -104,7 +104,7 @@ test("current-progress upload route includes external AP and transfer records", 
   );
   assert.match(
     result.advisorMeetingSummary,
-    /Verify AP\/transfer and Fall Through credits in Degree Works\./,
+    /Verify AP, transfer, and Fall Through credit applicability\./,
   );
 });
 

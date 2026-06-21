@@ -12,6 +12,7 @@ import type {
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
 import { formatExternalCreditAwareCode } from "./external-credit-display.ts";
 import { formatStillNeededItemForDisplay } from "./degreeworks-still-needed.ts";
+import { buildCurrentProgressPriorities } from "./current-progress-display.ts";
 
 export type CurrentStateGapReport = {
   overallStatus:
@@ -318,7 +319,7 @@ export function buildCurrentStateNextSteps({
     notYetRecommended: dedupeByCode(notYetRecommended),
     advisorQuestions: [
       "Which Still needed courses should I prioritize next semester?",
-      "Which Degree Works option-list or elective requirements should I discuss before choosing a course?",
+      "Which Degree Works core or elective options should I discuss before choosing a course?",
       "Should preregistered courses be treated as already handled for registration planning?",
       "Do AP, transfer, or Fall Through courses change the remaining requirement list?",
       "Do these suggested courses satisfy prerequisites and catalog rules for my official program?",
@@ -327,7 +328,7 @@ export function buildCurrentStateNextSteps({
     notes: [
       "These are current-progress discussion items, not registration advice or an official graduation plan.",
       "Completed and AP/transfer-satisfied courses are not suggested again.",
-      "Degree Works option lists are shown for advisor discussion instead of choosing one automatically.",
+      "Degree Works core or elective options are shown for advisor discussion instead of choosing one automatically.",
       "Preregistered and in-progress courses are listed for verification instead of new recommendations.",
       "Course availability, prerequisites, substitutions, exceptions, and advisor approval may change these suggestions.",
       ...dedupe(stillNeededAdvisorReviewItems).slice(0, 5),
@@ -348,7 +349,7 @@ export function buildCurrentProgressAdvisorSummary({
   const questions = dedupeQuestions([
     "Which remaining requirements should I prioritize next semester?",
     "Do my preregistered courses satisfy the expected requirements?",
-    "Which option-list or elective requirements should I choose from?",
+    "Which core or elective options should I choose from?",
     "Do any AP, transfer, or Fall Through credits change my remaining requirements?",
     "Is the next-semester load reasonable?",
     ...gapReport.advisorQuestions,
@@ -365,12 +366,8 @@ export function buildCurrentProgressAdvisorSummary({
     `- Audit confidence: ${formatConfidence(audit.confidence)}`,
     "",
     "Main items to discuss:",
-    ...capLines(mainItems, 6).map((item, index) => `${index + 1}. ${item}`),
+    ...capLines(mainItems, 5).map((item, index) => `${index + 1}. ${item}`),
   ];
-
-  if (mainItems.length > 6) {
-    lines.push(`+${mainItems.length - 6} more items in the detailed report`);
-  }
 
   if (audit.preregisteredCourseCodes.length > 0) {
     lines.push(
@@ -378,23 +375,15 @@ export function buildCurrentProgressAdvisorSummary({
       "Courses already preregistered:",
       ...capLines(audit.preregisteredCourseCodes, 6).map((code) => `- ${code}`),
     );
-
-    if (audit.preregisteredCourseCodes.length > 6) {
-      lines.push(`+${audit.preregisteredCourseCodes.length - 6} more items in the detailed report`);
-    }
   }
 
   lines.push(
     "",
     "Questions for my advisor:",
     ...questions
-      .slice(0, 6)
+      .slice(0, 5)
       .map((question) => `- ${question}`),
   );
-
-  if (questions.length > 6) {
-    lines.push(`+${questions.length - 6} more items in the detailed report`);
-  }
 
   return lines.join("\n");
 }
@@ -406,47 +395,24 @@ function buildCurrentProgressDiscussionItems({
   audit: CurrentDegreeAuditAnalysis;
   nextSteps: CurrentStateNextSteps;
 }) {
-  const items = [
-    audit.preregisteredCourseCodes.length > 0
-      ? "Confirm how my preregistered courses affect my remaining requirements."
-      : "Confirm how completed, in-progress, and planned courses affect my remaining requirements.",
-  ];
-  const suggestedCodes = nextSteps.suggestedCourses
-    .flatMap((course) => course.code.split(/\s+or\s+/i))
-    .map((code) => code.trim())
-    .filter(Boolean);
-  const priorityCodes = dedupe([
-    ...suggestedCodes,
-    ...audit.stillNeededCourseCodes,
-  ]).slice(0, 5);
+  void nextSteps;
 
-  if (priorityCodes.length > 0) {
-    items.push(
-      `Prioritize remaining courses such as ${formatReadableList(priorityCodes)}.`,
-    );
-  }
-
-  if (audit.stillNeededItems.some((item) => item.courseOptions.length > 1 || item.requirementType === "credit_hours_from_list")) {
-    items.push("Choose remaining core/elective options, especially option-list and elective requirements.");
-  }
-
-  if (
-    audit.externalCreditRecords.length > 0 ||
-    audit.transferOrApCourseCodes.length > 0 ||
-    audit.nonDegreeApplicableCourseCodes.length > 0
-  ) {
-    items.push("Verify AP/transfer and Fall Through credits in Degree Works.");
-  }
-
-  if (nextSteps.advisorMilestones.length > 0) {
-    items.push(
-      `Verify milestone requirements such as ${formatReadableList(
-        nextSteps.advisorMilestones.map((item) => item.label).slice(0, 2),
-      )}.`,
-    );
-  }
-
-  return dedupe(items);
+  return buildCurrentProgressPriorities({ audit }).map((item) => {
+    switch (item.label) {
+      case "Finish remaining major requirements":
+        return "Prioritize remaining major requirements.";
+      case "Choose remaining core or elective options":
+        return "Choose remaining core or elective options.";
+      case "Verify preregistered courses":
+        return "Confirm how preregistered courses affect remaining requirements.";
+      case "Confirm AP, transfer, and Fall Through credit applicability":
+        return "Verify AP, transfer, and Fall Through credit applicability.";
+      case "Review graduation or program milestones":
+        return "Review graduation or program milestones.";
+      default:
+        return item.label.endsWith(".") ? item.label : `${item.label}.`;
+    }
+  });
 }
 
 function resolveTargetPath({
@@ -609,14 +575,6 @@ function formatDegreeStatus(status: CurrentDegreeAuditAnalysis["degreeStatus"]) 
 
 function formatConfidence(confidence: DegreeWorksParserConfidence) {
   return confidence.charAt(0).toUpperCase() + confidence.slice(1);
-}
-
-function formatReadableList(items: string[]) {
-  if (items.length <= 1) {
-    return items[0] ?? "items to review";
-  }
-
-  return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
 }
 
 function capLines(items: string[], maxItems: number) {

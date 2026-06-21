@@ -6,7 +6,7 @@ import type { DraftSemesterPlan } from "@/lib/plan/draft-semester-plan";
 import type { GapReport, GapReportBestFitPath, GapReportStatus } from "@/lib/plan/gap-report";
 import type { PlanningTargetPathInput } from "@/lib/plan/target-path";
 import type { NextSemesterSuggestedCourse, NextSemesterSuggestions } from "../types";
-import { ProvenanceDetails, ResultSection } from "./result-cards";
+import { ResultSection } from "./result-cards";
 
 export function GapReportCard({
   gapReport,
@@ -171,9 +171,6 @@ export function NextSemesterSuggestionsCard({
               Course availability, prerequisites, AP/transfer credit,
               substitutions, and advisor approval may change these suggestions.
             </p>
-            <p className="font-semibold text-amber-800">
-              Availability and prerequisite checks use a local conservative model. Verify with Auburn bulletin/advisor.
-            </p>
           </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[30rem]">
@@ -202,7 +199,7 @@ export function NextSemesterSuggestionsCard({
         <ResultSection title="Suggested courses to discuss">
           {suggestions.suggestedCourses.length > 0 ? (
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {suggestions.suggestedCourses.map((course) => (
+              {suggestions.suggestedCourses.slice(0, 6).map((course) => (
                 <li
                   className="flex min-w-0 flex-col rounded-lg border border-slate-200 bg-slate-50/70 p-3 transition hover:border-[#03244d]/25 hover:bg-white hover:shadow-sm"
                   key={course.code}
@@ -243,11 +240,6 @@ export function NextSemesterSuggestionsCard({
                       {course.availabilityNotes[0]}
                     </p>
                   ) : null}
-                  {course.provenance?.map((provenance) => (
-                    <div className="mt-2" key={`${course.code}-${provenance.sourceId}`}>
-                      <ProvenanceDetails provenance={provenance} />
-                    </div>
-                  ))}
                 </li>
               ))}
             </ul>
@@ -259,7 +251,7 @@ export function NextSemesterSuggestionsCard({
           )}
         </ResultSection>
 
-        <ResultSection title="Advisor milestones">
+        <ResultSection title="Milestones to verify">
           {(suggestions.advisorMilestones?.length ?? 0) > 0 ? (
             <ul className="grid gap-3 md:grid-cols-2">
               {suggestions.advisorMilestones?.map((milestone) => (
@@ -283,40 +275,46 @@ export function NextSemesterSuggestionsCard({
           )}
         </ResultSection>
 
-        <ResultSection title="Not yet recommended">
-          {suggestions.notYetRecommended.length > 0 ? (
-            <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-              {suggestions.notYetRecommended.map((course) => (
-                <li
-                  className="flex gap-2 text-[13px] leading-5 text-slate-700"
-                  key={course.code}
-                >
-                  <AlertCircle
-                    aria-hidden="true"
-                    className="mt-0.5 shrink-0 text-[#b84300]"
-                    size={15}
-                  />
-                  <span>
-                    <span className="font-semibold text-slate-950">
-                      {course.code}:
-                    </span>{" "}
-                    {course.reason}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
-              No modeled course was held back by missing prerequisites.
-            </p>
-          )}
-        </ResultSection>
-
-        <GapReportList
-          items={suggestions.advisorQuestions}
-          title="Advisor questions"
-        />
-        <GapReportList items={suggestions.notes} title="Notes" />
+        <CollapsibleDetails
+          description="Held-back courses, advisor questions, notes, and local-model caveats."
+          title="Detailed suggestion evidence"
+        >
+          <div className="grid gap-4">
+            <ResultSection title="Not yet recommended">
+              {suggestions.notYetRecommended.length > 0 ? (
+                <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  {suggestions.notYetRecommended.map((course) => (
+                    <li
+                      className="flex gap-2 text-[13px] leading-5 text-slate-700"
+                      key={course.code}
+                    >
+                      <AlertCircle
+                        aria-hidden="true"
+                        className="mt-0.5 shrink-0 text-[#b84300]"
+                        size={15}
+                      />
+                      <span>
+                        <span className="font-semibold text-slate-950">
+                          {course.code}:
+                        </span>{" "}
+                        {course.reason}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+                  No modeled course was held back by missing prerequisites.
+                </p>
+              )}
+            </ResultSection>
+            <GapReportList
+              items={suggestions.advisorQuestions}
+              title="Advisor questions"
+            />
+            <GapReportList items={suggestions.notes} title="Notes" />
+          </div>
+        </CollapsibleDetails>
       </div>
     </section>
   );
@@ -344,9 +342,6 @@ export function DraftSemesterPlanCard({
             <p>
               Confirm course availability, prerequisites, substitutions,
               AP/transfer credit, and semester load with an advisor.
-            </p>
-            <p className="font-semibold text-amber-800">
-              Availability and prerequisites are local conservative models; verify with Auburn bulletin/advisor.
             </p>
           </div>
         </div>
@@ -441,24 +436,31 @@ export function DraftSemesterPlanCard({
           )}
         </ResultSection>
 
-        <ResultSection title="Unplaced courses">
-          {plan.unplacedCourses.length > 0 ? (
-            <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-              {plan.unplacedCourses.map((course) => (
-                <li className="text-[13px] leading-5 text-slate-700" key={course.code}>
-                  <span className="font-semibold text-slate-950">{course.code}:</span>{" "}
-                  {course.reason}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
-              No exact modeled course was left unplaced.
-            </p>
-          )}
-        </ResultSection>
-        <GapReportList items={plan.advisorReviewItems} title="Advisor review items" />
-        <GapReportList items={plan.notes} title="Draft plan notes" />
+        <CollapsibleDetails
+          description="Unplaced courses, advisor-review items, and local-model notes."
+          title="Detailed draft-plan evidence"
+        >
+          <div className="grid gap-4">
+            <ResultSection title="Unplaced courses">
+              {plan.unplacedCourses.length > 0 ? (
+                <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  {plan.unplacedCourses.map((course) => (
+                    <li className="text-[13px] leading-5 text-slate-700" key={course.code}>
+                      <span className="font-semibold text-slate-950">{course.code}:</span>{" "}
+                      {course.reason}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+                  No exact modeled course was left unplaced.
+                </p>
+              )}
+            </ResultSection>
+            <GapReportList items={plan.advisorReviewItems} title="Advisor review items" />
+            <GapReportList items={plan.notes} title="Draft plan notes" />
+          </div>
+        </CollapsibleDetails>
       </div>
     </section>
   );

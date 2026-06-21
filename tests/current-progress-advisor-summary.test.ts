@@ -11,6 +11,11 @@ import {
   buildCurrentStateNextSteps,
 } from "../src/lib/plan/current-state-next-steps.ts";
 import {
+  buildCurrentProgressPriorities,
+  formatRequirementBlockLabel,
+  groupStillNeededItems,
+} from "../src/lib/plan/current-progress-display.ts";
+import {
   formatStillNeededItemForDisplay,
   parseDegreeWorksStillNeededItem,
 } from "../src/lib/plan/degreeworks-still-needed.ts";
@@ -111,9 +116,11 @@ test("current-progress summary caps preregistered courses and deduplicates quest
     .filter((line) => line.startsWith("- "));
 
   assert.equal(preregisteredLines.length, 6);
-  assert.match(summary, /\+2 more items in the detailed report/);
+  assert.doesNotMatch(summary, /\+\d+ more items in the detailed report/);
   assert.equal(new Set(questionLines).size, questionLines.length);
-  assert.ok(questionLines.length <= 6);
+  assert.ok(questionLines.length <= 5);
+  assert.doesNotMatch(summary, /option-list/);
+  assert.match(summary, /core or elective options/);
 });
 
 test("AP transfer and Fall Through verification is mentioned once", async () => {
@@ -125,7 +132,7 @@ test("AP transfer and Fall Through verification is mentioned once", async () => 
     gapReport,
     nextSteps,
   });
-  const matches = summary.match(/AP\/transfer and Fall Through/g) ?? [];
+  const matches = summary.match(/AP, transfer, and Fall Through/g) ?? [];
 
   assert.equal(matches.length, 1);
   assert.doesNotMatch(summary, /AP Statistics: verify STAT 2510/);
@@ -163,4 +170,49 @@ test("milestones render as short labels", () => {
   assert.equal(formatStillNeededItemForDisplay(graduation), "UNIV 4AA0 graduation requirement");
   assert.equal(assessment.requirementLabel, "COMP 4810 program assessment");
   assert.equal(formatStillNeededItemForDisplay(assessment), "COMP 4810 program assessment");
+});
+
+test("clean requirement block labels are degree agnostic", async () => {
+  const audit = await analyzeFixture("worksheet-business-audit-sample.txt");
+  const majorBlock = audit.requirementBlocks.find((block) =>
+    /Business Major Courses/i.test(block.name),
+  );
+
+  assert.ok(majorBlock);
+  assert.equal(
+    formatRequirementBlockLabel({ ...majorBlock, creditsNeeded: 30 }),
+    "Business Major Courses - 30 credits needed",
+  );
+  assert.equal(
+    formatRequirementBlockLabel({
+      name: "Credits required: 51 Credits applied: 21 Catalog year: 2026-2027 GPA: 3.75 Unmet condition",
+      creditsNeeded: 3,
+    }),
+    "Requirement block needs advisor review",
+  );
+});
+
+test("still-needed items group into clean student-facing buckets", async () => {
+  const audit = await analyzeFixture("worksheet-business-audit-sample.txt");
+  const groups = groupStillNeededItems(audit.stillNeededItems);
+  const groupText = groups.flatMap((group) => [group.title, ...group.items]).join("\n");
+
+  assert.match(groupText, /Specific courses still needed/);
+  assert.match(groupText, /Course option requirements/);
+  assert.match(groupText, /Core or elective requirements/);
+  assert.match(groupText, /Milestones/);
+  assert.match(groupText, /UNIV 4AA0 graduation requirement/);
+  assert.doesNotMatch(groupText, /See Business Major Requirements section UNIV/i);
+});
+
+test("degree-agnostic priorities work for non-CSSE audits", async () => {
+  const businessAudit = await analyzeFixture("worksheet-business-audit-sample.txt");
+  const liberalArtsAudit = await analyzeFixture("worksheet-liberal-arts-audit-sample.txt");
+  const businessPriorities = buildCurrentProgressPriorities({ audit: businessAudit });
+  const liberalArtsPriorities = buildCurrentProgressPriorities({ audit: liberalArtsAudit });
+
+  assert.ok(businessPriorities.some((item) => item.label === "Finish remaining major requirements"));
+  assert.ok(businessPriorities.some((item) => item.label === "Choose remaining core or elective options"));
+  assert.ok(liberalArtsPriorities.some((item) => item.label === "Finish remaining major requirements"));
+  assert.ok(liberalArtsPriorities.some((item) => item.label === "Choose remaining core or elective options"));
 });

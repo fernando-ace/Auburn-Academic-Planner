@@ -106,12 +106,43 @@ test("Current Progress source leads with action summary before collapsed evidenc
     "utf8",
   );
 
-  assert.match(currentProgressDetailsSource, /Current Progress Summary/);
-  assert.match(currentProgressDetailsSource, /What needs attention/);
-  assert.match(currentProgressDetailsSource, /What to discuss taking next/);
+  assert.match(currentProgressDetailsSource, /Current standing/);
+  assert.match(currentProgressDetailsSource, /Top priorities/);
+  assert.match(currentProgressDetailsSource, /Courses to discuss next/);
   assert.match(currentProgressDetailsSource, /Details and evidence/);
   assert.match(currentProgressDetailsSource, /Detailed course evidence/);
+  assert.doesNotMatch(currentProgressDetailsSource, /Top incomplete blocks/);
+  assert.doesNotMatch(currentProgressDetailsSource, /Top still-needed requirements/);
   assert.doesNotMatch(currentProgressDetailsSource, /ResultSection title="Course status buckets"/);
+});
+
+test("Planned Path source summarizes before collapsed detailed audits", async () => {
+  const pageSource = await readFile(
+    path.join(projectRoot, "src", "app", "plan-check", "page.tsx"),
+    "utf8",
+  );
+  const combinedDetailsSource = await readFile(
+    path.join(
+      projectRoot,
+      "src",
+      "app",
+      "plan-check",
+      "components",
+      "combined-analysis-details.tsx",
+    ),
+    "utf8",
+  );
+
+  assert.match(pageSource, /PlannedPathOverviewCard/);
+  assert.match(combinedDetailsSource, /Planned path overview/);
+  assert.match(combinedDetailsSource, /Plan coverage/);
+  assert.match(combinedDetailsSource, /Detailed audits and evidence/);
+  assert.match(combinedDetailsSource, /Detailed course evidence/);
+  assert.match(combinedDetailsSource, /Parser diagnostics/);
+  assert.match(combinedDetailsSource, /Parsed Degree Works text evidence/);
+  assert.match(combinedDetailsSource, /Local rule\/provenance details/);
+  assert.match(combinedDetailsSource, /Program audit details/);
+  assert.doesNotMatch(combinedDetailsSource, /Parser and planning evidence/);
 });
 
 test("Rule Audit and collapsed diagnostics can still mention modeled local programs", async () => {

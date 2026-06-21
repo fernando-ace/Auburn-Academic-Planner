@@ -166,12 +166,9 @@ export function buildAdvisorMeetingSummary({
     "",
     "Top items to review:",
     "1. Missing or unmatched requirements.",
-    "2. Any unresolved core/elective blocks.",
+    "2. Any unresolved core or elective blocks.",
     "3. Prerequisite and semester order.",
-    "4. AP/transfer/substitution effects.",
-    "",
-    "Draft next step:",
-    "- Review the suggested first semester or top suggested courses with an advisor.",
+    "4. AP, transfer, or substitution effects.",
   ];
 
   if (suggestedCourses.length > 0) {
@@ -180,10 +177,6 @@ export function buildAdvisorMeetingSummary({
       "Suggested courses to review:",
       ...suggestedCourses.slice(0, 6).map((code) => `- ${code}`),
     );
-
-    if (suggestedCourses.length > 6) {
-      lines.push(`+${suggestedCourses.length - 6} more items in the detailed report`);
-    }
   }
 
   lines.push(
@@ -201,7 +194,7 @@ function buildQuestions() {
     "Are these courses offered in the suggested terms?",
     "Are prerequisites and course load reasonable?",
     "Do substitutions, AP/transfer credit, or hidden Degree Works sections change the plan?",
-  ]).slice(0, 6);
+  ]).slice(0, 5);
 }
 
 function inferSingleResultPath({

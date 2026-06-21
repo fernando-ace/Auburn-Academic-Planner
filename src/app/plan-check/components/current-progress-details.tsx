@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { CollapsibleDetails } from "@/components/ui-primitives";
@@ -11,7 +11,12 @@ import {
   buildExternalCreditAwareBucketItems,
   findExternalCreditRecordForCode,
 } from "@/lib/plan/external-credit-display";
-import { formatStillNeededItemForDisplay } from "@/lib/plan/degreeworks-still-needed";
+import {
+  buildCurrentProgressPriorities,
+  formatRequirementBlockLabel,
+  formatStillNeededDisplayText,
+  groupStillNeededItems,
+} from "@/lib/plan/current-progress-display";
 import type { CurrentDegreeWorksUploadResult } from "../types";
 import { ResultSection } from "./result-cards";
 
@@ -25,12 +30,8 @@ export function CurrentProgressResultDetails({
   const analysis = result.currentProgressAnalysis;
   const nextSteps = result.currentStateNextSteps;
   const gapReport = result.currentStateGapReport;
-  const attentionIncompleteBlocks = gapReport.incompleteBlocks.slice(0, 3);
-  const attentionStillNeededItems = analysis.stillNeededItems.slice(0, 5);
-  const attentionVerificationItems = nextSteps.verificationItems.slice(0, 4);
-  const hasExternalCreditWarning =
-    analysis.externalCreditRecords.length > 0 ||
-    analysis.nonDegreeApplicableCourseCodes.length > 0;
+  const priorities = buildCurrentProgressPriorities({ audit: analysis });
+  const groupedStillNeededItems = groupStillNeededItems(analysis.stillNeededItems);
   const visibleSuggestions = nextSteps.suggestedCourses.slice(0, 6);
 
   return (
@@ -42,7 +43,7 @@ export function CurrentProgressResultDetails({
               Current Progress
             </p>
             <h2 className="mt-2 text-[22px] font-semibold leading-8 text-slate-950">
-              Current Progress Summary
+              Current standing
             </h2>
             <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
               Status-aware current standing from a Degree Works Worksheet audit.
@@ -54,73 +55,30 @@ export function CurrentProgressResultDetails({
             <Metric label="Detected program" value={analysis.detectedProgram.displayName} />
             <Metric label="Degree status" value={analysis.degreeStatus ?? "unknown"} />
             <Metric label="Credits applied" value={analysis.creditsApplied ?? "Unknown"} />
+            <Metric label="Credits required" value={analysis.creditsRequired ?? "Unknown"} />
             <Metric label="Credits needed" value={analysis.creditsNeeded ?? "Unknown"} />
             <Metric label="Audit confidence" value={analysis.confidence} />
           </div>
         </div>
 
         <div className="mt-4 grid gap-4">
-          <ResultSection title="Current Progress Summary">
-            <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-              {gapReport.summaryBullets.map((bullet) => (
-                <li className="flex gap-2 text-[13px] leading-5 text-slate-700" key={bullet}>
-                  <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-[#2f7d32]" size={15} />
-                  <span>{bullet}</span>
+          <ResultSection title="Top priorities">
+            <ul className="grid gap-2 md:grid-cols-2">
+              {priorities.map((priority) => (
+                <li className="rounded-md border border-slate-200 bg-slate-50 p-3" key={priority.label}>
+                  <div className="flex gap-2">
+                    <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-[#2f7d32]" size={15} />
+                    <div>
+                      <p className="text-[14px] font-semibold leading-5 text-slate-950">{priority.label}</p>
+                      <p className="mt-1 text-[12px] leading-5 text-slate-600">{priority.reason}</p>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
           </ResultSection>
 
-          <ResultSection title="What needs attention">
-            <div className="grid gap-3">
-              {attentionIncompleteBlocks.length > 0 ? (
-                <AttentionGroup title="Top incomplete blocks">
-                  {attentionIncompleteBlocks.map((block) => (
-                    <li className="text-[13px] leading-5 text-slate-700" key={block.name}>
-                      <span className="font-semibold text-slate-950">{block.name}</span>
-                      {block.stillNeededText[0] ? `: ${block.stillNeededText[0]}` : ""}
-                    </li>
-                  ))}
-                </AttentionGroup>
-              ) : null}
-
-              {attentionStillNeededItems.length > 0 ? (
-                <AttentionGroup title="Top still-needed requirements">
-                  {attentionStillNeededItems.map((item) => (
-                    <li className="text-[13px] leading-5 text-slate-700" key={`${item.blockName}-${item.requirementLabel}-${item.neededText}`}>
-                      <span className="font-semibold text-slate-950">{item.requirementLabel}</span>
-                      <span className="text-slate-500"> ({formatRequirementType(item.requirementType)})</span>: {formatStillNeededItemForDisplay(item)}
-                    </li>
-                  ))}
-                </AttentionGroup>
-              ) : null}
-
-              {attentionVerificationItems.length > 0 ? (
-                <AttentionGroup title="Preregistered or current courses to verify">
-                  {attentionVerificationItems.map((item) => (
-                    <li className="text-[13px] leading-5 text-slate-700" key={`${item.code}-${item.status}`}>
-                      {item.reason}
-                    </li>
-                  ))}
-                </AttentionGroup>
-              ) : null}
-
-              {hasExternalCreditWarning ? (
-                <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-[13px] leading-5 text-amber-900">
-                  <AlertCircle aria-hidden="true" className="mt-0.5 shrink-0" size={15} />
-                  <span>
-                    AP/transfer or Fall Through evidence was detected. Confirm applicability in Degree Works and with an advisor before relying on it.
-                  </span>
-                </div>
-              ) : null}
-
-              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] leading-5 text-slate-500">
-                Showing the highest-priority items here. View all details in the collapsed evidence section below.
-              </p>
-            </div>
-          </ResultSection>
-
-          <ResultSection title="What to discuss taking next">
+          <ResultSection title="Courses to discuss next">
             <div className="grid gap-3">
               {visibleSuggestions.length > 0 ? (
                 <div className="grid gap-2">
@@ -147,8 +105,8 @@ export function CurrentProgressResultDetails({
                 </div>
               ) : (
                 <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
-                  No new course suggestions were produced. Review verification
-                  items and advisor questions.
+                  No specific new course suggestions were produced. Review
+                  the priority items and advisor questions.
                 </p>
               )}
 
@@ -195,6 +153,50 @@ export function CurrentProgressResultDetails({
       >
         <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
           <div className="grid gap-4">
+            <ResultSection title="Current Progress Summary">
+              <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                {gapReport.summaryBullets.map((bullet) => (
+                  <li className="flex gap-2 text-[13px] leading-5 text-slate-700" key={bullet}>
+                    <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-[#2f7d32]" size={15} />
+                    <span>{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+            </ResultSection>
+
+            <ResultSection title="Clean requirement groups">
+              {groupedStillNeededItems.length > 0 ? (
+                <div className="grid gap-2">
+                  {groupedStillNeededItems.map((group) => (
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={group.title}>
+                      <p className="text-[14px] font-semibold text-slate-800">{group.title}</p>
+                      <ul className="mt-2 space-y-1">
+                        {group.items.map((item) => (
+                          <li className="text-[13px] leading-5 text-slate-700" key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+                  No structured still-needed groups were parsed.
+                </p>
+              )}
+            </ResultSection>
+
+            {nextSteps.verificationItems.length > 0 ? (
+              <ResultSection title="Preregistered and current-course verification">
+                <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  {nextSteps.verificationItems.map((item) => (
+                    <li className="text-[13px] leading-5 text-slate-700" key={`${item.code}-${item.status}`}>
+                      {item.reason}
+                    </li>
+                  ))}
+                </ul>
+              </ResultSection>
+            ) : null}
+
             <ResultSection title="Detailed course evidence">
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <CourseCodeBucket
@@ -233,7 +235,7 @@ export function CurrentProgressResultDetails({
                   {gapReport.incompleteBlocks.map((block) => (
                     <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={block.name}>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-slate-950">{block.name}</span>
+                        <span className="font-semibold text-slate-950">{formatRequirementBlockLabel(block)}</span>
                         <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold uppercase text-slate-600">
                           {block.status}
                         </span>
@@ -270,7 +272,13 @@ export function CurrentProgressResultDetails({
                           <span className="text-[12px] text-slate-500">{item.creditAmount} credit/class amount</span>
                         ) : null}
                       </div>
-                      <p className="mt-2 text-[13px] leading-5 text-slate-700">{item.neededText}</p>
+                      <p className="mt-2 text-[13px] leading-5 text-slate-700">{formatStillNeededDisplayText(item)}</p>
+                      <CollapsibleDetails
+                        description="Original Degree Works Still needed evidence."
+                        title="Raw still-needed evidence"
+                      >
+                        <p className="rounded-md border border-slate-200 bg-white p-3 text-[12px] leading-5 text-slate-600">{item.neededText}</p>
+                      </CollapsibleDetails>
                       {item.courseOptions.length > 0 ? (
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {item.courseOptions.map((code) => (
@@ -318,21 +326,6 @@ export function CurrentProgressResultDetails({
           </div>
         </section>
       </CollapsibleDetails>
-    </div>
-  );
-}
-
-function AttentionGroup({
-  children,
-  title,
-}: {
-  children: ReactNode;
-  title: string;
-}) {
-  return (
-    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <p className="text-[14px] font-semibold text-slate-800">{title}</p>
-      <ul className="mt-2 space-y-2">{children}</ul>
     </div>
   );
 }

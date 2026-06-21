@@ -40,7 +40,6 @@ test("builds concise planned-path advisor summary", () => {
   assert.match(summary, /- Parser confidence: High/);
   assert.match(summary, /- Plan credits: 122/);
   assert.match(summary, /Top items to review:\n1\. Missing or unmatched requirements\./);
-  assert.match(summary, /Draft next step:/);
   assert.match(summary, /Questions for my advisor:/);
   assert.doesNotMatch(summary, /Top missing items:/);
   assert.doesNotMatch(summary, /Core Science Sequence: advisor_review/);
@@ -80,7 +79,8 @@ test("planned-path summary caps suggested courses and avoids course reason dumps
     .filter((line) => line.startsWith("- "));
 
   assert.equal(suggestedLines.length, 6);
-  assert.match(summary, /\+2 more items in the detailed report/);
+  assert.doesNotMatch(summary, /\+\d+ more items in the detailed report/);
   assert.equal(questionLines.length, 4);
+  assert.ok(questionLines.length <= 5);
   assert.doesNotMatch(summary, /long deterministic explanation/);
 });

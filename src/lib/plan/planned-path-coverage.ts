@@ -105,7 +105,7 @@ export function comparePlannedPathToCurrentProgress({
     }),
     notes: [
       "This compares planned-path courses against Degree Works Still needed items from Current Progress.",
-      "Exact course and option-list matches can be covered by planned courses; section references and broad elective credit-hour requirements stay advisor-review items.",
+      "Exact course and core or elective option matches can be covered by planned courses; section references and broad elective credit-hour requirements stay advisor-review items.",
       "Completed, AP/transfer, preregistered, and in-progress courses from Current Progress are not treated as new planned-path coverage.",
     ],
   };
