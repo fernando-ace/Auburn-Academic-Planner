@@ -1,5 +1,6 @@
 import {
   CURATED_ACADEMIC_SOURCE_MANIFEST_PATH,
+  EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT,
   validateCuratedAcademicSources,
 } from "./curated-academic-sources.ts";
 import {
@@ -61,9 +62,12 @@ export function checkSourceIntegrity(
     warnings.push(...curatedValidation.warnings);
   }
 
-  if (Array.isArray(curatedManifest) && curatedManifest.length !== 10) {
+  if (
+    Array.isArray(curatedManifest) &&
+    curatedManifest.length !== EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT
+  ) {
     errors.push(
-      `${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} must list exactly 10 curated sources.`,
+      `${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} must list exactly ${EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT} curated sources.`,
     );
   }
 

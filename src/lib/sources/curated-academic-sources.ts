@@ -8,6 +8,7 @@ import {
 export const CURATED_ACADEMIC_SOURCE_DIR = "sources/auburn/curated";
 export const CURATED_ACADEMIC_SOURCE_MANIFEST_PATH =
   "sources/auburn/curated/manifest.json";
+export const EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT = 7;
 
 export type CuratedAcademicSourceManifestEntry = {
   id: string;

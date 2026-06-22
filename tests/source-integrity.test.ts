@@ -49,7 +49,7 @@ test("detects curated manifest size drift", () => {
 
     assert.equal(result.status, "fail");
     assert.ok(
-      result.errors.some((error) => error.includes("exactly 10 curated sources")),
+      result.errors.some((error) => error.includes("exactly 7 curated sources")),
     );
   });
 });

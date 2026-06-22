@@ -8,7 +8,10 @@ import {
   type UploadToFileSearchStoreOperation,
   type UploadToFileSearchStoreResponse,
 } from "@google/genai";
-import { CURATED_ACADEMIC_SOURCE_MANIFEST_PATH } from "../src/lib/sources/curated-academic-sources.ts";
+import {
+  CURATED_ACADEMIC_SOURCE_MANIFEST_PATH,
+  EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT,
+} from "../src/lib/sources/curated-academic-sources.ts";
 
 const FILE_SEARCH_STORE_DISPLAY_NAME = "Auburn Academic Planner Sources";
 const POLL_INTERVAL_MS = 5000;
@@ -104,9 +107,9 @@ function readManifest() {
     );
   }
 
-  if (sources.length !== 10) {
+  if (sources.length !== EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT) {
     throw new Error(
-      `${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} must contain exactly 10 curated sources; found ${sources.length}.`,
+      `${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} must contain exactly ${EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT} curated sources; found ${sources.length}.`,
     );
   }
 

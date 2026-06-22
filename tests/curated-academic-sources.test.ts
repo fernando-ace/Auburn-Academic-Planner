@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   buildCuratedAcademicSourceManifest,
+  EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT,
   formatCuratedAcademicSourceDryRun,
   planCuratedAcademicSourceFetches,
   validateCuratedAcademicSources,
@@ -23,9 +24,6 @@ const seeds = JSON.parse(
 const expectedEligibleSourceIds = [
   "auburn-undergraduate-majors-index",
   "auburn-courses-of-instruction-index",
-  "auburn-computer-science-online-bulletin",
-  "auburn-csse-department-bulletin",
-  "auburn-engineering-undergraduate-majors",
   "auburn-core-curriculum",
   "auburn-registrar-degreeworks",
   "auburn-registrar-credit-tables",
@@ -37,7 +35,7 @@ test("fetch planning includes the curated RAG-only seed inventory", () => {
   const plans = planCuratedAcademicSourceFetches(seeds);
   const plannedIds = new Set(plans.map((plan) => plan.seed.id));
 
-  assert.equal(plans.length, 10);
+  assert.equal(plans.length, EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT);
   assert.deepEqual([...plannedIds], expectedEligibleSourceIds);
 });
 
@@ -83,7 +81,10 @@ test("dry run text includes every eligible source exactly once", () => {
     .filter((line) => line.startsWith("Source "));
 
   assert.equal(sourceLines.length, expectedEligibleSourceIds.length);
-  assert.match(output, /Eligible RAG-only sources: 10/);
+  assert.match(
+    output,
+    new RegExp(`Eligible RAG-only sources: ${EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT}`),
+  );
 
   for (const id of expectedEligibleSourceIds) {
     const matchingLines = sourceLines.filter((line) => line.includes(`id=${id} |`));

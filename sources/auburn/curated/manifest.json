@@ -28,48 +28,6 @@
     "contentType": "text/html"
   },
   {
-    "id": "auburn-computer-science-online-bulletin",
-    "title": "Bachelor of Computer Science (On-line) Bulletin",
-    "url": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/departmentofcomputerscienceandsoftwareengineering/bachelorofcomputerscience_major/",
-    "type": "bulletin_major",
-    "status": "rag_only",
-    "college": "Samuel Ginn College of Engineering",
-    "department": "Computer Science and Software Engineering",
-    "catalogYear": "2025-2026",
-    "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
-    "fileName": "auburn/curated/auburn-computer-science-online-bulletin.html",
-    "contentType": "text/html"
-  },
-  {
-    "id": "auburn-csse-department-bulletin",
-    "title": "Computer Science and Software Engineering Department Bulletin",
-    "url": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/departmentofcomputerscienceandsoftwareengineering/",
-    "type": "advising",
-    "status": "rag_only",
-    "college": "Samuel Ginn College of Engineering",
-    "department": "Computer Science and Software Engineering",
-    "catalogYear": "2025-2026",
-    "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
-    "fileName": "auburn/curated/auburn-csse-department-bulletin.html",
-    "contentType": "text/html"
-  },
-  {
-    "id": "auburn-engineering-undergraduate-majors",
-    "title": "Samuel Ginn College of Engineering Undergraduate Majors",
-    "url": "https://bulletin.auburn.edu/undergraduate/samuelginncollegeofengineering/majors/",
-    "type": "bulletin_major",
-    "status": "rag_only",
-    "college": "Samuel Ginn College of Engineering",
-    "department": null,
-    "catalogYear": "2025-2026",
-    "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
-    "fileName": "auburn/curated/auburn-engineering-undergraduate-majors.html",
-    "contentType": "text/html"
-  },
-  {
     "id": "auburn-core-curriculum",
     "title": "Core Curriculum and General Education Outcomes",
     "url": "https://bulletin.auburn.edu/Policies/Academic/thecorecurriculum/",

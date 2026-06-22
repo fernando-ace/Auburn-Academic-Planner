@@ -32,7 +32,11 @@ Curated chat retrieval uses exactly the cached Auburn academic HTML files under:
 - `sources/auburn/curated/manifest.json`
 - `sources/auburn/academic-source-seeds.json`
 
-The curated manifest currently lists 10 source files. Source upload and source checks should stay scoped to those curated files.
+The curated manifest currently lists 7 source files. The curated RAG set intentionally uses broad Auburn academic/advising sources: undergraduate majors, courses of instruction, core curriculum, DegreeWorks, registrar credit tables, transfer credit policy, and Pathways transfer credit. Department-specific or major-specific pages should only be added through a balanced all-majors ingestion process.
+
+Planning Hub remains Degree Works-native for all majors. Catalog pages can ground chat answers, but they do not become deterministic degree requirements unless explicitly modeled and advisor-safe.
+
+Future work: build a controlled all-undergraduate-majors Bulletin ingestion pipeline from the Undergraduate Majors Index, so every major receives equal RAG page-depth.
 
 Useful source commands:
 
