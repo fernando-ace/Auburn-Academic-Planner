@@ -6,11 +6,12 @@ import { POST } from "../src/app/api/plan/analyze-degreeworks/upload/route.ts";
 const plannedPathText = `
 Degree Works Plan
 Plan Description Universal planned path
-Summer 2026
+Summer 2026 Credits: 6
 ACCT 2110 Principles of Financial Accounting 3
 PHIL 1020 Introduction to Ethics 3
-Fall 2026
+Fall 2026 Credits: 19
 MKTG 3310 Principles of Marketing 3
+ELEC 2200 Elective placeholder 3
 UNIV 4AA0 University Graduation 0
 Total planned credits 122.0
 `;
@@ -29,6 +30,8 @@ test("POST parses a Degree Works-native planned path upload", async () => {
   assert.ok(result.parsedCourseCodes.includes("PHIL 1020"));
   assert.equal(result.totalPlannedCredits, 122);
   assert.ok(Array.isArray(result.semesterPlanAnalysis.terms));
+  assert.equal(result.semesterPlanAnalysis.terms[0].plannedCredits, 6);
+  assert.equal(result.semesterPlanAnalysis.terms[1].plannedCredits, 19);
   assert.equal(result.aiCertificateCheck, undefined);
   assert.equal(result.softwareEngineeringCheck, undefined);
   assert.equal(result.computerScienceCheck, undefined);
@@ -49,6 +52,41 @@ test("POST compares planned path to current-progress evidence when provided", as
         requirementType: "specific_course",
         courseOptions: ["ACCT 2110"],
       },
+      {
+        blockName: "Business Major",
+        requirementLabel: "Choose one from PHIL 1020 or HIST 1020",
+        neededText: "Still needed: PHIL 1020 or HIST 1020",
+        requirementType: "course_options",
+        courseOptions: ["PHIL 1020", "HIST 1020"],
+      },
+      {
+        blockName: "Business Major",
+        requirementLabel: "Business elective list",
+        neededText: "Still needed: 6 Credits from MKTG 3310, MNGT 3100, FINC 3610",
+        requirementType: "credit_hours_from_list",
+        courseOptions: ["MKTG 3310", "MNGT 3100", "FINC 3610"],
+      },
+      {
+        blockName: "University Requirements",
+        requirementLabel: "UNIV 4AA0 graduation requirement",
+        neededText: "Still needed: UNIV 4AA0",
+        requirementType: "graduation_milestone",
+        courseOptions: ["UNIV 4AA0"],
+      },
+      {
+        blockName: "Business Major",
+        requirementLabel: "See major requirements block",
+        neededText: "Still needed: See major requirements block",
+        requirementType: "block_reference",
+        courseOptions: [],
+      },
+      {
+        blockName: "Business Major",
+        requirementLabel: "SCMN 3720",
+        neededText: "Still needed: SCMN 3720",
+        requirementType: "specific_course",
+        courseOptions: ["SCMN 3720"],
+      },
     ],
     completedCourseCodes: [],
     preregisteredCourseCodes: [],
@@ -66,7 +104,41 @@ test("POST compares planned path to current-progress evidence when provided", as
 
   assert.equal(response.status, 200);
   assert.ok(result.plannedPathCoverage);
-  assert.equal(result.plannedPathCoverage.coveredStillNeededItems.length, 1);
+  assert.ok(
+    result.plannedPathCoverage.coveredStillNeededItems.some(
+      (item: { requirementLabel: string }) => item.requirementLabel === "ACCT 2110",
+    ),
+  );
+  assert.ok(
+    result.plannedPathCoverage.coveredStillNeededItems.some(
+      (item: { requirementLabel: string }) =>
+        item.requirementLabel === "Choose one from PHIL 1020 or HIST 1020",
+    ),
+  );
+  assert.ok(
+    result.plannedPathCoverage.coveredStillNeededItems.some(
+      (item: { requirementLabel: string }) =>
+        item.requirementLabel === "UNIV 4AA0 graduation requirement",
+    ),
+  );
+  assert.ok(
+    result.plannedPathCoverage.advisorReviewStillNeededItems.some(
+      (item: { requirementLabel: string }) =>
+        item.requirementLabel === "Business elective list",
+    ),
+  );
+  assert.ok(
+    result.plannedPathCoverage.advisorReviewStillNeededItems.some(
+      (item: { requirementLabel: string }) =>
+        item.requirementLabel === "See major requirements block",
+    ),
+  );
+  assert.ok(
+    result.plannedPathCoverage.uncoveredStillNeededItems.some(
+      (item: { requirementLabel: string }) => item.requirementLabel === "SCMN 3720",
+    ),
+  );
+  assert.ok(result.plannedPathCoverage.plannedButUnmatchedCourses.includes("ELEC 2200"));
 });
 
 test("POST rejects a request without a file field", async () => {

@@ -12,6 +12,9 @@ import {
   CURATED_ACADEMIC_SOURCE_MANIFEST_PATH,
   EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT,
 } from "../src/lib/sources/curated-academic-sources.ts";
+import {
+  MAJOR_ACADEMIC_SOURCE_MANIFEST_PATH,
+} from "../src/lib/sources/major-academic-sources.ts";
 
 const FILE_SEARCH_STORE_DISPLAY_NAME = "Auburn Academic Planner Sources";
 const POLL_INTERVAL_MS = 5000;
@@ -30,6 +33,7 @@ type ManifestSource = {
   url?: unknown;
   lastChecked?: unknown;
   seedLastChecked?: unknown;
+  seedGeneratedAt?: unknown;
   fetchedAt?: unknown;
   contentType?: unknown;
 };
@@ -57,6 +61,10 @@ const sourcesDir = path.join(projectRoot, "sources");
 const curatedManifestPath = path.join(
   projectRoot,
   ...CURATED_ACADEMIC_SOURCE_MANIFEST_PATH.split("/"),
+);
+const majorManifestPath = path.join(
+  projectRoot,
+  ...MAJOR_ACADEMIC_SOURCE_MANIFEST_PATH.split("/"),
 );
 
 function loadLocalEnv() {
@@ -94,26 +102,37 @@ function readManifest() {
     throw new Error(`Missing curated source manifest: ${curatedManifestPath}`);
   }
 
-  const sources = readManifestEntries(
+  const curatedSources = readManifestEntries(
     curatedManifestPath,
     CURATED_ACADEMIC_SOURCE_MANIFEST_PATH,
   ).map((source, index) =>
-    normalizeSource(source, index),
+    normalizeSource(source, index, "curated"),
   );
 
-  if (sources.length === 0) {
+  if (curatedSources.length === 0) {
     throw new Error(
       `${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} is empty. Add curated source entries before uploading.`,
     );
   }
 
-  if (sources.length !== EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT) {
+  if (curatedSources.length !== EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT) {
     throw new Error(
-      `${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} must contain exactly ${EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT} curated sources; found ${sources.length}.`,
+      `${CURATED_ACADEMIC_SOURCE_MANIFEST_PATH} must contain exactly ${EXPECTED_CURATED_ACADEMIC_SOURCE_COUNT} curated sources; found ${curatedSources.length}.`,
     );
   }
 
-  return sources;
+  const majorSources = existsSync(majorManifestPath)
+    ? readManifestEntries(
+        majorManifestPath,
+        MAJOR_ACADEMIC_SOURCE_MANIFEST_PATH,
+      ).map((source, index) => normalizeSource(source, index, "major"))
+    : [];
+
+  return {
+    curatedSources,
+    majorSources,
+    sources: [...curatedSources, ...majorSources],
+  };
 }
 
 function readManifestEntries(filePath: string, label: string) {
@@ -129,10 +148,15 @@ function readManifestEntries(filePath: string, label: string) {
   return sourceEntries;
 }
 
-function normalizeSource(source: ManifestSource, index: number): ValidSource {
-  const id = requireString(source.id, `sources[${index}].id`);
-  const title = requireString(source.title, `sources[${index}].title`);
-  const type = requireString(source.type, `sources[${index}].type`);
+function normalizeSource(
+  source: ManifestSource,
+  index: number,
+  group: "curated" | "major",
+): ValidSource {
+  const label = `${group}Sources[${index}]`;
+  const id = requireString(source.id, `${label}.id`);
+  const title = requireString(source.title, `${label}.title`);
+  const type = requireString(source.type, `${label}.type`);
   const program = readString(source.program) ?? "";
   const status = readString(source.status) ?? "";
   const college = readString(source.college) ?? "";
@@ -142,10 +166,20 @@ function normalizeSource(source: ManifestSource, index: number): ValidSource {
   const lastChecked =
     readString(source.lastChecked) ??
     readString(source.seedLastChecked) ??
-    requireString(source.lastChecked, `sources[${index}].lastChecked`);
+    readString(source.seedGeneratedAt)?.slice(0, 10) ??
+    requireString(source.lastChecked, `${label}.lastChecked`);
   const url = readString(source.url) ?? "";
   const fetchedAt = readString(source.fetchedAt) ?? "";
   const contentType = readString(source.contentType) ?? "";
+
+  if (group === "major") {
+    if (type !== "bulletin_major") {
+      throw new Error(`${label}.type must be bulletin_major.`);
+    }
+    if (status !== "rag_only") {
+      throw new Error(`${label}.status must be rag_only.`);
+    }
+  }
 
   const filePath = path.resolve(sourcesDir, fileName);
   const relativePath = path.relative(sourcesDir, filePath);
@@ -254,10 +288,20 @@ function shouldListSources(args: string[]) {
   );
 }
 
-function printUploadInventory(sources: ValidSource[]) {
+function printUploadInventory({
+  curatedSources,
+  majorSources,
+  sources,
+}: {
+  curatedSources: ValidSource[];
+  majorSources: ValidSource[];
+  sources: ValidSource[];
+}) {
   console.log("Gemini File Search upload inventory");
   console.log(`Store display name: ${FILE_SEARCH_STORE_DISPLAY_NAME}`);
-  console.log(`Source files: ${sources.length}`);
+  console.log(`Curated sources: ${curatedSources.length}`);
+  console.log(`All-major RAG-only sources: ${majorSources.length}`);
+  console.log(`Total upload count: ${sources.length}`);
 
   sources.forEach((source, index) => {
     const mimeType = source.contentType || mimeTypeFor(source.filePath) || "unknown";
@@ -298,10 +342,11 @@ async function waitForUploadOperation(
 
 async function main() {
   const listOnly = shouldListSources(process.argv.slice(2));
-  const sources = readManifest();
+  const inventory = readManifest();
+  const { sources } = inventory;
 
   if (listOnly) {
-    printUploadInventory(sources);
+    printUploadInventory(inventory);
     return;
   }
 

@@ -11,7 +11,13 @@ import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/ui-primitives";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
-import { CombinedDegreeWorksParsedDetails, PlannedPathCoverageCard, PlannedPathOverviewCard } from "./components/combined-analysis-details";
+import {
+  CombinedDegreeWorksParsedDetails,
+  PlannedPathCoverageCard,
+  PlannedPathOverviewCard,
+  PlannedPathSemesterPlanCard,
+  PlannedPathFixListCard,
+} from "./components/combined-analysis-details";
 import { CurrentProgressResultDetails } from "./components/current-progress-details";
 import {
   DegreeWorksWorkflowUploadSection,
@@ -51,10 +57,9 @@ export default function PlanCheckPage() {
 
   const advisorMeetingSummary = useMemo(
     () =>
-      currentDegreeWorksResult?.advisorMeetingSummary ??
       (combinedDegreeWorksResult
         ? buildPlannedPathAdvisorSummary(combinedDegreeWorksResult)
-        : ""),
+        : currentDegreeWorksResult?.advisorMeetingSummary ?? ""),
     [combinedDegreeWorksResult, currentDegreeWorksResult?.advisorMeetingSummary],
   );
 
@@ -68,7 +73,6 @@ export default function PlanCheckPage() {
 
     setIsCombinedDegreeWorksLoading(true);
     setCombinedDegreeWorksError(null);
-    setCurrentDegreeWorksResult(null);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -110,11 +114,9 @@ export default function PlanCheckPage() {
       };
 
       setCombinedDegreeWorksResult(combinedPayload);
-      setCurrentDegreeWorksResult(null);
       void sharedPlanFields;
     } catch (fetchError) {
       setCombinedDegreeWorksResult(null);
-      setCurrentDegreeWorksResult(null);
       setCombinedDegreeWorksError(
         fetchError instanceof Error
           ? fetchError.message
@@ -309,6 +311,7 @@ export default function PlanCheckPage() {
       isCombinedDegreeWorksLoading,
   );
   const analyzedFileSummary = currentDegreeWorksResult
+    && !combinedDegreeWorksResult
     ? {
         workflowType: "Current Progress",
         fileName: currentDegreeWorksResult.sourceFileName,
@@ -324,7 +327,9 @@ export default function PlanCheckPage() {
       ? {
           workflowType: "Planned Path",
           fileName: combinedDegreeWorksResult.sourceFileName,
-          detectedProgram: formatSelectedPlanningTarget(),
+          detectedProgram: currentDegreeWorksResult
+            ? currentDegreeWorksResult.currentProgressAnalysis.detectedProgram.displayName
+            : formatSelectedPlanningTarget(),
           creditsSummary:
             typeof combinedDegreeWorksResult.totalPlannedCredits === "number"
               ? `${combinedDegreeWorksResult.totalPlannedCredits} planned credits`
@@ -414,7 +419,7 @@ export default function PlanCheckPage() {
             </div>
           ) : null}
 
-          {currentDegreeWorksResult ? (
+          {currentDegreeWorksResult && !combinedDegreeWorksResult ? (
             <CurrentProgressResultDetails
               advisorSummarySlot={
                 advisorMeetingSummary ? (
@@ -433,6 +438,8 @@ export default function PlanCheckPage() {
             <>
               <PlannedPathOverviewCard result={combinedDegreeWorksResult} />
               <PlannedPathCoverageCard result={combinedDegreeWorksResult} />
+              <PlannedPathSemesterPlanCard result={combinedDegreeWorksResult} />
+              <PlannedPathFixListCard result={combinedDegreeWorksResult} />
               {advisorMeetingSummary ? (
                 <AdvisorMeetingSummary
                   copyStatus={advisorSummaryCopyStatus}
@@ -477,35 +484,35 @@ function formatSelectedPlanningTarget() {
 }
 
 function buildPlannedPathAdvisorSummary(result: CombinedDegreeWorksUploadResult) {
+  const coverage = result.plannedPathCoverage;
+  const mainResult = coverage
+    ? `${coverage.coveredStillNeededItems.length} requirements appear covered, ${coverage.partiallyCoveredStillNeededItems.length + coverage.advisorReviewStillNeededItems.length} need review, ${coverage.uncoveredStillNeededItems.length} are not clearly covered.`
+    : "Upload a Current Progress audit too to compare this plan against actual Degree Works requirements.";
   const lines = [
     "Advisor Meeting Summary",
     "",
     "This is a preparation summary, not an official degree audit.",
     "",
     "Planned path review:",
-    `- Source file: ${result.sourceFileName}`,
-    `- Parser confidence: ${result.parserConfidence}`,
-    `- Planned courses parsed: ${result.parsedCourseCount}`,
-    `- Planned credits: ${result.totalPlannedCredits ?? "unknown"}`,
+    `- Current audit: ${coverage ? "uploaded" : "not uploaded"}`,
+    "- Planned path: uploaded",
+    `- Main result: ${mainResult}`,
   ];
-
-  if (result.plannedPathCoverage) {
-    lines.push(
-      "",
-      "Current Progress comparison:",
-      `- Covered Still needed items: ${result.plannedPathCoverage.coveredStillNeededItems.length}`,
-      `- Partially covered Still needed items: ${result.plannedPathCoverage.partiallyCoveredStillNeededItems.length}`,
-      `- Uncovered Still needed items: ${result.plannedPathCoverage.uncoveredStillNeededItems.length}`,
-      `- Advisor-review items: ${result.plannedPathCoverage.advisorReviewItems.length}`,
-    );
-  }
 
   lines.push(
     "",
+    "Items to discuss:",
+    "1. Confirm whether the uncovered Degree Works requirements are addressed.",
+    "2. Review option-list and elective requirements.",
+    "3. Confirm semester loads and course availability.",
+    "4. Verify AP, transfer, Fall Through, or substitution effects.",
+    "",
     "Questions for my advisor:",
-    "- Does this planned path satisfy my Degree Works Still needed requirements?",
-    "- Are substitutions, exceptions, AP/transfer credit, or hidden Degree Works sections missing from the PDF text?",
-    "- Are these courses offered in the planned terms with a reasonable workload?",
+    "- Does this planned path cover my remaining Degree Works requirements?",
+    "- Which uncovered items should I add to the plan?",
+    "- Are the semester loads reasonable?",
+    "- Which planned courses count toward electives or option lists?",
+    "- Do any AP/transfer credits change this plan?",
   );
 
   return lines.join("\n");

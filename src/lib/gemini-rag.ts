@@ -1,14 +1,23 @@
-import { createRequire } from "node:module";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 
 import { GoogleGenAI, type Content, type GroundingChunk } from "@google/genai";
 
 import { selectDisplaySources } from "./chat-presentation.ts";
 import { getGeminiModel } from "./gemini-config.ts";
 
-const require = createRequire(import.meta.url);
-const curatedManifest = require(
-  "../../sources/auburn/curated/manifest.json",
-) as RawManifestSource[];
+const curatedManifestPath = path.resolve(
+  process.cwd(),
+  "sources/auburn/curated/manifest.json",
+);
+const majorManifestPath = path.resolve(
+  process.cwd(),
+  "sources/auburn/majors/manifest.json",
+);
+const manifestSources = [
+  ...readManifestSources(curatedManifestPath),
+  ...readManifestSources(majorManifestPath),
+];
 
 export type IncomingMessage = {
   role: "user" | "assistant";
@@ -35,6 +44,7 @@ type RawManifestSource = {
   url?: unknown;
   lastChecked?: unknown;
   seedLastChecked?: unknown;
+  seedGeneratedAt?: unknown;
   fetchedAt?: unknown;
   fileName: string;
 };
@@ -97,7 +107,7 @@ const FALLBACK_ADVISOR_NOTE =
 const NO_RETRIEVAL_ANSWER =
   "The Gemini File Search tool did not return Auburn source material for this question, so I cannot answer it confidently from the uploaded Auburn sources.";
 
-const typedManifest = curatedManifest
+const typedManifest = manifestSources
   .map(normalizeManifestSource)
   .filter((source): source is ManifestSource => source !== null);
 
@@ -172,9 +182,22 @@ function normalizeManifestSource(source: RawManifestSource): ManifestSource | nu
     lastChecked:
       stringValue(source.lastChecked) ??
       stringValue(source.seedLastChecked) ??
+      stringValue(source.seedGeneratedAt)?.slice(0, 10) ??
       stringValue(source.fetchedAt),
     fileName,
   };
+}
+
+function readManifestSources(filePath: string): RawManifestSource[] {
+  if (!existsSync(filePath)) {
+    return [];
+  }
+
+  const parsed = JSON.parse(readFileSync(filePath, "utf8")) as
+    | RawManifestSource[]
+    | { sources?: RawManifestSource[] };
+
+  return Array.isArray(parsed) ? parsed : parsed.sources ?? [];
 }
 
 function latestUserQuestion(messages: IncomingMessage[]) {

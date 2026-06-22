@@ -6,11 +6,12 @@ The app is intentionally universal: it reads Degree Works Worksheet/Audit PDFs f
 
 ## Current MVP
 
-- `/chat` - source-grounded Auburn academic Q&A using curated Auburn academic sources.
+- `/chat` - source-grounded Auburn academic Q&A using curated Auburn academic sources plus balanced RAG-only Auburn Bulletin undergraduate major pages.
 - `/plan-check` - Planning Hub with Current Progress, Planned Path, Planned Path comparison, advisor meeting summary, and details/evidence.
 - Current Progress parses Worksheet/Audit PDFs for detected program, credits required/applied/needed, incomplete blocks, Still needed requirements, completed/preregistered/in-progress/AP-transfer/Fall Through evidence, and advisor-safe next steps.
 - Planned Path parses Plan PDFs for planned courses, planned credits, detected terms, parser confidence, and advisor-safe notes.
-- Planned Path comparison matches planned courses against Current Progress Still needed items and keeps broad requirement blocks as advisor-review items.
+- Planned Path is strongest when compared against Current Progress: it answers whether a future Degree Works Plan appears to cover what the Current Progress audit says is still needed.
+- Planned Path comparison matches planned courses against Current Progress Still needed items and keeps electives, option lists, block references, AP/transfer, Fall Through, substitutions, and unclear requirements as advisor-review items.
 - PDF uploads are processed server-side for the request and are not permanently stored by the app.
 
 ## Demo Flow
@@ -20,34 +21,39 @@ The app is intentionally universal: it reads Degree Works Worksheet/Audit PDFs f
 3. Upload a synthetic or redacted Degree Works Worksheet/Audit PDF under `Current Progress`.
 4. Switch to `Planned Path` and upload a synthetic or redacted Degree Works Plan PDF.
 5. Review the comparison, advisor meeting summary, and collapsed evidence details.
-6. Open `http://localhost:3000/chat` for curated Auburn academic source questions.
+6. Open `http://localhost:3000/chat` for Auburn-wide academic source questions.
 
 Use only synthetic/redacted PDFs for demos. Do not commit real student records, names, IDs, GPAs, advisor emails, screenshots, or private academic records.
 
 ## Sources
 
-Curated chat retrieval uses exactly the cached Auburn academic HTML files under:
+Chat retrieval uses cached Auburn academic HTML files under:
 
 - `sources/auburn/curated/*.html`
 - `sources/auburn/curated/manifest.json`
 - `sources/auburn/academic-source-seeds.json`
+- `sources/auburn/generated-major-source-seeds.json`
+- `sources/auburn/majors/*.html`
+- `sources/auburn/majors/manifest.json`
 
-The curated manifest currently lists 7 source files. The curated RAG set intentionally uses broad Auburn academic/advising sources: undergraduate majors, courses of instruction, core curriculum, DegreeWorks, registrar credit tables, transfer credit policy, and Pathways transfer credit. Department-specific or major-specific pages should only be added through a balanced all-majors ingestion process.
+The curated manifest currently lists 7 broad source files. The generated major manifest lists official Auburn Bulletin undergraduate major pages discovered only from the checked-in Undergraduate Majors index. The all-major pages are balanced RAG-only chat sources; they are not deterministic degree requirements.
 
-Planning Hub remains Degree Works-native for all majors. Catalog pages can ground chat answers, but they do not become deterministic degree requirements unless explicitly modeled and advisor-safe.
-
-Future work: build a controlled all-undergraduate-majors Bulletin ingestion pipeline from the Undergraduate Majors Index, so every major receives equal RAG page-depth.
+Planning Hub remains Degree Works-native for all majors. Catalog pages can ground chat answers, but they do not become deterministic degree requirements or alter Planning Hub requirement logic.
 
 Useful source commands:
 
 ```bash
 npm run sources:fetch:dry-run
+npm run sources:discover-majors:dry-run
+npm run sources:discover-majors
+npm run sources:fetch:majors:dry-run
+npm run sources:fetch:majors
 npm run sources:check-scope
 npm run check:sources
 npm run sources:upload -- --dry-run
 ```
 
-`sources:fetch:dry-run` prints the eligible curated source inventory without fetching URLs. `check:sources` validates curated files, curated manifest metadata, and seed scope. `sources:upload -- --dry-run` prints the Gemini File Search upload inventory without making an API call.
+`sources:fetch:dry-run` prints the eligible curated source inventory without fetching URLs. `sources:discover-majors:dry-run` reads only the checked-in Undergraduate Majors index and shows discovered Bulletin major counts without writing files. `sources:fetch:majors:dry-run` shows the bounded all-major fetch plan without fetching URLs. `check:sources` validates curated files, major files when present, manifests, and seed scope. `sources:upload -- --dry-run` prints curated, all-major, and total Gemini File Search upload counts without making an API call.
 
 ## Gemini Chat
 
@@ -77,6 +83,7 @@ npm test
 npm run check:sources
 npm run sources:check-scope
 npm run sources:fetch:dry-run
+npm run sources:upload -- --dry-run
 npm run lint
 npx tsc --noEmit
 npm run build

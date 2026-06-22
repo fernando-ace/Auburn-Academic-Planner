@@ -17,6 +17,7 @@ export type PlannedPathCoverage = {
   coveredStillNeededItems: PlannedPathCoverageMatch[];
   partiallyCoveredStillNeededItems: PlannedPathCoverageMatch[];
   uncoveredStillNeededItems: PlannedPathCoverageMatch[];
+  advisorReviewStillNeededItems: PlannedPathCoverageMatch[];
   plannedButUnmatchedCourses: string[];
   advisorReviewItems: string[];
   confidence: DegreeWorksParserConfidence;
@@ -47,6 +48,7 @@ export function comparePlannedPathToCurrentProgress({
   const coveredStillNeededItems: PlannedPathCoverageMatch[] = [];
   const partiallyCoveredStillNeededItems: PlannedPathCoverageMatch[] = [];
   const uncoveredStillNeededItems: PlannedPathCoverageMatch[] = [];
+  const advisorReviewStillNeededItems: PlannedPathCoverageMatch[] = [];
   const advisorReviewItems: string[] = [];
 
   for (const item of currentAudit.stillNeededItems) {
@@ -63,12 +65,8 @@ export function comparePlannedPathToCurrentProgress({
       }
     }
 
-    if (
-      item.requirementType === "block_reference" ||
-      item.requirementType === "credit_hours_from_list" ||
-      item.requirementType === "advisor_review" ||
-      item.requirementType === "graduation_milestone"
-    ) {
+    if (shouldKeepInAdvisorReview(item, match)) {
+      advisorReviewStillNeededItems.push(match);
       advisorReviewItems.push(match.reason);
       continue;
     }
@@ -95,6 +93,7 @@ export function comparePlannedPathToCurrentProgress({
     coveredStillNeededItems,
     partiallyCoveredStillNeededItems,
     uncoveredStillNeededItems,
+    advisorReviewStillNeededItems,
     plannedButUnmatchedCourses: Array.from(new Set(plannedButUnmatchedCourses)),
     advisorReviewItems: Array.from(new Set(advisorReviewItems)).slice(0, 12),
     confidence: getCoverageConfidence({
@@ -174,14 +173,59 @@ function matchStillNeededItem({
     };
   }
 
+  if (item.requirementType === "credit_hours_from_list") {
+    if (plannedMatches.length > 0) {
+      return {
+        ...base,
+        status: "partial" as const,
+        reason: `${plannedMatches.join(", ")} appear in the planned path, but this is a credit-hour or elective list and needs advisor review before it can be marked fully covered.`,
+      };
+    }
+
+    return {
+      ...base,
+      status: "partial" as const,
+      reason: `${item.requirementLabel} is a credit-hour option list and needs advisor review before this comparison can mark it covered: ${item.neededText}`,
+    };
+  }
+
+  if (item.requirementType === "graduation_milestone") {
+    if (plannedMatches.length > 0) {
+      return {
+        ...base,
+        status: "covered" as const,
+        reason: `${plannedMatches[0]} appears in the planned path for this Degree Works milestone.`,
+      };
+    }
+
+    return {
+      ...base,
+      status: "partial" as const,
+      reason: `${item.requirementLabel} is a Degree Works milestone and needs advisor review unless the planned path includes the milestone course.`,
+    };
+  }
+
   return {
     ...base,
     status: "partial" as const,
     reason:
-      item.requirementType === "credit_hours_from_list"
-        ? `${item.requirementLabel} is a credit-hour option list and needs advisor review before this comparison can mark it covered: ${item.neededText}`
-        : `${item.requirementLabel} needs advisor review before this comparison can mark it covered: ${item.neededText}`,
+      `${item.requirementLabel} needs advisor review before this comparison can mark it covered: ${item.neededText}`,
   };
+}
+
+function shouldKeepInAdvisorReview(
+  item: DegreeWorksStillNeededItem,
+  match: PlannedPathCoverageMatch & { status: "covered" | "partial" | "uncovered" },
+) {
+  if (item.requirementType === "specific_course" || item.requirementType === "course_options") {
+    return false;
+  }
+
+  if (item.requirementType === "graduation_milestone" && match.status === "covered") {
+    return false;
+  }
+
+  return true;
 }
 
 function getCoverageConfidence({

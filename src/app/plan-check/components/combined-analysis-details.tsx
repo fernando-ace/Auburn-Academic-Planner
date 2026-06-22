@@ -32,10 +32,17 @@ export function PlannedPathOverviewCard({
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[32rem]">
           <CoverageMetric label="Mode" value="Degree Works-native" />
           <CoverageMetric label="Planned credits" value={result.totalPlannedCredits ?? "Not provided"} />
+          <CoverageMetric label="Parsed courses" value={result.parsedCourseCount} />
           <CoverageMetric label="Parser confidence" value={result.parserConfidence} />
           <CoverageMetric label="Coverage status" value={formatCoverageStatus(result)} />
         </div>
       </div>
+      {!result.plannedPathCoverage ? (
+        <p className="mt-4 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[13px] leading-5 text-sky-900">
+          Upload a Current Progress audit too for coverage against your actual
+          Degree Works requirements.
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -109,7 +116,7 @@ export function CombinedDegreeWorksParsedDetails({
                     key={`${term.index}-${term.label}`}
                   >
                     <summary className="cursor-pointer font-semibold text-slate-800">
-                      {term.label}: {term.courseCodes.length} courses
+                      {term.label}: {term.courseCodes.length} courses, {term.plannedCredits ?? "unknown"} credits
                     </summary>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {term.courseCodes.map((courseCode) => (
@@ -192,68 +199,170 @@ export function PlannedPathCoverageCard({
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-4 lg:w-[36rem]">
-          <CoverageMetric label="Covered" value={coverage.coveredStillNeededItems.length} />
-          <CoverageMetric label="Partial" value={coverage.partiallyCoveredStillNeededItems.length} />
-          <CoverageMetric label="Uncovered" value={coverage.uncoveredStillNeededItems.length} />
-          <CoverageMetric label="Advisor review" value={coverage.advisorReviewItems.length} />
+          <CoverageMetric label="Appears covered" value={coverage.coveredStillNeededItems.length} />
+          <CoverageMetric label="Partly covered" value={coverage.partiallyCoveredStillNeededItems.length} />
+          <CoverageMetric label="Still not covered" value={coverage.uncoveredStillNeededItems.length} />
+          <CoverageMetric label="Needs review" value={coverage.advisorReviewStillNeededItems.length} />
         </div>
       </div>
 
       <div className="mt-4 grid gap-4">
-        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-600">
-          Covered, partial, uncovered, and advisor-review counts are summarized
-          here. Expand the coverage evidence to inspect exact Degree Works
-          matches and unmatched planned courses.
-        </p>
-
-        <CollapsibleDetails
-          description="Exact coverage matches, partial matches, uncovered items, unmatched planned courses, and coverage notes."
-          title="Detailed coverage evidence"
-        >
-          <div className="grid gap-4">
-            <CoverageList
-              emptyText="No exact Still needed items were fully covered by planned-path courses."
-              items={coverage.coveredStillNeededItems}
-              title="Covered Still needed items"
-            />
-            <CoverageList
-              emptyText="No partially covered Still needed items were found."
-              items={coverage.partiallyCoveredStillNeededItems}
-              title="Partially covered Still needed items"
-            />
-            <CoverageList
-              emptyText="No uncovered exact or option Still needed items were found."
-              items={coverage.uncoveredStillNeededItems}
-              title="Uncovered Still needed items"
-            />
-
-            {coverage.plannedButUnmatchedCourses.length > 0 ? (
-              <ResultSection title="Planned but unmatched courses">
-                <div className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-                  {coverage.plannedButUnmatchedCourses.slice(0, 20).map((code) => (
-                    <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-700" key={code}>
-                      {code}
-                    </span>
-                  ))}
-                </div>
-              </ResultSection>
-            ) : null}
-
-            {coverage.advisorReviewItems.length > 0 || coverage.notes.length > 0 ? (
-              <ResultSection title="Coverage notes">
-                <ul className="space-y-2 rounded-md border border-[#dd550c]/25 bg-[#fff7f1] p-3">
-                  {[...coverage.advisorReviewItems, ...coverage.notes].map((note) => (
-                    <li className="flex gap-2 text-[13px] leading-5 text-slate-700" key={note}>
-                      <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-[#b84300]" size={15} />
-                      <span>{note}</span>
-                    </li>
-                  ))}
-                </ul>
-              </ResultSection>
-            ) : null}
-          </div>
-        </CollapsibleDetails>
+        <CoverageList
+          emptyText="No Degree Works Still needed items were clearly covered by planned-path courses."
+          items={coverage.coveredStillNeededItems}
+          title="This plan appears to cover"
+        />
+        <CoverageList
+          emptyText="No partially covered Still needed items were found."
+          items={coverage.partiallyCoveredStillNeededItems}
+          title="Partially covered"
+        />
+        <CoverageList
+          emptyText="No exact or option-list Still needed items remain clearly uncovered."
+          items={coverage.uncoveredStillNeededItems}
+          title="Still not covered"
+        />
+        <CoverageList
+          emptyText="No broad requirements were separated for advisor review."
+          items={coverage.advisorReviewStillNeededItems}
+          title="Needs advisor review"
+        />
+        {coverage.plannedButUnmatchedCourses.length > 0 ? (
+          <ResultSection title="Courses in your plan that need applicability review">
+            <div className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              {coverage.plannedButUnmatchedCourses.slice(0, 24).map((code) => (
+                <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-700" key={code}>
+                  {code}
+                </span>
+              ))}
+            </div>
+          </ResultSection>
+        ) : null}
       </div>
+    </section>
+  );
+}
+
+export function PlannedPathSemesterPlanCard({
+  result,
+}: {
+  result: CombinedDegreeWorksUploadResult;
+}) {
+  const terms = result.semesterPlanAnalysis.terms;
+
+  return (
+    <section className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="border-b border-slate-200 pb-4">
+        <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+          Semester-by-semester plan
+        </p>
+        <h2 className="mt-2 text-[20px] font-semibold leading-7 text-slate-950">
+          Semester-by-semester plan
+        </h2>
+      </div>
+
+      <div className="mt-4">
+        {terms.length > 0 ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {terms.map((term) => {
+              const warnings = semesterWarnings(term.plannedCredits, term.courseCodes);
+              return (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${term.index}-${term.label}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-[15px] font-semibold leading-6 text-slate-950">
+                      {term.label}
+                    </h3>
+                    <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-600">
+                      {term.plannedCredits ?? "unknown"} credits
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {term.courseCodes.length > 0 ? term.courseCodes.map((courseCode) => (
+                      <span
+                        className={`rounded-sm border px-2 py-1 text-[12px] font-semibold ${isPlaceholderCourse(courseCode) ? "border-amber-200 bg-amber-50 text-amber-900" : "border-slate-200 bg-white text-slate-700"}`}
+                        key={`${term.label}-${courseCode}`}
+                      >
+                        {courseCode}
+                      </span>
+                    )) : (
+                      <span className="text-[13px] leading-5 text-slate-500">
+                        No parsed course codes in this term.
+                      </span>
+                    )}
+                  </div>
+                  {warnings.length > 0 ? (
+                    <ul className="mt-3 space-y-1.5">
+                      {warnings.map((warning) => (
+                        <li className="flex gap-2 text-[12px] leading-5 text-amber-900" key={warning}>
+                          <AlertCircle aria-hidden="true" className="mt-0.5 shrink-0" size={14} />
+                          <span>{warning}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500">
+            The PDF did not provide reliable semester structure. Use course
+            coverage only.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function PlannedPathFixListCard({
+  result,
+}: {
+  result: CombinedDegreeWorksUploadResult;
+}) {
+  const coverage = result.plannedPathCoverage;
+  if (!coverage) return null;
+
+  const fixItems = [
+    ...coverage.uncoveredStillNeededItems.map(
+      (item) => `Add or discuss ${item.requirementLabel}; it is still not clearly covered.`,
+    ),
+    ...coverage.partiallyCoveredStillNeededItems.map(
+      (item) => `Confirm ${item.requirementLabel}; the plan only partially matches this Degree Works item.`,
+    ),
+    ...coverage.advisorReviewStillNeededItems.map(
+      (item) => `Review ${item.requirementLabel}; Degree Works lists this as an option, elective, milestone, or block-reference item.`,
+    ),
+    ...coverage.plannedButUnmatchedCourses.map(
+      (code) => `Ask how ${code} applies to remaining requirements or electives.`,
+    ),
+  ];
+
+  return (
+    <section className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="border-b border-slate-200 pb-4">
+        <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+          What to fix before trusting this plan
+        </p>
+        <h2 className="mt-2 text-[20px] font-semibold leading-7 text-slate-950">
+          What to fix before trusting this plan
+        </h2>
+      </div>
+      {fixItems.length > 0 ? (
+        <ol className="mt-4 grid gap-2">
+          {fixItems.slice(0, 16).map((item, index) => (
+            <li className="rounded-md border border-slate-200 bg-slate-50 p-3 text-[13px] leading-5 text-slate-700" key={`${index}-${item}`}>
+              {item}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] leading-5 text-emerald-900">
+          No obvious uncovered exact-course items were found. Still confirm
+          electives, substitutions, AP/transfer credit, Fall Through, course
+          availability, and semester loads with an advisor.
+        </p>
+      )}
     </section>
   );
 }
@@ -461,6 +570,7 @@ function formatCoverageStatus(result: CombinedDegreeWorksUploadResult) {
   if (!coverage) return "No current-progress comparison";
   if (coverage.uncoveredStillNeededItems.length > 0) return "Uncovered items need review";
   if (coverage.partiallyCoveredStillNeededItems.length > 0) return "Partially covered items need review";
+  if (coverage.advisorReviewStillNeededItems.length > 0) return "Advisor review needed";
   return "No uncovered exact items";
 }
 
@@ -468,4 +578,27 @@ function isMostlyUnknownCourseStatuses(counts: DegreeWorksCourseStatusCounts) {
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
 
   return total >= 10 && counts.unknown / total >= 0.5;
+}
+
+function semesterWarnings(
+  plannedCredits: number | null,
+  courseCodes: string[],
+) {
+  const warnings: string[] = [];
+
+  if (plannedCredits === null || plannedCredits === 0) {
+    warnings.push("Credit load is zero or unclear; confirm the term total.");
+  } else if (plannedCredits > 18) {
+    warnings.push("Credit load is high; confirm this workload with an advisor.");
+  }
+
+  if (courseCodes.some(isPlaceholderCourse)) {
+    warnings.push("One or more planned courses looks like an elective or placeholder; confirm how it applies.");
+  }
+
+  return warnings;
+}
+
+function isPlaceholderCourse(courseCode: string) {
+  return /^(?:ELEC|FREE)\s/i.test(courseCode) || /\b(?:9999|0000)\b/.test(courseCode);
 }

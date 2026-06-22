@@ -4,6 +4,12 @@ import {
   validateCuratedAcademicSources,
 } from "./curated-academic-sources.ts";
 import {
+  GENERATED_MAJOR_SOURCE_SEEDS_PATH,
+  MAJOR_ACADEMIC_SOURCE_MANIFEST_PATH,
+  validateMajorAcademicSources,
+  type GeneratedMajorSourceSeed,
+} from "./major-academic-sources.ts";
+import {
   ACADEMIC_SOURCE_SEED_PATH,
   validateAcademicSourceSeeds,
   type AcademicSourceSeed,
@@ -44,6 +50,8 @@ export function checkSourceIntegrity(
 
   const seedData = readJson(ACADEMIC_SOURCE_SEED_PATH);
   const curatedManifest = readJson(CURATED_ACADEMIC_SOURCE_MANIFEST_PATH);
+  const majorSeedData = readOptionalJson(GENERATED_MAJOR_SOURCE_SEEDS_PATH);
+  const majorManifest = readOptionalJson(MAJOR_ACADEMIC_SOURCE_MANIFEST_PATH);
 
   if (Array.isArray(seedData)) {
     const seedValidation = validateAcademicSourceSeeds(seedData);
@@ -71,6 +79,22 @@ export function checkSourceIntegrity(
     );
   }
 
+  if (majorSeedData !== undefined) {
+    const majorValidation = validateMajorAcademicSources({
+      manifest: majorManifest,
+      reader,
+      seeds: Array.isArray(majorSeedData)
+        ? (majorSeedData as GeneratedMajorSourceSeed[])
+        : [],
+    });
+    errors.push(...majorValidation.errors);
+    warnings.push(...majorValidation.warnings);
+  } else if (majorManifest !== undefined) {
+    errors.push(
+      `${MAJOR_ACADEMIC_SOURCE_MANIFEST_PATH} exists but ${GENERATED_MAJOR_SOURCE_SEEDS_PATH} is missing.`,
+    );
+  }
+
   return finishResult();
 
   function readJson(relativePath: string): unknown {
@@ -78,6 +102,22 @@ export function checkSourceIntegrity(
     if (text === undefined) {
       missingFiles.push(relativePath);
       recommendedFixes.push(`Restore ${relativePath}.`);
+      return undefined;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unknown JSON error";
+      errors.push(`${relativePath} is not parseable JSON: ${detail}`);
+      recommendedFixes.push(`Fix ${relativePath} so it is valid JSON.`);
+      return undefined;
+    }
+  }
+
+  function readOptionalJson(relativePath: string): unknown {
+    const text = reader.readText(relativePath);
+    if (text === undefined) {
       return undefined;
     }
 

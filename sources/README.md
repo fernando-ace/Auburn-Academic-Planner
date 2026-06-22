@@ -2,9 +2,9 @@
 
 This project does not crawl all of `auburn.edu`. Auburn Academic Planner uses a scoped source policy so chat answers stay grounded in official academic planning material.
 
-## Curated RAG Sources
+## Curated And All-Major RAG Sources
 
-The only Auburn academic source files used for Gemini File Search upload are the curated HTML files under `sources/auburn/curated/` and their manifest.
+The Auburn academic source files used for Gemini File Search upload are the curated HTML files under `sources/auburn/curated/` plus generated official Auburn Bulletin undergraduate major pages under `sources/auburn/majors/`.
 
 The curated source set intentionally includes only broad Auburn academic/advising sources:
 
@@ -14,9 +14,9 @@ The curated source set intentionally includes only broad Auburn academic/advisin
 - Registrar Degree Works, transfer credit, and AP credit pages
 - Reviewed Auburn academic planning pages listed in `sources/auburn/academic-source-seeds.json`
 
-Department-specific or major-specific pages should only be added through a balanced all-majors ingestion process. These files support source-grounded chat. Planning Hub remains Degree Works-native for all majors and does not add requirements from catalog pages.
+Major-specific pages are added only through the balanced all-majors ingestion process. These files support source-grounded chat. Planning Hub remains Degree Works-native for all majors and does not add requirements from catalog pages.
 
-Future work: build a controlled all-undergraduate-majors Bulletin ingestion pipeline from the Undergraduate Majors Index, so every major receives equal RAG page-depth.
+All generated major pages are `rag_only`. They must not become deterministic rule sources or Planning Hub requirement logic.
 
 ## Excluded Sources
 
@@ -34,9 +34,15 @@ These sources are out of scope for academic planning and should not be ingested:
 
 - `sources/auburn/academic-source-seeds.json` is the reviewed seed registry.
 - `sources/auburn/curated/manifest.json` lists the 7 cached curated HTML files.
+- `sources/auburn/generated-major-source-seeds.json` is generated from the checked-in Undergraduate Majors index.
+- `sources/auburn/majors/manifest.json` lists fetched official Auburn Bulletin undergraduate major pages.
 - `npm run sources:check-scope` validates the seed list and source classification without fetching live URLs.
 - `npm run sources:fetch:dry-run` shows which seed URLs would be fetched.
 - `npm run sources:fetch` fetches only those exact curated URLs and writes local cached HTML files.
-- `npm run sources:upload -- --dry-run` prints the curated Gemini File Search upload inventory without making an API call.
+- `npm run sources:discover-majors:dry-run` shows the generated major source plan without writing files.
+- `npm run sources:discover-majors` writes `sources/auburn/generated-major-source-seeds.json`.
+- `npm run sources:fetch:majors:dry-run` shows which generated major URLs would be fetched.
+- `npm run sources:fetch:majors` fetches only those generated major URLs and writes cached HTML files.
+- `npm run sources:upload -- --dry-run` prints the curated, all-major, and total Gemini File Search upload inventory without making an API call.
 
-The seed list is not a crawler queue. The fetch script does not recursively follow links or crawl all of `auburn.edu`.
+The seed list and generated major manifest are not crawler queues. The fetch scripts do not recursively follow links or crawl all of `auburn.edu`.

@@ -49,6 +49,7 @@ const academicBulletinPathPatterns = [
   /^\/undergraduate\/majors\/?$/i,
   /^\/undergraduate\/[^?#]*\/majors\/?$/i,
   /^\/undergraduate\/[^?#]*_major\/?$/i,
+  /^\/undergraduate\/[^?#]*_major\/index\.html$/i,
   /^\/undergraduate\/[^?#]*_minor\/?$/i,
   /^\/undergraduate\/[^?#]*_ucrt\/?$/i,
   /^\/undergraduate\/[^?#]*department[^?#]*\/?$/i,

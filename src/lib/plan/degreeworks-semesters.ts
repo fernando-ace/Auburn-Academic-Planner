@@ -5,6 +5,7 @@ export type DegreeWorksSemesterTerm = {
   label: string;
   index: number;
   courseCodes: string[];
+  plannedCredits: number | null;
 };
 
 export type DegreeWorksSemesterExtraction = {
@@ -15,7 +16,7 @@ export type DegreeWorksSemesterExtraction = {
 };
 
 const termLabelPattern =
-  /\b(Fall|Spring|Summer)\s+(20\d{2})\s+Credits\s*:\s*\d+(?:\.\d+)?/gi;
+  /\b(Fall|Spring|Summer)\s+(20\d{2})\s+Credits\s*:\s*(\d+(?:\.\d+)?)/gi;
 
 export function extractDegreeWorksSemesters(
   text: string,
@@ -56,6 +57,7 @@ export function extractDegreeWorksSemesters(
       label: `${capitalizeTerm(match[1])} ${match[2]}`,
       index,
       courseCodes,
+      plannedCredits: Number(match[3]),
     };
   });
 
