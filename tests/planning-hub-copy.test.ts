@@ -18,6 +18,14 @@ test("Planning Hub public copy is Degree Works-native", async () => {
   assert.match(files, /Current Progress/);
   assert.match(files, /Planned Path/);
   assert.match(files, /Degree Works-native/);
+  assert.match(
+    files,
+    /Upload Current Progress too to compare this plan against your actual\s+remaining Degree Works requirements\./,
+  );
+  assert.match(
+    files,
+    /Confirm availability, prerequisites, and fit with your advisor\./,
+  );
   assert.doesNotMatch(files, /Rule Audit/);
   assert.doesNotMatch(files, /rule-audit/);
   assert.doesNotMatch(files, /local enrichment/i);

@@ -158,7 +158,8 @@ export function buildCurrentStateNextSteps({
         seenSuggestions.add(code);
         suggestedCourses.push({
           code,
-          reason: "Degree Works lists this exact course in Still needed evidence.",
+          reason:
+            "Degree Works lists this as still needed. Ask whether it should be part of your next schedule.",
           priority: "high",
           source: "still_needed",
           advisorVerificationRequired: true,
@@ -234,11 +235,10 @@ export function buildCurrentProgressAdvisorSummary({
     "",
     "This is a preparation summary, not an official degree audit.",
     "",
-    "Current progress:",
-    `- Program detected from Degree Works: ${audit.detectedProgram.displayName}`,
-    `- Parser confidence: ${audit.confidence}`,
+    "Current standing to review:",
+    `- Degree Works program: ${audit.detectedProgram.displayName}`,
     `- Credits: ${formatCreditSummary(audit)}`,
-    `- Still-needed course codes detected: ${audit.stillNeededCourseCodes.length}`,
+    `- Still-needed courses found in the audit: ${audit.stillNeededCourseCodes.length}`,
     "",
     "Top items to review:",
     ...gapReport.nextActions.slice(0, 4).map((item, index) => `${index + 1}. ${item}`),
@@ -247,7 +247,7 @@ export function buildCurrentProgressAdvisorSummary({
   if (nextSteps.suggestedCourses.length > 0) {
     lines.push(
       "",
-      "Courses to discuss with an advisor:",
+      "Courses I want to ask about:",
       ...nextSteps.suggestedCourses.slice(0, 6).map((course) => `- ${course.code}`),
     );
   }

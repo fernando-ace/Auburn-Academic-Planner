@@ -95,7 +95,7 @@ export function CurrentProgressResultDetails({
                       </div>
                       <p className="mt-2 text-[13px] leading-5 text-slate-700">{course.reason}</p>
                       <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                        Advisor caveat: verify term availability, prerequisites, substitutions, and fit for the official audit before registering.
+                        Confirm availability, prerequisites, and fit with your advisor.
                       </p>
                     </div>
                   ))}

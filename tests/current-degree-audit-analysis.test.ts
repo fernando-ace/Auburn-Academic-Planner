@@ -121,8 +121,9 @@ test("advisor summary is concise and Degree Works-native", async () => {
 
   assert.match(summary, /^Advisor Meeting Summary/);
   assert.match(summary, /not an official degree audit/);
-  assert.match(summary, /Program detected from Degree Works/);
-  assert.match(summary, /Courses to discuss with an advisor/);
+  assert.match(summary, /Current standing to review/);
+  assert.match(summary, /Degree Works program/);
+  assert.match(summary, /Courses I want to ask about/);
   assert.ok(summary.length < 1400);
 });
 

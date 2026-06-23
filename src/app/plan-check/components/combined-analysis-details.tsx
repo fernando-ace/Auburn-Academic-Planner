@@ -39,8 +39,8 @@ export function PlannedPathOverviewCard({
       </div>
       {!result.plannedPathCoverage ? (
         <p className="mt-4 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[13px] leading-5 text-sky-900">
-          Upload a Current Progress audit too for coverage against your actual
-          Degree Works requirements.
+          Upload Current Progress too to compare this plan against your actual
+          remaining Degree Works requirements.
         </p>
       ) : null}
     </section>

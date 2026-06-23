@@ -487,7 +487,7 @@ function buildPlannedPathAdvisorSummary(result: CombinedDegreeWorksUploadResult)
   const coverage = result.plannedPathCoverage;
   const mainResult = coverage
     ? `${coverage.coveredStillNeededItems.length} requirements appear covered, ${coverage.partiallyCoveredStillNeededItems.length + coverage.advisorReviewStillNeededItems.length} need review, ${coverage.uncoveredStillNeededItems.length} are not clearly covered.`
-    : "Upload a Current Progress audit too to compare this plan against actual Degree Works requirements.";
+    : "Upload Current Progress too to compare this plan against your actual remaining Degree Works requirements.";
   const lines = [
     "Advisor Meeting Summary",
     "",
