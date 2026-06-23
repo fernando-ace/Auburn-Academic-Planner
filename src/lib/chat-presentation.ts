@@ -43,6 +43,51 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
 const TRANSFER_CREDIT_INTENT =
   /\btransfer\s+credits?\b|\btransfer\b.*\bcredits?\b|\bcredits?\b.*\btransfer\b|\bcredit\s+tables?\b|\bap\s+credit\b/i;
 
+const CORE_CURRICULUM_INTENT =
+  /\bcore\s+curriculum\b|\bgeneral\s+education\b|\bcore\s+requirements?\b/i;
+
+const MAJOR_REQUIREMENT_INTENT =
+  /\b(?:requirements?|requires?|require)\b.*\b(?:major|program|degree)\b|\b(?:requirements?|requires?|require)\b.*\bfor\b|\bmajor\b.*\b(?:requirements?|requires?|require)\b|\bprogram\b.*\b(?:requirements?|requires?|require)\b/i;
+
+const MAJOR_QUERY_STOP_WORDS = new Set([
+  "auburn",
+  "degree",
+  "does",
+  "for",
+  "major",
+  "program",
+  "require",
+  "required",
+  "requirement",
+  "requirements",
+  "requires",
+  "the",
+  "what",
+  "work",
+]);
+
+const BROAD_POLICY_SOURCE_TYPES = new Set([
+  "advising",
+  "ap_credit",
+  "core_curriculum",
+  "course_catalog",
+  "registrar",
+  "transfer_credit",
+]);
+
+const TRANSFER_SOURCE_TYPES = new Set([
+  "ap_credit",
+  "registrar",
+  "transfer_credit",
+]);
+
+const CORE_SOURCE_TYPES = new Set([
+  "advising",
+  "core_curriculum",
+  "course_catalog",
+  "registrar",
+]);
+
 function decodeCommonHtmlEntities(value: string) {
   const entities: Record<string, string> = {
     "&amp;": "&",
@@ -51,6 +96,8 @@ function decodeCommonHtmlEntities(value: string) {
     "&nbsp;": " ",
     "&quot;": '"',
     "&#39;": "'",
+    "&mdash;": "-",
+    "&ndash;": "-",
   };
 
   return value.replace(
@@ -71,6 +118,184 @@ function stripHtmlExtractionFragments(value: string) {
     .replace(/\s*&+\s*/g, " ");
 }
 
+function compactText(value: string) {
+  return normalizeText(value).replace(/\s+/g, "");
+}
+
+function normalizeText(value: string) {
+  return decodeCommonHtmlEntities(value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u2010-\u2015]/g, " ")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizedTokens(value: string) {
+  return normalizeText(value)
+    .split(" ")
+    .filter((token) => token.length > 1 && !MAJOR_QUERY_STOP_WORDS.has(token));
+}
+
+function sourceSearchText(source: PresentableChatSource) {
+  return `${source.title} ${source.program ?? ""} ${source.fileName ?? ""}`;
+}
+
+function isBulletinMajorSource(source: PresentableChatSource) {
+  return source.sourceType === "bulletin_major";
+}
+
+function isBroadPolicySource(source: PresentableChatSource) {
+  return source.sourceType ? BROAD_POLICY_SOURCE_TYPES.has(source.sourceType) : false;
+}
+
+function titleBase(title: string) {
+  return normalizeText(title.split(/\s[-\u2010-\u2015]\s|:/)[0] ?? title);
+}
+
+function majorQuestionCandidates(question: string) {
+  if (!MAJOR_REQUIREMENT_INTENT.test(question)) {
+    return [];
+  }
+
+  const candidates: string[] = [];
+  const patterns = [
+    /\brequirements?\s+for\s+(?:the\s+)?(.+?)(?:\s+(?:major|program|degree))?(?:\?|$)/i,
+    /\bwhat\s+are\s+the\s+requirements?\s+for\s+(?:the\s+)?(.+?)(?:\s+(?:major|program|degree))?(?:\?|$)/i,
+    /\bwhat\s+does\s+(?:the\s+)?(.+?)\s+(?:major|program|degree)\s+require\b/i,
+    /\b(?:the\s+)?(.+?)\s+(?:major|program|degree)\s+requirements?\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = question.match(pattern);
+    const candidate = normalizeText(match?.[1] ?? "");
+    if (candidate) {
+      candidates.push(candidate);
+    }
+  }
+
+  return Array.from(new Set(candidates));
+}
+
+function majorSourceMatchScore(
+  question: string,
+  source: PresentableChatSource,
+  candidates: string[],
+) {
+  if (!isBulletinMajorSource(source)) {
+    return 0;
+  }
+
+  const sourceText = normalizeText(sourceSearchText(source));
+  const sourceCompact = compactText(sourceSearchText(source));
+  const normalizedTitle = normalizeText(source.title);
+  const normalizedTitleBase = titleBase(source.title);
+  const questionText = normalizeText(question);
+  const questionCompact = compactText(question);
+  const queryTokens = normalizedTokens(question);
+
+  for (const candidate of candidates) {
+    const candidateCompact = compactText(candidate);
+    if (!candidateCompact) {
+      continue;
+    }
+
+    if (normalizedTitle === candidate || normalizedTitleBase === candidate) {
+      return 120;
+    }
+
+    if (
+      normalizedTitle.startsWith(`${candidate} `) ||
+      normalizedTitleBase.startsWith(`${candidate} `)
+    ) {
+      return 105;
+    }
+
+    if (sourceText.includes(candidate) || sourceCompact.includes(candidateCompact)) {
+      return 95;
+    }
+  }
+
+  if (
+    queryTokens.some(
+      (token) =>
+        normalizedTitle === token ||
+        normalizedTitleBase === token ||
+        normalizedTitle.startsWith(`${token} `) ||
+        sourceText.includes(` ${token} `) ||
+        sourceCompact.includes(token),
+    )
+  ) {
+    return 80;
+  }
+
+  if (
+    normalizedTitle.length > 0 &&
+    (questionText.includes(normalizedTitle) ||
+      questionCompact.includes(compactText(normalizedTitleBase)))
+  ) {
+    return 80;
+  }
+
+  return 0;
+}
+
+function filterMajorSpecificSources(
+  question: string,
+  sources: PresentableChatSource[],
+) {
+  const candidates = majorQuestionCandidates(question);
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const scoredSources = sources.map((source, index) => ({
+    source,
+    index,
+    majorScore: majorSourceMatchScore(question, source, candidates),
+  }));
+  const bestMajorScore = Math.max(...scoredSources.map((item) => item.majorScore));
+
+  if (bestMajorScore < 80) {
+    return null;
+  }
+
+  return scoredSources
+    .filter(
+      ({ source, majorScore }) =>
+        majorScore > 0 || (isBroadPolicySource(source) && !isBulletinMajorSource(source)),
+    )
+    .map(({ source, index, majorScore }) => ({
+      source,
+      index,
+      score: relevanceScore(question, source) + majorScore,
+    }));
+}
+
+function filterBroadTopicSources(
+  question: string,
+  sources: PresentableChatSource[],
+) {
+  const sourceTypes = CORE_CURRICULUM_INTENT.test(question)
+    ? CORE_SOURCE_TYPES
+    : TRANSFER_CREDIT_INTENT.test(question)
+      ? TRANSFER_SOURCE_TYPES
+      : null;
+
+  if (!sourceTypes) {
+    return null;
+  }
+
+  const broadSources = sources.filter(
+    (source) => source.sourceType && sourceTypes.has(source.sourceType),
+  );
+
+  return broadSources.length > 0 ? broadSources : null;
+}
+
 export function sanitizeAssistantMarkdown(value: string) {
   return value
     .replace(/\r\n?/g, "\n")
@@ -84,6 +309,9 @@ export function cleanSourcePreview(value?: string, maxLength = 240) {
     return SOURCE_PREVIEW_FALLBACK;
   }
 
+  const rawSnippetLooksBroken =
+    /<(?:table|tbody|thead|tr|td|th)\b|<\/(?:table|tbody|thead|tr|td|th)>/i.test(value) ||
+    /(?:^|\s)(?:rowspan|colspan|class|style|onclick|href|aria-[\w-]+)\s*=/i.test(value);
   const cleaned = stripHtmlExtractionFragments(decodeCommonHtmlEntities(value))
     .replace(/==+\s*(?:start|end)\s+of\s+(?:pdf|ocr|page[^=]*)==+/gi, " ")
     .replace(/(?:^|\s)(?:[-=]{2,}\s*)?page\s+\d+(?:\s+of\s+\d+)?(?:\s*[-=]{2,})?(?=\s|$)/gi, " ")
@@ -94,6 +322,10 @@ export function cleanSourcePreview(value?: string, maxLength = 240) {
   const looksLikeMarkup = /<\/?\w|\{\s*[\w-]+\s*:|\b(?:function|DOCTYPE)\b/i.test(
     cleaned,
   );
+
+  if (rawSnippetLooksBroken && (words.length < 7 || looksLikeMarkup)) {
+    return SOURCE_PREVIEW_FALLBACK;
+  }
 
   if (cleaned.length < 40 || words.length < 7 || looksLikeMarkup) {
     return SOURCE_PREVIEW_FALLBACK;
@@ -184,6 +416,10 @@ function relevanceScore(question: string, source: PresentableChatSource) {
     if (source.sourceType === "ap_credit") score += 55;
     if (/transfer\s+credit/i.test(normalizedSource)) score += 35;
   }
+  if (CORE_CURRICULUM_INTENT.test(question)) {
+    if (source.sourceType === "core_curriculum") score += 90;
+    if (/core\s+curriculum|general\s+education/i.test(normalizedSource)) score += 35;
+  }
   if (/\bdashboard\b/i.test(question) && /dashboard/.test(normalizedSource)) {
     score += 60;
   }
@@ -215,6 +451,11 @@ export function selectDisplaySources(
             !source.program || source.program === mentionedPrograms[0],
         )
       : sourceTypeEligible;
+  const broadTopicSources = filterBroadTopicSources(question, eligible);
+  const majorSpecificSources = broadTopicSources
+    ? null
+    : filterMajorSpecificSources(question, eligible);
+  const displayEligible = broadTopicSources ?? eligible;
 
   if (eligible.length === 0) {
     const fallback = sources
@@ -231,8 +472,11 @@ export function selectDisplaySources(
     ];
   }
 
-  return eligible
-    .map((source, index) => ({ source, index, score: relevanceScore(question, source) }))
+  return (majorSpecificSources ?? displayEligible.map((source, index) => ({
+    source,
+    index,
+    score: relevanceScore(question, source),
+  })))
     .sort((left, right) => right.score - left.score || left.index - right.index)
     .slice(0, limit)
     .map(({ source }) => ({
