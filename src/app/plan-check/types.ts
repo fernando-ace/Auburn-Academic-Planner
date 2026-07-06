@@ -19,6 +19,7 @@ import type { DegreeWorksSemesterExtraction } from "@/lib/plan/degreeworks-semes
 import type { DegreeWorksStillNeededItem } from "@/lib/plan/degreeworks-still-needed";
 import type { DegreeWorksCourseStatusCounts, DegreeWorksCourseStatusRecord } from "@/lib/plan/degreeworks-course-status";
 import type { PlannedPathCoverage } from "@/lib/plan/planned-path-coverage";
+import type { GeneratedPlannedPath } from "@/lib/plan/generated-planned-path";
 
 export type DegreeWorksNativeTarget = "degreeworks_native";
 
@@ -55,12 +56,14 @@ export type CurrentDegreeWorksUploadResult = {
     incompleteBlocks: CurrentDegreeAuditAnalysis["requirementBlocks"];
     stillNeededItems: DegreeWorksStillNeededItem[];
     currentStateSuggestions: CurrentStateNextSteps | null;
+    generatedPlannedPath?: GeneratedPlannedPath | null;
     advisorQuestions: string[];
     advisorMeetingSummary: string;
   };
   currentProgressAnalysis: CurrentDegreeAuditAnalysis;
   currentStateGapReport: CurrentStateGapReport;
   currentStateNextSteps: CurrentStateNextSteps;
+  generatedPlannedPath: GeneratedPlannedPath | null;
   advisorMeetingSummary: string;
   parserDiagnostics: {
     parserWarnings: string[];

@@ -316,10 +316,20 @@ function buildCompletedRows(text: string): CurrentDegreeAuditCourseStatusRecord[
 
     const courseIndex = match.index ?? 0;
     const nextCourseIndex = matches[index + 1]?.index;
-    const evidence = normalizeWhitespace(
-      text.slice(
-        Math.max(0, courseIndex - 80),
-        Math.min(text.length, nextCourseIndex ?? courseIndex + 220),
+    const evidence = sanitizeParserEvidence(
+      normalizeWhitespace(
+        text.slice(
+          courseIndex,
+          Math.min(text.length, nextCourseIndex ?? courseIndex + 220),
+        ),
+      ),
+    );
+    const statusEvidence = sanitizeParserEvidence(
+      normalizeWhitespace(
+        text.slice(
+          Math.max(0, courseIndex - 40),
+          Math.min(text.length, nextCourseIndex ?? courseIndex + 220),
+        ),
       ),
     );
     const grade = extractGrade(evidence);
@@ -330,7 +340,7 @@ function buildCompletedRows(text: string): CurrentDegreeAuditCourseStatusRecord[
 
     const transferEvidence =
       transferGradePattern.test(grade) ||
-      /\b(?:Transfer|Advanced Placement|AP|AICE|IB)\b/i.test(evidence);
+      /\b(?:Transfer|Advanced Placement|AP|AICE|IB)\b/i.test(statusEvidence);
     const completedEvidence = completedGradePattern.test(grade);
 
     if (!transferEvidence && !completedEvidence) {
@@ -365,16 +375,40 @@ function buildSectionRecords({
     return [];
   }
 
-  return extractCourseCodesFromText(text).map((code) => ({
-    code,
-    status,
-    title: extractCourseTitle(getEvidenceWindow(text, code), code),
-    termLabel: getEvidenceWindow(text, code).match(termPattern)?.[0],
-    grade: extractGrade(getEvidenceWindow(text, code)),
-    credits: extractNearbyCredits(getEvidenceWindow(text, code)),
-    rawEvidence: getEvidenceWindow(text, code),
-    confidence,
-  }));
+  return extractCourseCodesFromText(text).map((code) => {
+    const evidence = getCourseRowEvidence(text, code) ?? getEvidenceWindow(text, code);
+
+    return {
+      code,
+      status,
+      title: extractCourseTitle(evidence, code),
+      termLabel: evidence.match(termPattern)?.[0],
+      grade: extractGrade(evidence),
+      credits: extractNearbyCredits(evidence),
+      rawEvidence: evidence,
+      confidence,
+    };
+  });
+}
+
+function getCourseRowEvidence(text: string, code: string) {
+  const compactCodePattern = new RegExp(
+    `\\b${escapeRegExp(code).replace("\\ ", "\\s*")}\\b`,
+    "i",
+  );
+  const match = compactCodePattern.exec(text);
+  if (!match || typeof match.index !== "number") {
+    return null;
+  }
+
+  const nextCoursePattern = new RegExp(courseCodePattern.source, "g");
+  nextCoursePattern.lastIndex = match.index + match[0].length;
+  const nextCourse = nextCoursePattern.exec(text);
+  const endIndex = nextCourse?.index ?? match.index + 260;
+
+  return sanitizeParserEvidence(
+    normalizeWhitespace(text.slice(match.index, Math.min(text.length, endIndex))),
+  );
 }
 
 function addRecords(
@@ -511,9 +545,44 @@ function extractStillNeededTexts(text: string) {
   );
 
   return matches
-    .map((match) => normalizeWhitespace(match[1]))
+    .map((match) => sanitizeStillNeededEvidence(match[1]))
     .filter(Boolean)
     .slice(0, 30);
+}
+
+function sanitizeStillNeededEvidence(text: string) {
+  let normalized = sanitizeParserEvidence(normalizeWhitespace(text));
+  const boundaries = [
+    /\bAuburn\s+University\b/i,
+    /\bCourse\s+Title\s+Grade\s+Credits\s+Term\b/i,
+    /\bBlocks\s+included\s+in\s+this\s+block\b/i,
+    /\bPre-Requisites\b/i,
+    /\bCatalog\s+year\b/i,
+    /\bGPA\b/i,
+    /\bMath\s+Electives\b/i,
+    /\bProfessional\s+Development\s+I\b/i,
+    /\bProfessional\s+Development\s+II\b/i,
+    /\bProgram\s+Assessment\b/i,
+    /\bFine\s+Arts\s*:/i,
+    /\bEthics\s*:/i,
+    /\bHistory\s+Sequence\b/i,
+  ];
+
+  for (const boundary of boundaries) {
+    const match = boundary.exec(normalized);
+    if (match && typeof match.index === "number") {
+      normalized = normalized.slice(0, match.index).trim();
+    }
+  }
+
+  const rowBleedMatch = /\s+[A-Z]{2,4}\s*\d{4}\s+[A-Za-z][A-Za-z0-9 &/.'-]{2,80}\s+(?:--|A|B|C|D|S|P|CR|TR|TA|TP|AP)\s+\(?\d+(?:\.\d+)?\)?\s+(?:Spring|Summer|Fall|Winter)\s+20\d{2}\b/i.exec(
+    normalized,
+  );
+  if (rowBleedMatch && typeof rowBleedMatch.index === "number") {
+    normalized = normalized.slice(0, rowBleedMatch.index).trim();
+  }
+
+  return normalized;
 }
 
 function extractSatisfiedByTexts(text: string) {
@@ -522,7 +591,7 @@ function extractSatisfiedByTexts(text: string) {
       /\bSatisfied\s+by\s*:?\s*([\s\S]*?)(?=\bStill\s+needed\s*:|\bSatisfied\s+by\b|\bComplete\b|\bIncomplete\b|\bPreregistered\b|\bFall\s+Through\b|\bDisclaimer\b|$)/gi,
     ),
   )
-    .map((match) => normalizeWhitespace(match[1]))
+    .map((match) => sanitizeParserEvidence(normalizeWhitespace(match[1])))
     .filter(Boolean)
     .slice(0, 30);
 }
@@ -557,7 +626,7 @@ function extractNumericLabel(text: string, label: string) {
 
 function extractLabelText(text: string, label: string) {
   const match = new RegExp(
-    `\\b${escapeRegExp(label)}\\b\\s*:?\\s*([A-Za-z0-9][A-Za-z0-9 &/.-]{1,80}?)(?=\\s+\\b(?:Program|Major|Catalog year|Credits required|Credits applied|Audit date|Degree)\\b|$)`,
+    `\\b${escapeRegExp(label)}\\b\\s*:?\\s*([A-Za-z0-9][A-Za-z0-9 &/.-]{1,80}?)(?=\\s+\\b(?:Student name|Student ID|Program|Major|College|Catalog year|Credits required|Credits applied|Audit date|Degree|Degree progress|Overall GPA|Level|Classification|GPA|Unmet conditions)\\b|$)`,
     "i",
   ).exec(text);
 
@@ -608,7 +677,9 @@ function extractGrade(evidence: string) {
 function extractNearbyCredits(evidence: string) {
   const match =
     /\bCredits?\s*[:=-]?\s*(\d+(?:\.\d+)?)\b/i.exec(evidence) ??
-    /\b(\d+(?:\.\d+)?)\s+Credits?\b/i.exec(evidence);
+    /\b(\d+(?:\.\d+)?)\s+Credits?\b/i.exec(evidence) ??
+    /--\s*\((\d+(?:\.\d+)?)\)\s+(?:Spring|Summer|Fall|Winter)\s+20\d{2}\b/i.exec(evidence) ??
+    /(?:\b(?:A|B|C|D|S|P|CR|TR|TA|TP|AP)\b|--)\s+\(?(\d+(?:\.\d+)?)\)?\s+(?:Spring|Summer|Fall|Winter)\s+20\d{2}\b/i.exec(evidence);
 
   return match ? Number(match[1]) : null;
 }
@@ -621,6 +692,7 @@ function extractCourseTitle(evidence: string, code: string) {
 
   const afterCode = evidence.slice(codeIndex + code.length);
   const title = afterCode
+    .replace(/\s+--\s+\(?\d+(?:\.\d+)?\)?\s+(?:Spring|Summer|Fall|Winter)\s+20\d{2}\b[\s\S]*$/i, "")
     .replace(/\b(?:Grade|Credits?|Term)\b[\s\S]*$/i, "")
     .replace(/\b(?:A|B|C|D|S|P|CR|TR|TA|TP|AP)\b[\s\S]*$/i, "")
     .trim();
@@ -636,8 +708,10 @@ function getEvidenceWindow(text: string, code: string) {
   const match = compactCodePattern.exec(text);
   const index = match?.index ?? 0;
 
-  return normalizeWhitespace(
-    text.slice(Math.max(0, index - 180), Math.min(text.length, index + 240)),
+  return sanitizeParserEvidence(
+    normalizeWhitespace(
+      text.slice(Math.max(0, index - 180), Math.min(text.length, index + 240)),
+    ),
   );
 }
 
@@ -704,6 +778,16 @@ function getConfidence({
 
 function normalizeWhitespace(text: string) {
   return text.replace(/\s+/g, " ").trim();
+}
+
+function sanitizeParserEvidence(text: string) {
+  return text
+    .replace(/\bAuburn\s+University\s+[A-Za-z ,.'-]+-\s*\*+\d+\b/gi, "Auburn University")
+    .replace(/\bStudent\s+name\b[\s\S]{0,80}?\bStudent\s+ID\s+\*+\d+\b/gi, "Student record")
+    .replace(/\bOverall\s+GPA\s+\d+(?:\.\d+)?\b/gi, "")
+    .replace(/\bGPA:\s*\d+(?:\.\d+)?\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function escapeRegExp(value: string) {

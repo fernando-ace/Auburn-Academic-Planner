@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react";
+import { AlertCircle, CalendarDays, CheckCircle2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { CollapsibleDetails } from "@/components/ui-primitives";
@@ -36,6 +36,8 @@ export function CurrentProgressResultDetails({
 
   return (
     <div className="grid gap-5">
+      <GeneratedPlannedPathCard result={result} />
+
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -113,8 +115,8 @@ export function CurrentProgressResultDetails({
                     Advisor milestones
                   </p>
                   <ul className="mt-3 space-y-2">
-                    {nextSteps.advisorMilestones.map((item) => (
-                      <li className="flex gap-2 text-[13px] leading-5 text-slate-700" key={`${item.label}-${item.reason}`}>
+                    {nextSteps.advisorMilestones.map((item, index) => (
+                      <li className="flex gap-2 text-[13px] leading-5 text-slate-700" key={`${item.label}-${item.reason}-${index}`}>
                         <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-[#b84300]" size={15} />
                         <span>{item.label}</span>
                       </li>
@@ -129,8 +131,8 @@ export function CurrentProgressResultDetails({
                   title="Not suggested as new courses"
                 >
                   <ul className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                    {nextSteps.notYetRecommended.map((item) => (
-                      <li className="text-[13px] leading-5 text-slate-700" key={`${item.code}-${item.reason}`}>
+                    {nextSteps.notYetRecommended.map((item, index) => (
+                      <li className="text-[13px] leading-5 text-slate-700" key={`${item.code}-${item.reason}-${index}`}>
                         <span className="font-semibold text-slate-950">{item.code}</span>: {item.reason}
                       </li>
                     ))}
@@ -185,8 +187,8 @@ export function CurrentProgressResultDetails({
             {nextSteps.verificationItems.length > 0 ? (
               <ResultSection title="Preregistered and current-course verification">
                 <ul className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-                  {nextSteps.verificationItems.map((item) => (
-                    <li className="text-[13px] leading-5 text-slate-700" key={`${item.code}-${item.status}`}>
+                  {nextSteps.verificationItems.map((item, index) => (
+                    <li className="text-[13px] leading-5 text-slate-700" key={`${item.code}-${item.status}-${index}`}>
                       {item.reason}
                     </li>
                   ))}
@@ -321,6 +323,185 @@ export function CurrentProgressResultDetails({
   );
 }
 
+function GeneratedPlannedPathCard({
+  result,
+}: {
+  result: CurrentDegreeWorksUploadResult;
+}) {
+  const generatedPath = result.generatedPlannedPath;
+
+  if (!generatedPath) {
+    return (
+      <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-5">
+        <div className="flex gap-3 text-amber-900">
+          <AlertCircle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
+          <div>
+            <h2 className="text-[18px] font-semibold leading-7">
+              Generated Planned Path unavailable
+            </h2>
+            <p className="mt-1 text-[13px] leading-5">
+              Upload a readable Degree Works Worksheet audit so the planner can
+              generate a draft path from Current Progress evidence.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const creditTotals = getGeneratedPathCreditTotals(generatedPath);
+
+  return (
+    <section className="rounded-lg border border-[#03244d]/20 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+            Generated Planned Path
+          </p>
+          <h2 className="mt-2 text-[22px] font-semibold leading-8 text-slate-950">
+            Draft path from your Current Progress
+          </h2>
+          <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
+            A balanced draft built from Degree Works Still needed evidence.
+            Use it as advisor-prep, not as an official degree audit.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:w-[32rem]">
+          <Metric label="Start term" value={generatedPath.preferences.startTerm} />
+          <Metric label="Terms shown" value={generatedPath.terms.length} />
+          <Metric
+            label="Registered/current credits"
+            value={formatCredits(creditTotals.lockedCurrentCredits)}
+          />
+          <Metric
+            label="Remaining draft credits"
+            value={formatCredits(creditTotals.draftCredits)}
+          />
+          <Metric
+            label="Total shown"
+            value={formatCredits(creditTotals.totalDisplayedCredits)}
+          />
+          <Metric label="Confidence" value={generatedPath.confidence} />
+        </div>
+      </div>
+
+      {generatedPath.orderingSource.bulletinOrderingHint ? (
+        <p className="mt-4 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[13px] leading-5 text-sky-900">
+          Sequencing uses the checked-in Auburn Bulletin sample plan for{" "}
+          {generatedPath.orderingSource.bulletinOrderingHint.matchedMajorTitle}{" "}
+          only to order courses that Degree Works already lists as remaining.
+        </p>
+      ) : (
+        <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-600">
+          No matching checked-in Bulletin sample plan was found, so the draft
+          follows the order of Degree Works Still needed evidence.
+        </p>
+      )}
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {generatedPath.terms.length > 0 ? (
+          generatedPath.terms.map((term) => {
+            const termCreditBreakdown = getGeneratedPathTermCreditBreakdown(term);
+
+            return (
+              <div
+                className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                key={`${term.index}-${term.label}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 text-[15px] font-semibold leading-6 text-slate-950">
+                    <CalendarDays aria-hidden="true" className="text-[#03244d]" size={16} />
+                    {term.label}
+                  </h3>
+                  <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-600">
+                    {formatCredits(termCreditBreakdown.totalCredits)}
+                  </span>
+                </div>
+                {termCreditBreakdown.lockedCredits > 0 ? (
+                  <p className="mt-2 text-[12px] leading-5 text-slate-600">
+                    {formatCredits(termCreditBreakdown.lockedCredits)} registered/current;{" "}
+                    {formatCredits(termCreditBreakdown.draftCredits)} remaining draft.
+                  </p>
+                ) : null}
+                <ul className="mt-3 grid gap-2">
+                  {term.items.map((item, index) => (
+                    <li
+                      className={`rounded-md border p-3 ${
+                        item.locked
+                          ? "border-sky-200 bg-sky-50"
+                          : "border-slate-200 bg-white"
+                      }`}
+                      key={`${term.label}-${item.label}-${index}`}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-slate-950">{item.label}</span>
+                        <span className="rounded-sm border border-slate-200 bg-slate-50 px-2 py-1 text-[12px] font-semibold uppercase text-slate-600">
+                          {formatGeneratedPathItemKind(item.kind)}
+                        </span>
+                        {item.locked ? (
+                          <span className="rounded-sm border border-sky-200 bg-white px-2 py-1 text-[12px] font-semibold text-sky-800">
+                            locked from Current Progress
+                          </span>
+                        ) : null}
+                        <span className="text-[12px] text-slate-500">
+                          {formatCredits(item.credits)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-[12px] leading-5 text-slate-600">
+                        {item.reason}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                {term.warnings.length > 0 ? (
+                  <ul className="mt-3 space-y-1.5">
+                    {term.warnings.map((warning) => (
+                      <li className="flex gap-2 text-[12px] leading-5 text-amber-900" key={warning}>
+                        <AlertCircle aria-hidden="true" className="mt-0.5 shrink-0" size={14} />
+                        <span>{warning}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            );
+          })
+        ) : (
+          <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-500 md:col-span-2">
+            No exact courses or advisor-choice placeholders could be placed.
+            Review the advisor-review items below.
+          </p>
+        )}
+      </div>
+
+      {generatedPath.advisorReviewItems.length > 0 ||
+      generatedPath.unplacedItems.length > 0 ? (
+        <ResultSection title="Advisor-review items in this draft">
+          <ul className="grid gap-2 rounded-md border border-[#dd550c]/20 bg-[#fff7f1] p-3">
+            {[...generatedPath.advisorReviewItems, ...generatedPath.unplacedItems]
+              .slice(0, 10)
+              .map((item, index) => (
+                <li
+                  className="text-[13px] leading-5 text-slate-700"
+                  key={`${item.label}-${item.reason}-${index}`}
+                >
+                  <span className="font-semibold text-slate-950">{item.label}</span>:{" "}
+                  {item.reason}
+                </li>
+              ))}
+          </ul>
+        </ResultSection>
+      ) : null}
+
+      <ul className="mt-4 space-y-1.5 text-[12px] leading-5 text-slate-500">
+        {generatedPath.notes.map((note) => (
+          <li key={note}>{note}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -328,6 +509,116 @@ function Metric({ label, value }: { label: string; value: string | number }) {
       <p className="mt-1 break-words text-[16px] font-semibold leading-6 text-slate-950">{value}</p>
     </div>
   );
+}
+
+function formatCredits(value: number) {
+  const normalized = Number(value.toFixed(1));
+  return normalized === 1 ? "1 credit" : `${normalized} credits`;
+}
+
+type GeneratedPathForDisplay = NonNullable<
+  CurrentDegreeWorksUploadResult["generatedPlannedPath"]
+>;
+type GeneratedPathTermForDisplay = GeneratedPathForDisplay["terms"][number];
+
+type GeneratedPathCreditBreakdown = {
+  lockedCredits: number;
+  draftCredits: number;
+  totalCredits: number;
+};
+
+type GeneratedPathCreditTotals = {
+  lockedCurrentCredits: number;
+  draftCredits: number;
+  totalDisplayedCredits: number;
+};
+
+function getGeneratedPathCreditTotals(
+  generatedPath: GeneratedPathForDisplay,
+): GeneratedPathCreditTotals {
+  const sourceTotals = generatedPath.creditTotals as
+    | Partial<GeneratedPathCreditTotals>
+    | undefined;
+  const lockedCurrentCredits = safeCreditNumber(sourceTotals?.lockedCurrentCredits);
+  const draftCredits = safeCreditNumber(sourceTotals?.draftCredits);
+  const totalDisplayedCredits = safeCreditNumber(sourceTotals?.totalDisplayedCredits);
+
+  if (
+    lockedCurrentCredits !== null &&
+    draftCredits !== null &&
+    totalDisplayedCredits !== null
+  ) {
+    return {
+      lockedCurrentCredits,
+      draftCredits,
+      totalDisplayedCredits,
+    };
+  }
+
+  const computed = generatedPath.terms.reduce(
+    (totals, term) => {
+      const termTotals = getGeneratedPathTermCreditBreakdown(term);
+      return {
+        lockedCurrentCredits: totals.lockedCurrentCredits + termTotals.lockedCredits,
+        draftCredits: totals.draftCredits + termTotals.draftCredits,
+        totalDisplayedCredits: totals.totalDisplayedCredits + termTotals.totalCredits,
+      };
+    },
+    {
+      lockedCurrentCredits: 0,
+      draftCredits: 0,
+      totalDisplayedCredits: 0,
+    },
+  );
+
+  return {
+    lockedCurrentCredits: Number(computed.lockedCurrentCredits.toFixed(1)),
+    draftCredits: Number(computed.draftCredits.toFixed(1)),
+    totalDisplayedCredits: Number(computed.totalDisplayedCredits.toFixed(1)),
+  };
+}
+
+function getGeneratedPathTermCreditBreakdown(
+  term: GeneratedPathTermForDisplay,
+): GeneratedPathCreditBreakdown {
+  const lockedCredits = safeCreditNumber(term.lockedCredits);
+  const draftCredits = safeCreditNumber(term.draftCredits);
+  const totalCredits = safeCreditNumber(term.plannedCredits) ?? 0;
+
+  if (lockedCredits !== null && draftCredits !== null) {
+    return {
+      lockedCredits,
+      draftCredits,
+      totalCredits: Number((lockedCredits + draftCredits).toFixed(1)),
+    };
+  }
+
+  const computedLockedCredits = term.items
+    .filter((item) => item.locked)
+    .reduce((sum, item) => sum + (safeCreditNumber(item.credits) ?? 0), 0);
+
+  return {
+    lockedCredits: Number(computedLockedCredits.toFixed(1)),
+    draftCredits: Number(Math.max(0, totalCredits - computedLockedCredits).toFixed(1)),
+    totalCredits,
+  };
+}
+
+function safeCreditNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function formatGeneratedPathItemKind(kind: string) {
+  switch (kind) {
+    case "registered":
+      return "registered";
+    case "current":
+      return "in progress";
+    case "placeholder":
+      return "advisor review";
+    default:
+      return kind;
+  }
 }
 
 function CourseCodeBucket({
@@ -384,8 +675,8 @@ function ExternalCreditBucket({ records }: { records: ExternalCreditRecord[] }) 
       <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">{records.length}</p>
       {records.length > 0 ? (
         <div className="mt-2 grid gap-1.5">
-          {records.slice(0, 5).map((record) => (
-            <div className="rounded-sm border border-slate-200 bg-white px-2 py-1.5" key={`${record.sourceCode}-${record.satisfiesCourseCode ?? record.displayName}`}>
+          {records.slice(0, 5).map((record, index) => (
+            <div className="rounded-sm border border-slate-200 bg-white px-2 py-1.5" key={`${record.sourceCode}-${record.satisfiesCourseCode ?? record.displayName}-${index}`}>
               <div className="flex flex-wrap items-center gap-1.5">
                 <SourceTypeBadge record={record} />
                 <span className="text-[12px] font-semibold leading-5 text-slate-800">{record.displayName}</span>
@@ -415,8 +706,8 @@ function ExternalCreditEvidence({ records }: { records: ExternalCreditRecord[] }
 
   return (
     <div className="grid gap-2">
-      {records.map((record) => (
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${record.sourceCode}-${record.satisfiesCourseCode ?? record.displayName}`}>
+      {records.map((record, index) => (
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${record.sourceCode}-${record.satisfiesCourseCode ?? record.displayName}-${index}`}>
           <div className="flex flex-wrap items-center gap-2">
             <SourceTypeBadge record={record} />
             <span className="font-semibold text-slate-950">{record.displayName}</span>
@@ -488,10 +779,10 @@ function ParsedCurrentCourseStatuses({
 
   return (
     <div className="grid gap-2">
-      {records.map((record) => (
+      {records.map((record, index) => (
         <ParsedCurrentCourseStatusCard
           externalCreditRecords={externalCreditRecords}
-          key={`${record.code}-${record.status}`}
+          key={`${record.code}-${record.status}-${record.termLabel ?? ""}-${index}`}
           record={record}
         />
       ))}

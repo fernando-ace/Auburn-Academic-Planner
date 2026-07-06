@@ -5,7 +5,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { POST as currentPost } from "../src/app/api/plan/analyze-degreeworks-current/upload/route.ts";
+import { POST as generatePathPost } from "../src/app/api/plan/generate-path/route.ts";
 import { POST as plannedPost } from "../src/app/api/plan/analyze-degreeworks/upload/route.ts";
+import { resetInMemoryRateLimits } from "../src/lib/api/rate-limit.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const fixtureDirectory = path.join(testDir, "fixtures", "degreeworks");
@@ -13,6 +15,8 @@ const plannedPathText =
   "Degree Works Plan Description Universal plan Total planned credits 122 Fall 2026 ACCT 2110 PHIL 1020 FREE 9999";
 
 test("current-progress upload route returns worksheet current-state response", async () => {
+  resetInMemoryRateLimits();
+
   const worksheetText = await readFile(
     path.join(fixtureDirectory, "worksheet-preregistered-sample.txt"),
     "utf8",
@@ -26,6 +30,8 @@ test("current-progress upload route returns worksheet current-state response", a
   const result = await response.json();
 
   assert.equal(response.status, 200);
+  assert.equal(result.sourceFileName, "Uploaded Degree Works PDF");
+  assert.notEqual(result.sourceFileName, "worksheet-current-progress.pdf");
   assert.equal(result.documentType, "worksheet_audit");
   assert.equal(result.currentProgressAnalysis.creditsRequired, 122);
   assert.ok(
@@ -43,6 +49,18 @@ test("current-progress upload route returns worksheet current-state response", a
     ),
   );
   assert.match(result.advisorMeetingSummary, /Advisor Meeting Summary/);
+  assert.ok(result.generatedPlannedPath);
+  assert.ok(
+    typeof result.generatedPlannedPath.creditTotals.lockedCurrentCredits === "number",
+  );
+  assert.ok(
+    typeof result.generatedPlannedPath.creditTotals.draftCredits === "number",
+  );
+  assert.match(
+    result.generatedPlannedPath.preferences.startTerm,
+    /^(Fall|Spring|Summer) 20\d{2}$/,
+  );
+  assert.ok(result.advisorMeetingSummary.includes("Generated draft path"));
 });
 
 test("current-progress upload route warns when a planned-path PDF is uploaded", async () => {
@@ -55,6 +73,8 @@ test("current-progress upload route warns when a planned-path PDF is uploaded", 
   const result = await response.json();
 
   assert.equal(response.status, 200);
+  assert.equal(result.sourceFileName, "Uploaded Degree Works PDF");
+  assert.notEqual(result.sourceFileName, "universal-plan.pdf");
   assert.equal(result.documentType, "planned_path");
   assert.equal(result.currentProgressAnalysis.confidence, "low");
   assert.equal(result.currentStateGapReport.overallStatus, "insufficient_data");
@@ -100,6 +120,8 @@ test("current-progress upload route includes external AP and transfer records", 
 });
 
 test("current-progress upload route returns universal native analysis", async () => {
+  resetInMemoryRateLimits();
+
   const worksheetText = await readFile(
     path.join(fixtureDirectory, "worksheet-business-audit-sample.txt"),
     "utf8",
@@ -118,6 +140,40 @@ test("current-progress upload route returns universal native analysis", async ()
   assert.ok(result.degreeWorksNativeAnalysis.stillNeededItems.length > 0);
   assert.equal(result.catalogEnrichmentResults, undefined);
   assert.equal(result.currentStateNextSteps.targetPath, "degreeworks_native");
+  assert.ok(result.generatedPlannedPath.placedItems.length > 0);
+});
+
+test("generated path route regenerates from current progress without a PDF upload", async () => {
+  resetInMemoryRateLimits();
+
+  const worksheetText = await readFile(
+    path.join(fixtureDirectory, "worksheet-business-audit-sample.txt"),
+    "utf8",
+  );
+  const currentResponse = await currentPost(
+    formDataRequest(
+      "http://localhost/api/plan/analyze-degreeworks-current/upload",
+      await pdfFileFromText(worksheetText, "worksheet-business.pdf"),
+    ),
+  );
+  const currentResult = await currentResponse.json();
+  const response = await generatePathPost(
+    jsonRequest("http://localhost/api/plan/generate-path", {
+      currentProgressAnalysis: currentResult.currentProgressAnalysis,
+      preferences: {
+        startTerm: "Spring 2027",
+        maxCreditsPerTerm: 9,
+        includeSummer: true,
+        maxSummerCredits: 6,
+      },
+    }),
+  );
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(result.generatedPlannedPath.preferences.startTerm, "Spring 2027");
+  assert.ok(result.generatedPlannedPath.terms.length > 0);
+  assert.match(result.advisorMeetingSummary, /Generated draft path/);
 });
 
 test("planned-path upload route returns Degree Works-native planned result", async () => {
@@ -130,6 +186,8 @@ test("planned-path upload route returns Degree Works-native planned result", asy
   const result = await response.json();
 
   assert.equal(response.status, 200);
+  assert.equal(result.sourceFileName, "Uploaded Degree Works PDF");
+  assert.notEqual(result.sourceFileName, "universal-plan.pdf");
   assert.equal(result.documentType, "planned_path");
   assert.ok(result.parsedCourseCount > 0);
   assert.equal(result.totalPlannedCredits, 122);
@@ -197,6 +255,14 @@ function formDataRequest(
   return new Request(url, {
     method: "POST",
     body: formData,
+  });
+}
+
+function jsonRequest(url: string, body: unknown) {
+  return new Request(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
 }
 

@@ -1,4 +1,3 @@
-import { validatePdfUpload } from "../../../../../lib/api/pdf-upload-validation.ts";
 import { checkRateLimit } from "../../../../../lib/api/rate-limit.ts";
 import { analyzeCombinedDegreeWorksText } from "../../../../../lib/plan/combined-degreeworks-analysis.ts";
 import { parseCurrentProgressAnalysisInput } from "../../../../../lib/plan/current-progress-analysis-input.ts";
@@ -6,10 +5,12 @@ import { comparePlannedPathToCurrentProgress } from "../../../../../lib/plan/pla
 
 export const runtime = "nodejs";
 
+export const MAX_MANUAL_PLANNED_COURSES_TEXT_LENGTH = 20_000;
+
 export async function POST(request: Request) {
   const rateLimit = await checkRateLimit(request, {
-    namespace: "planned-path-pdf",
-    limit: 8,
+    namespace: "manual-planned-path",
+    limit: 30,
     windowSeconds: 10 * 60,
   });
 
@@ -20,28 +21,45 @@ export async function POST(request: Request) {
     );
   }
 
-  const formData = await request.formData().catch(() => null);
+  const body = await request.json().catch(() => null);
 
-  if (!formData) {
+  if (!body || typeof body !== "object") {
     return Response.json(
-      { error: "Request body must be multipart/form-data." },
+      { error: "Request body must be JSON." },
       { status: 400 },
     );
   }
 
-  const uploadedFile = formData.get("file");
-  const currentProgressAnalysisValue = formData.get("currentProgressAnalysis");
+  const plannedCoursesText = (body as { plannedCoursesText?: unknown })
+    .plannedCoursesText;
 
-  const upload = await validatePdfUpload(uploadedFile);
-  if (!upload.ok) {
-    return Response.json({ error: upload.error }, { status: upload.status });
+  if (typeof plannedCoursesText !== "string" || !plannedCoursesText.trim()) {
+    return Response.json(
+      { error: "Paste at least one planned Auburn course before checking Planned Path." },
+      { status: 400 },
+    );
+  }
+
+  if (plannedCoursesText.length > MAX_MANUAL_PLANNED_COURSES_TEXT_LENGTH) {
+    return Response.json(
+      { error: "Pasted planned-course text is too long to process safely." },
+      { status: 413 },
+    );
   }
 
   const combinedAnalysis = analyzeCombinedDegreeWorksText({
-    text: upload.text,
+    text: plannedCoursesText,
   });
+
+  if (combinedAnalysis.parsedCourseCount === 0) {
+    return Response.json(
+      { error: "No Auburn course codes were found in the pasted planned courses." },
+      { status: 422 },
+    );
+  }
+
   const currentProgressAnalysis = parseCurrentProgressAnalysisInput(
-    currentProgressAnalysisValue,
+    (body as { currentProgressAnalysis?: unknown }).currentProgressAnalysis,
   );
   const plannedPathCoverage = currentProgressAnalysis
     ? comparePlannedPathToCurrentProgress({
@@ -51,15 +69,15 @@ export async function POST(request: Request) {
     : null;
 
   return Response.json({
-    sourceFileName: "Uploaded Degree Works PDF",
+    sourceFileName: "Manual planned courses",
     documentType: "planned_path",
     selectedTargetPath: "degreeworks_native",
     ...combinedAnalysis,
     ...(plannedPathCoverage ? { plannedPathCoverage } : {}),
     notes: [
-      "This combined Degree Works PDF analysis is not an official degree audit.",
+      "This manual planned-path analysis is not an official degree audit.",
       "Advisor verification is required before making registration, graduation, certificate, or degree-completion decisions.",
-      "Extracted PDF text can omit substitutions, exceptions, transfer equivalencies, catalog changes, and advisor-approved electives.",
+      "Manual planned-course text only includes the courses entered for this request.",
     ],
   });
 }

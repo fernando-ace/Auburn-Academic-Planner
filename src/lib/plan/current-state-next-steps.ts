@@ -6,6 +6,7 @@ import type {
 import type { DegreeWorksParserConfidence } from "./degreeworks-analysis.ts";
 import { formatExternalCreditAwareCode } from "./external-credit-display.ts";
 import { formatStillNeededItemForDisplay } from "./degreeworks-still-needed.ts";
+import type { GeneratedPlannedPath } from "./generated-planned-path.ts";
 
 export type CurrentStateGapReport = {
   overallStatus:
@@ -224,12 +225,23 @@ export function buildCurrentStateNextSteps({
 export function buildCurrentProgressAdvisorSummary({
   audit,
   gapReport,
+  generatedPlannedPath,
   nextSteps,
 }: {
   audit: CurrentDegreeAuditAnalysis;
   gapReport: CurrentStateGapReport;
+  generatedPlannedPath?: GeneratedPlannedPath | null;
   nextSteps: CurrentStateNextSteps;
 }) {
+  const generatedTerms = generatedPlannedPath?.terms ?? [];
+  const generatedCredits = generatedPlannedPath?.creditTotals.draftCredits ?? 0;
+  const lockedCredits = generatedPlannedPath?.creditTotals.lockedCurrentCredits ?? 0;
+  const visibleGeneratedItems =
+    generatedPlannedPath?.placedItems.slice(0, 6).map((item) => {
+      const credits = item.credits === 1 ? "1 credit" : `${item.credits} credits`;
+      const locked = item.locked ? ", registered/current" : "";
+      return `- ${item.label} (${credits}${locked})`;
+    }) ?? [];
   const lines = [
     "Advisor Meeting Summary",
     "",
@@ -239,10 +251,32 @@ export function buildCurrentProgressAdvisorSummary({
     `- Degree Works program: ${audit.detectedProgram.displayName}`,
     `- Credits: ${formatCreditSummary(audit)}`,
     `- Still-needed courses found in the audit: ${audit.stillNeededCourseCodes.length}`,
+  ];
+
+  if (generatedPlannedPath) {
+    lines.push(
+      "",
+      "Generated draft path to review:",
+      `- Start term: ${generatedPlannedPath.preferences.startTerm}`,
+      `- Draft terms: ${generatedTerms.length}`,
+      `- Draft credits placed: ${Number(generatedCredits.toFixed(1))}`,
+      `- Registered/current credits shown: ${Number(lockedCredits.toFixed(1))}`,
+      `- Advisor-review or unplaced items: ${
+        generatedPlannedPath.advisorReviewItems.length +
+        generatedPlannedPath.unplacedItems.length
+      }`,
+    );
+
+    if (visibleGeneratedItems.length > 0) {
+      lines.push("", "First placed items:", ...visibleGeneratedItems);
+    }
+  }
+
+  lines.push(
     "",
     "Top items to review:",
     ...gapReport.nextActions.slice(0, 4).map((item, index) => `${index + 1}. ${item}`),
-  ];
+  );
 
   if (nextSteps.suggestedCourses.length > 0) {
     lines.push(
@@ -255,7 +289,15 @@ export function buildCurrentProgressAdvisorSummary({
   lines.push(
     "",
     "Questions for my advisor:",
-    ...gapReport.advisorQuestions.slice(0, 5).map((question) => `- ${question}`),
+    ...(generatedPlannedPath
+      ? [
+          "Does this generated draft path put the remaining Degree Works requirements in the right order?",
+          "Are these semester credit loads reasonable for me?",
+          "Which advisor-review placeholders should become specific courses?",
+          "Do course availability, prerequisites, substitutions, AP/transfer, or Fall Through credits change this path?",
+        ]
+      : gapReport.advisorQuestions.slice(0, 5)
+    ).map((question) => `- ${question}`),
   );
 
   return lines.join("\n");

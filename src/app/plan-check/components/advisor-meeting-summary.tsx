@@ -4,10 +4,12 @@ export function AdvisorMeetingSummary({
   summary,
   copyStatus,
   onCopySummary,
+  title = "Advisor Meeting Summary",
 }: {
   summary: string;
   copyStatus: string | null;
   onCopySummary: () => void;
+  title?: string;
 }) {
   return (
     <section className="mb-5 overflow-hidden rounded-xl border border-[#03244d]/20 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05),0_10px_28px_rgba(15,23,42,0.04)]">
@@ -19,7 +21,7 @@ export function AdvisorMeetingSummary({
       <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-[18px] font-semibold leading-7 text-slate-950">
-            Advisor Meeting Summary
+            {title}
           </h2>
           <p className="mt-1 text-[13px] leading-5 text-slate-600">
             This is a preparation summary, not an official degree audit.

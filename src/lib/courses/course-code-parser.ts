@@ -1,30 +1,7 @@
-const coursePrefixes = [
-  "ACCT",
-  "BUAL",
-  "CHEM",
-  "CIVL",
-  "COMM",
-  "COMP",
-  "ECON",
-  "ELEC",
-  "ENGL",
-  "ENGR",
-  "FINC",
-  "HIST",
-  "INDD",
-  "MATH",
-  "MKTG",
-  "MNGT",
-  "MUSI",
-  "PHIL",
-  "POLI",
-  "SCMN",
-  "STAT",
-  "UNIV",
-] as const;
+import { AUBURN_COURSE_PREFIXES } from "./auburn-course-prefixes.generated.ts";
 
 const courseCodePattern = new RegExp(
-  `\\b(${coursePrefixes.join("|")})\\s*-?\\s*([0-9][0-9A-Z]{3})\\b`,
+  `\\b(${AUBURN_COURSE_PREFIXES.join("|")})\\s*-?\\s*([0-9][0-9A-Z]{3})\\b`,
   "gi",
 );
 

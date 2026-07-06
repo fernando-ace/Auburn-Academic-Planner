@@ -19,6 +19,7 @@ import {
 import { FormEvent, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
+import { StakeholderMoreMenu } from "@/components/stakeholder-more-menu";
 import {
   cleanSourcePreview,
   formatProgramLabel,
@@ -176,7 +177,7 @@ function PlanCheckCard() {
 
       <div className="mt-3 grid gap-2">
         <Link
-          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#dd550c] px-3 py-2 text-center text-[13px] font-semibold leading-5 text-white shadow-sm transition hover:bg-[#b84300]"
+        className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#b84300] px-3 py-2 text-center text-[13px] font-semibold leading-5 text-white shadow-sm transition hover:bg-[#8f3200]"
           href="/plan-check"
         >
           Open Planning Hub
@@ -192,7 +193,10 @@ function PlanningTopicsPanel({
   onSelect: (question: string) => void;
 }) {
   return (
-    <aside className="flex h-full flex-col border-r border-slate-200 bg-white">
+    <aside
+      aria-label="Planning topics"
+      className="flex h-full flex-col border-r border-slate-200 bg-white"
+    >
       <div className="border-b border-slate-200 px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[#03244d]">
@@ -268,7 +272,10 @@ function SourcesPanel({ message }: { message?: ChatMessage }) {
   const sources = message?.sources ?? [];
 
   return (
-    <aside className="flex h-full flex-col border-l border-slate-200 bg-white">
+    <aside
+      aria-label="Retrieved sources"
+      className="flex h-full flex-col border-l border-slate-200 bg-white"
+    >
       <div className="border-b border-slate-200 px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[#03244d]">
@@ -610,11 +617,12 @@ export function ChatWorkspace() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Link
-            className="inline-flex h-9 items-center rounded-lg bg-[#dd550c] px-3 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#b84300]"
+            className="inline-flex h-9 items-center rounded-lg bg-[#b84300] px-3 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#8f3200]"
             href="/plan-check"
           >
             Planning Hub
           </Link>
+          <StakeholderMoreMenu />
           <div className="hidden items-center gap-2 text-[13px] font-medium text-white/90 xl:flex">
             <MessageSquareText aria-hidden="true" size={18} />
             Academic Planning Assistant
@@ -719,7 +727,7 @@ export function ChatWorkspace() {
                 value={draft}
               />
               <button
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-[#dd550c] text-white transition hover:bg-[#c54908] disabled:cursor-not-allowed disabled:bg-slate-300 sm:h-12 sm:w-12"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-[#b84300] text-white transition hover:bg-[#8f3200] disabled:cursor-not-allowed disabled:bg-slate-300 sm:h-12 sm:w-12"
                 disabled={isLoading || !draft.trim()}
                 type="submit"
               >

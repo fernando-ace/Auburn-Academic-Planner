@@ -23,7 +23,8 @@ test("POST parses a Degree Works-native planned path upload", async () => {
   const result = await response.json();
 
   assert.equal(response.status, 200);
-  assert.equal(result.sourceFileName, "universal-plan.pdf");
+  assert.equal(result.sourceFileName, "Uploaded Degree Works PDF");
+  assert.notEqual(result.sourceFileName, "universal-plan.pdf");
   assert.equal(result.selectedTargetPath, "degreeworks_native");
   assert.equal(result.documentType, "planned_path");
   assert.ok(result.parsedCourseCodes.includes("ACCT 2110"));

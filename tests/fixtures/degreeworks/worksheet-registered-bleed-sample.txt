@@ -1,0 +1,49 @@
+Auburn University Degree Works Worksheet
+Student name Redacted Student
+Student ID *****0000
+Degree Bachelor of Software Engr
+Audit date 07/02/2026 1:51 AM
+Degree progress Overall GPA 3.52
+Level Undergraduate
+Classification Junior
+Major Software Engineering - SENG
+Program BSWE Software Engineering
+College College of Engineering
+Bachelor of Software Engineering INCOMPLETE
+Credits required: 122
+Credits applied: 83
+Catalog year: 2026-2027
+GPA: 3.52
+Unmet conditions for this set of requirements: 39 Credits needed
+
+Complete See Computing Foundation Requirements Below
+Satisfied by: COMP 1210 Fundamentals of Computing I Grade A Credits 4 Term Fall 2024
+Satisfied by: COMP 2210 Fundamentals of Computing II Grade A Credits 4 Term Spring 2026
+Satisfied by: COMP 4200 Program Assessment Grade S Credits 0 Term Spring 2026
+
+Incomplete See Software Engineering Major Courses section
+Still needed: 3 Credits in COMP 3220
+Still needed: 3 Credits in COMP 3500
+Still needed: 3 Credits in COMP 3700
+Still needed: 3 Credits in COMM 1000 Math Electives STAT 3600 Probability And Statistics I -- (3) Fall 2026 (R)
+Still needed: 3 Credits in MATH 2630 or 2637 or 2650 or 4@ or 5@ or STAT 3@ or 4@ or 5@ Except STAT 3010 Professional Development I COMP 2800 Professional Development I -- (1) Fall 2026 (R)
+Still needed: 3 Credits in ENGL 2200 or 2207 Registered Composition ENGL 2200 Technical Writing -- (3) Fall 2026 (R)
+Still needed: 3 Credits in PHIL 1110 or 1020 or 1027 History Sequence Completed. Auburn University Redacted Student - *****0000 Pre-Requisites
+Still needed: 9 Credits in COMP 4200 or 5970 or 5130 or 5210 or 5320 or 5340
+
+Preregistered
+Credits applied: 16
+Classes applied: 6
+Course Title Grade Credits Term Repeated
+COMP 2710 Software Construction -- (3) Fall 2026 (R)
+COMP 2800 Professional Development I -- (1) Fall 2026 (R)
+COMP 3270 Introduction To Algorithms -- (3) Fall 2026 (R)
+COMP 3350 Comp Org And Assembly Lang Pgm -- (3) Fall 2026 (R)
+STAT 3010 Stats For Engineers And Sci -- (3) Fall 2026 (R)
+STAT 3600 Probability And Statistics I -- (3) Fall 2026 (R)
+ENGL 2200 Technical Writing -- (3) Fall 2026 (R)
+
+Fall Through
+COMP 9999 Non-degree sample course -- (3) Fall 2026 (R)
+
+Disclaimer: This redacted synthetic audit is not an official record.

@@ -3,10 +3,24 @@ import {
   logRetrievalDebug,
   parseChatRequestBody,
 } from "@/lib/gemini-rag";
+import { checkRateLimit } from "@/lib/api/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const rateLimit = await checkRateLimit(request, {
+    namespace: "chat",
+    limit: 20,
+    windowSeconds: 10 * 60,
+  });
+
+  if (!rateLimit.ok) {
+    return Response.json(
+      { error: rateLimit.error },
+      { status: rateLimit.status },
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const messages = parseChatRequestBody(body);
 

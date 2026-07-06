@@ -67,6 +67,47 @@ test("extracts preregistered courses without treating them as new suggestions", 
   );
 });
 
+test("parses registered Degree Works rows without leaking adjacent evidence", async () => {
+  const analysis = await analyzeFixture("worksheet-registered-bleed-sample.txt");
+  const comp2800 = analysis.courseStatusRecords.find(
+    (record) => record.code === "COMP 2800",
+  );
+  const stat3600 = analysis.courseStatusRecords.find(
+    (record) => record.code === "STAT 3600",
+  );
+  const phil1110 = analysis.courseStatusRecords.find(
+    (record) => record.code === "PHIL 1110",
+  );
+  const commRequirement = analysis.stillNeededItems.find(
+    (item) => item.requirementLabel === "COMM 1000",
+  );
+  const mathRequirement = analysis.stillNeededItems.find((item) =>
+    item.requirementLabel.includes("MATH 2630"),
+  );
+
+  assert.equal(analysis.detectedProgram.degree, "Bachelor of Software Engr");
+  assert.ok(comp2800);
+  assert.equal(comp2800.status, "preregistered");
+  assert.equal(comp2800.termLabel, "Fall 2026");
+  assert.equal(comp2800.credits, 1);
+  assert.ok(stat3600);
+  assert.equal(stat3600.status, "preregistered");
+  assert.equal(stat3600.credits, 3);
+  assert.notEqual(phil1110?.status, "completed");
+  assert.ok(commRequirement);
+  assert.deepEqual(commRequirement.courseOptions, ["COMM 1000"]);
+  assert.ok(mathRequirement);
+  assert.ok(!mathRequirement.courseOptions.includes("COMP 2800"));
+  assert.ok(!mathRequirement.courseOptions.includes("STAT 3010"));
+  assert.ok(
+    analysis.courseStatusRecords.every(
+      (record) =>
+        !record.rawEvidence?.includes("Redacted Student") &&
+        !record.rawEvidence?.includes("*****0000"),
+    ),
+  );
+});
+
 test("extracts AP/transfer and fall-through status evidence", async () => {
   const analysis = await analyzeFixture("worksheet-transfer-ap-sample.txt");
   const gapReport = buildCurrentStateGapReport({ audit: analysis });

@@ -65,7 +65,7 @@ function inferProgramKey(text: string): DegreeWorksProgramKey {
 
 function extractDegree(text: string) {
   const match =
-    /\bDegree\s*:?\s*([A-Za-z][A-Za-z0-9 ./&-]{1,80})/i.exec(text) ??
+    /\bDegree\s*:?\s*([A-Za-z][A-Za-z0-9 ./&-]{1,80}?)(?=\s+\b(?:Audit date|Degree progress|Program|Major|College|Credits required|Catalog year|GPA|Unmet conditions)\b|$)/i.exec(text) ??
     /\b(?:Bachelor|Master|B[.]?S[.]?|BBA|BA)\b[ A-Za-z./&-]{0,80}/i.exec(text);
 
   return cleanLabel(match?.[1] ?? match?.[0]);

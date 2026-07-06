@@ -1,4 +1,5 @@
 import { validatePdfUpload } from "../../../../../lib/api/pdf-upload-validation.ts";
+import { checkRateLimit } from "../../../../../lib/api/rate-limit.ts";
 import {
   analyzeCurrentDegreeAuditText,
   emptyCurrentDegreeAuditAnalysis,
@@ -9,10 +10,27 @@ import {
   buildCurrentStateGapReport,
   buildCurrentStateNextSteps,
 } from "../../../../../lib/plan/current-state-next-steps.ts";
+import {
+  buildGeneratedPlannedPath,
+  parseGeneratedPathPreferences,
+} from "../../../../../lib/plan/generated-planned-path.ts";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const rateLimit = await checkRateLimit(request, {
+    namespace: "current-progress-pdf",
+    limit: 8,
+    windowSeconds: 10 * 60,
+  });
+
+  if (!rateLimit.ok) {
+    return Response.json(
+      { error: rateLimit.error },
+      { status: rateLimit.status },
+    );
+  }
+
   const formData = await request.formData().catch(() => null);
 
   if (!formData) {
@@ -23,6 +41,7 @@ export async function POST(request: Request) {
   }
 
   const uploadedFile = formData.get("file");
+  const generatedPathPreferencesValue = formData.get("generatedPathPreferences");
   const upload = await validatePdfUpload(uploadedFile);
 
   if (!upload.ok) {
@@ -37,7 +56,7 @@ export async function POST(request: Request) {
     );
 
     return Response.json({
-      sourceFileName: upload.fileName,
+      sourceFileName: "Uploaded Degree Works PDF",
       selectedTargetPath: "degreeworks_native",
       documentType: documentTypeDetection.documentType,
       documentTypeDetection,
@@ -87,6 +106,7 @@ export async function POST(request: Request) {
           "No current-progress suggestions were produced because the PDF was not detected as a worksheet audit.",
         ],
       },
+      generatedPlannedPath: null,
       advisorMeetingSummary:
         "Advisor Meeting Summary\n\nThe uploaded PDF was not confidently detected as a Degree Works Worksheet audit. Re-export the Worksheet audit PDF for Current Progress, or use Planned Path for a Degree Works Plan PDF.",
       parserDiagnostics: {
@@ -108,14 +128,19 @@ export async function POST(request: Request) {
   const currentStateNextSteps = buildCurrentStateNextSteps({
     audit: currentProgressAnalysis,
   });
+  const generatedPlannedPath = buildGeneratedPlannedPath({
+    audit: currentProgressAnalysis,
+    preferences: parseGeneratedPathPreferences(generatedPathPreferencesValue),
+  });
   const advisorMeetingSummary = buildCurrentProgressAdvisorSummary({
     audit: currentProgressAnalysis,
     gapReport: currentStateGapReport,
+    generatedPlannedPath,
     nextSteps: currentStateNextSteps,
   });
 
   return Response.json({
-    sourceFileName: upload.fileName,
+    sourceFileName: "Uploaded Degree Works PDF",
     selectedTargetPath: "degreeworks_native",
     documentType: "worksheet_audit",
     documentTypeDetection,
@@ -129,12 +154,14 @@ export async function POST(request: Request) {
       incompleteBlocks: currentStateGapReport.incompleteBlocks,
       stillNeededItems: currentProgressAnalysis.stillNeededItems,
       currentStateSuggestions: currentStateNextSteps,
+      generatedPlannedPath,
       advisorQuestions: currentStateGapReport.advisorQuestions,
       advisorMeetingSummary,
     },
     currentProgressAnalysis,
     currentStateGapReport,
     currentStateNextSteps,
+    generatedPlannedPath,
     advisorMeetingSummary,
     parserDiagnostics: {
       parserWarnings: currentProgressAnalysis.parserWarnings,

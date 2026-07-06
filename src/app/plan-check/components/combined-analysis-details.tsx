@@ -61,14 +61,14 @@ export function CombinedDegreeWorksParsedDetails({
         <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
-              Degree Works PDF
+              Planning input
             </p>
             <h2 className="mt-2 text-[20px] font-semibold leading-7 text-slate-950">
               Parsed details
             </h2>
             <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
-              This evidence comes from the uploaded PDF text. Advisor
-              verification is required.
+              This evidence comes from uploaded PDF text or pasted
+              planned-course text. Advisor verification is required.
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:w-[34rem]">

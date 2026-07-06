@@ -33,6 +33,13 @@ test("parses course codes without spaces", () => {
   ]);
 });
 
+test("parses catalog-derived Auburn prefixes across programs", () => {
+  assert.deepEqual(
+    parseCourseCodes("AERO 2200, BIOL1020, CSES 2040, NURS 3100, COMP 5600"),
+    ["AERO 2200", "BIOL 1020", "CSES 2040", "NURS 3100", "COMP 5600"],
+  );
+});
+
 test("parses pasted Degree Works style text with titles and credits", () => {
   const degreeWorksText = `
     Still Needed:

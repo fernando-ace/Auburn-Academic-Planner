@@ -118,12 +118,13 @@ export function formatStillNeededItemForDisplay(
 }
 
 export function extractStillNeededCourseOptions(text: string) {
-  const directCodes = parseCourseCodes(text);
+  const optionText = text.split(/\bExcept\b/i)[0] ?? text;
+  const directCodes = parseCourseCodes(optionText);
   const options = [...directCodes];
   const firstPrefix = directCodes[0]?.split(" ")[0];
 
   if (firstPrefix) {
-    for (const match of text.matchAll(/\b(?:or|,|and)\s+(\d{4}[A-Z]?)\b/gi)) {
+    for (const match of optionText.matchAll(/\b(?:or|,|and)\s+(\d{4}[A-Z]?)\b/gi)) {
       options.push(`${firstPrefix} ${match[1].toUpperCase()}`);
     }
   }

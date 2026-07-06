@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
 
+import { StakeholderMoreMenu } from "@/components/stakeholder-more-menu";
 import { EmptyState } from "@/components/ui-primitives";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
 import {
@@ -21,23 +22,39 @@ import {
 import { CurrentProgressResultDetails } from "./components/current-progress-details";
 import {
   DegreeWorksWorkflowUploadSection,
-  type PlanCheckWorkflowMode,
+  type PlannedPathInputMode,
+  type PlanCheckStep,
 } from "./components/plan-check-input-sections";
 import type {
   CombinedDegreeWorksUploadResult,
   CurrentDegreeWorksUploadResult,
 } from "./types";
+import type { GeneratedPathPreferences } from "@/lib/plan/generated-planned-path";
 
 const combinedDegreeWorksUploadEndpoint =
   "/api/plan/analyze-degreeworks/upload";
 const currentDegreeWorksUploadEndpoint =
   "/api/plan/analyze-degreeworks-current/upload";
+const generatedPlannedPathEndpoint = "/api/plan/generate-path";
+const manualPlannedPathEndpoint =
+  "/api/plan/analyze-degreeworks/manual";
 
 export default function PlanCheckPage() {
   const [selectedCombinedDegreeWorksPdfFile, setSelectedCombinedDegreeWorksPdfFile] =
     useState<File | null>(null);
-  const [selectedWorkflowMode, setSelectedWorkflowMode] =
-    useState<PlanCheckWorkflowMode>("current_progress");
+  const [activeStep, setActiveStep] =
+    useState<PlanCheckStep>("current_progress");
+  const [plannedPathInputMode, setPlannedPathInputMode] =
+    useState<PlannedPathInputMode>("pdf");
+  const [manualPlannedCoursesText, setManualPlannedCoursesText] =
+    useState("");
+  const [generatedPathPreferences, setGeneratedPathPreferences] =
+    useState<GeneratedPathPreferences>({
+      startTerm: "Fall 2026",
+      maxCreditsPerTerm: 15,
+      includeSummer: false,
+      maxSummerCredits: 6,
+    });
   const [combinedDegreeWorksResult, setCombinedDegreeWorksResult] =
     useState<CombinedDegreeWorksUploadResult | null>(null);
   const [currentDegreeWorksResult, setCurrentDegreeWorksResult] =
@@ -101,26 +118,58 @@ export default function PlanCheckPage() {
       }
 
       const combinedPayload = payload as CombinedDegreeWorksUploadResult;
-      const sharedPlanFields = {
-        planDescription: "Combined Degree Works PDF analysis",
-        sourceFileName: combinedPayload.sourceFileName,
-        parsedCourseCodes: combinedPayload.parsedCourseCodes,
-        parsedCourseCount: combinedPayload.parsedCourseCount,
-        detectedSignals: combinedPayload.detectedSignals,
-        courseStatusRecords: combinedPayload.courseStatusRecords,
-        courseStatusCounts: combinedPayload.courseStatusCounts,
-        parserWarnings: combinedPayload.parserWarnings,
-        parserConfidence: combinedPayload.parserConfidence,
-      };
-
       setCombinedDegreeWorksResult(combinedPayload);
-      void sharedPlanFields;
     } catch (fetchError) {
       setCombinedDegreeWorksResult(null);
       setCombinedDegreeWorksError(
         fetchError instanceof Error
           ? fetchError.message
           : "The combined Degree Works PDF analysis could not run.",
+      );
+    } finally {
+      setIsCombinedDegreeWorksLoading(false);
+    }
+  }
+
+  async function runManualPlannedPathCheck(
+    plannedCoursesText: string,
+    currentProgressAnalysis?: CurrentDegreeWorksUploadResult["currentProgressAnalysis"],
+  ) {
+    if (isCombinedDegreeWorksLoading) {
+      return;
+    }
+
+    setIsCombinedDegreeWorksLoading(true);
+    setCombinedDegreeWorksError(null);
+
+    try {
+      const response = await fetch(manualPlannedPathEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plannedCoursesText,
+          ...(currentProgressAnalysis ? { currentProgressAnalysis } : {}),
+        }),
+      });
+      const payload = (await response.json()) as
+        | CombinedDegreeWorksUploadResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The manual planned-path analysis could not run.",
+        );
+      }
+
+      setCombinedDegreeWorksResult(payload as CombinedDegreeWorksUploadResult);
+    } catch (fetchError) {
+      setCombinedDegreeWorksResult(null);
+      setCombinedDegreeWorksError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The manual planned-path analysis could not run.",
       );
     } finally {
       setIsCombinedDegreeWorksLoading(false);
@@ -141,6 +190,10 @@ export default function PlanCheckPage() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append(
+      "generatedPathPreferences",
+      JSON.stringify(generatedPathPreferences),
+    );
 
     try {
       const response = await fetch(currentDegreeWorksUploadEndpoint, {
@@ -166,6 +219,66 @@ export default function PlanCheckPage() {
         fetchError instanceof Error
           ? fetchError.message
           : "The current-progress Degree Works analysis could not run.",
+      );
+    } finally {
+      setIsCombinedDegreeWorksLoading(false);
+    }
+  }
+
+  async function regenerateGeneratedPlannedPath() {
+    if (isCombinedDegreeWorksLoading || !currentDegreeWorksResult) {
+      return;
+    }
+
+    setIsCombinedDegreeWorksLoading(true);
+    setCombinedDegreeWorksError(null);
+
+    try {
+      const response = await fetch(generatedPlannedPathEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentProgressAnalysis:
+            currentDegreeWorksResult.currentProgressAnalysis,
+          preferences: generatedPathPreferences,
+        }),
+      });
+      const payload = (await response.json()) as
+        | {
+            generatedPlannedPath: CurrentDegreeWorksUploadResult["generatedPlannedPath"];
+            advisorMeetingSummary: string;
+          }
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The generated planned path could not be updated.",
+        );
+      }
+
+      if ("generatedPlannedPath" in payload) {
+        setCurrentDegreeWorksResult((currentResult) =>
+          currentResult
+            ? {
+                ...currentResult,
+                generatedPlannedPath: payload.generatedPlannedPath,
+                advisorMeetingSummary: payload.advisorMeetingSummary,
+                degreeWorksNativeAnalysis: {
+                  ...currentResult.degreeWorksNativeAnalysis,
+                  generatedPlannedPath: payload.generatedPlannedPath,
+                  advisorMeetingSummary: payload.advisorMeetingSummary,
+                },
+              }
+            : currentResult,
+        );
+      }
+    } catch (fetchError) {
+      setCombinedDegreeWorksError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "The generated planned path could not be updated.",
       );
     } finally {
       setIsCombinedDegreeWorksLoading(false);
@@ -198,11 +311,32 @@ export default function PlanCheckPage() {
     event.preventDefault();
     setCombinedDegreeWorksUploadValidationError(null);
 
+    if (
+      activeStep === "planned_path" &&
+      plannedPathInputMode === "manual"
+    ) {
+      const trimmed = manualPlannedCoursesText.trim();
+
+      if (!trimmed) {
+        setCombinedDegreeWorksResult(null);
+        setCombinedDegreeWorksUploadValidationError(
+          "Paste planned Auburn courses before checking Planned Path.",
+        );
+        return;
+      }
+
+      void runManualPlannedPathCheck(
+        trimmed,
+        currentDegreeWorksResult?.currentProgressAnalysis,
+      );
+      return;
+    }
+
     if (!selectedCombinedDegreeWorksPdfFile) {
       setCombinedDegreeWorksResult(null);
       setCurrentDegreeWorksResult(null);
       setCombinedDegreeWorksUploadValidationError(
-        selectedWorkflowMode === "current_progress"
+        activeStep === "current_progress"
           ? "Choose a Degree Works Worksheet/Audit PDF before checking Current Progress."
           : "Choose a Degree Works Plan PDF before checking Planned Path.",
       );
@@ -218,7 +352,7 @@ export default function PlanCheckPage() {
       return;
     }
 
-    if (selectedWorkflowMode === "current_progress") {
+    if (activeStep === "current_progress") {
       void runCurrentDegreeWorksUploadPlanCheck(
         selectedCombinedDegreeWorksPdfFile,
       );
@@ -237,6 +371,32 @@ export default function PlanCheckPage() {
     setCombinedDegreeWorksError(null);
     setCombinedDegreeWorksUploadValidationError(null);
     setAdvisorSummaryCopyStatus(null);
+    setManualPlannedCoursesText("");
+    setPlannedPathInputMode("pdf");
+    setGeneratedPathPreferences({
+      startTerm: "Fall 2026",
+      maxCreditsPerTerm: 15,
+      includeSummer: false,
+      maxSummerCredits: 6,
+    });
+    setActiveStep("current_progress");
+  }
+
+  function changeActiveStep(step: PlanCheckStep) {
+    if (
+      step === "advisor_summary" &&
+      !combinedDegreeWorksResult &&
+      !currentDegreeWorksResult?.generatedPlannedPath
+    ) {
+      return;
+    }
+
+    if (step !== activeStep && step !== "advisor_summary") {
+      setSelectedCombinedDegreeWorksPdfFile(null);
+    }
+
+    setActiveStep(step);
+    setCombinedDegreeWorksUploadValidationError(null);
   }
 
   function copyAdvisorMeetingSummary() {
@@ -310,8 +470,7 @@ export default function PlanCheckPage() {
       combinedDegreeWorksError ||
       isCombinedDegreeWorksLoading,
   );
-  const analyzedFileSummary = currentDegreeWorksResult
-    && !combinedDegreeWorksResult
+  const currentProgressFileSummary = currentDegreeWorksResult
     ? {
         workflowType: "Current Progress",
         fileName: currentDegreeWorksResult.sourceFileName,
@@ -323,8 +482,9 @@ export default function PlanCheckPage() {
           currentDegreeWorksResult.currentProgressAnalysis.creditsNeeded,
         ),
       }
-    : combinedDegreeWorksResult
-      ? {
+    : undefined;
+  const plannedPathFileSummary = combinedDegreeWorksResult
+    ? {
           workflowType: "Planned Path",
           fileName: combinedDegreeWorksResult.sourceFileName,
           detectedProgram: currentDegreeWorksResult
@@ -336,6 +496,10 @@ export default function PlanCheckPage() {
               : null,
         }
       : undefined;
+  const analyzedFileSummary =
+    activeStep === "current_progress"
+      ? currentProgressFileSummary
+      : plannedPathFileSummary ?? currentProgressFileSummary;
 
   return (
     <main className="min-h-dvh bg-slate-100 text-slate-950">
@@ -362,25 +526,43 @@ export default function PlanCheckPage() {
               <ArrowLeft aria-hidden="true" size={16} />
               Chat
             </Link>
+            <StakeholderMoreMenu />
           </nav>
         </div>
       </header>
 
       <DegreeWorksWorkflowUploadSection
+        activeStep={activeStep}
         analyzedFileSummary={analyzedFileSummary}
-        mode={selectedWorkflowMode}
-        hasAnalysisResult={Boolean(currentDegreeWorksResult || combinedDegreeWorksResult)}
+        advisorSummaryAvailable={Boolean(
+          advisorMeetingSummary &&
+            (combinedDegreeWorksResult ||
+              currentDegreeWorksResult?.generatedPlannedPath),
+        )}
+        generatedPathPreferences={generatedPathPreferences}
         isLoading={isCombinedDegreeWorksLoading}
         onAnalyze={checkCombinedDegreeWorksUploadedPdf}
         onClearAnalysis={clearDegreeWorksAnalysis}
         onFileChange={handleCombinedDegreeWorksPdfFileChange}
-        onModeChange={(mode) => {
-          setSelectedWorkflowMode(mode);
+        onGeneratedPathPreferencesChange={setGeneratedPathPreferences}
+        onManualPlannedCoursesChange={(event) => {
+          setManualPlannedCoursesText(event.currentTarget.value);
           setCombinedDegreeWorksUploadValidationError(null);
         }}
+        onPlannedPathInputModeChange={(mode) => {
+          setPlannedPathInputMode(mode);
+          setCombinedDegreeWorksUploadValidationError(null);
+        }}
+        onRegenerateGeneratedPath={() => {
+          void regenerateGeneratedPlannedPath();
+        }}
+        onStepChange={changeActiveStep}
+        plannedPathInputMode={plannedPathInputMode}
+        manualPlannedCoursesText={manualPlannedCoursesText}
         selectedFile={selectedCombinedDegreeWorksPdfFile}
         validationError={combinedDegreeWorksUploadValidationError}
         hasCurrentProgressResult={Boolean(currentDegreeWorksResult)}
+        hasPlannedPathResult={Boolean(combinedDegreeWorksResult)}
       />
 
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:py-7">
@@ -415,11 +597,11 @@ export default function PlanCheckPage() {
                 className="animate-spin text-[#dd550c]"
                 size={19}
               />
-              Analyzing Degree Works PDF...
+              Analyzing planning input...
             </div>
           ) : null}
 
-          {currentDegreeWorksResult && !combinedDegreeWorksResult ? (
+          {currentDegreeWorksResult && !combinedDegreeWorksResult && activeStep === "current_progress" ? (
             <CurrentProgressResultDetails
               advisorSummarySlot={
                 advisorMeetingSummary ? (
@@ -427,6 +609,7 @@ export default function PlanCheckPage() {
                   copyStatus={advisorSummaryCopyStatus}
                   onCopySummary={copyAdvisorMeetingSummary}
                   summary={advisorMeetingSummary}
+                  title="Current Progress Notes"
                 />
                 ) : null
               }
@@ -434,33 +617,42 @@ export default function PlanCheckPage() {
             />
           ) : null}
 
-          {combinedDegreeWorksResult ? (
+          {combinedDegreeWorksResult && activeStep === "planned_path" ? (
             <>
               <PlannedPathOverviewCard result={combinedDegreeWorksResult} />
               <PlannedPathCoverageCard result={combinedDegreeWorksResult} />
               <PlannedPathSemesterPlanCard result={combinedDegreeWorksResult} />
               <PlannedPathFixListCard result={combinedDegreeWorksResult} />
-              {advisorMeetingSummary ? (
-                <AdvisorMeetingSummary
-                  copyStatus={advisorSummaryCopyStatus}
-                  onCopySummary={copyAdvisorMeetingSummary}
-                  summary={advisorMeetingSummary}
-                />
-              ) : null}
               <CombinedDegreeWorksParsedDetails
                 result={combinedDegreeWorksResult}
               />
             </>
           ) : null}
 
-          {combinedDegreeWorksResult ? null : !currentDegreeWorksResult ? (
+          {combinedDegreeWorksResult && activeStep === "advisor_summary" && advisorMeetingSummary ? (
+            <AdvisorMeetingSummary
+              copyStatus={advisorSummaryCopyStatus}
+              onCopySummary={copyAdvisorMeetingSummary}
+              summary={advisorMeetingSummary}
+            />
+          ) : null}
+
+          {!combinedDegreeWorksResult && currentDegreeWorksResult && activeStep === "advisor_summary" && advisorMeetingSummary ? (
+            <AdvisorMeetingSummary
+              copyStatus={advisorSummaryCopyStatus}
+              onCopySummary={copyAdvisorMeetingSummary}
+              summary={advisorMeetingSummary}
+            />
+          ) : null}
+
+          {combinedDegreeWorksResult || currentDegreeWorksResult ? null : (
             <EmptyState>
               Upload a Degree Works Worksheet audit for Current Progress. Upload
               a Degree Works Plan PDF for Planned Path. Works from Degree
               Works-native requirements for any Auburn program with readable
               PDF text.
             </EmptyState>
-          ) : null}
+          )}
         </section>
       </div>
     </main>
@@ -495,7 +687,7 @@ function buildPlannedPathAdvisorSummary(result: CombinedDegreeWorksUploadResult)
     "",
     "Planned path review:",
     `- Current audit: ${coverage ? "uploaded" : "not uploaded"}`,
-    "- Planned path: uploaded",
+    `- Planned path: ${result.sourceFileName === "Manual planned courses" ? "manual planned courses" : "uploaded Degree Works PDF"}`,
     `- Main result: ${mainResult}`,
   ];
 
