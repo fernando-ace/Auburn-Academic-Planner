@@ -14,10 +14,12 @@ import {
   Menu,
   MessageSquareText,
   PanelRightOpen,
+  RotateCcw,
   Send,
+  ShieldCheck,
   X,
 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { StakeholderMoreMenu } from "@/components/stakeholder-more-menu";
@@ -27,6 +29,11 @@ import {
   formatSourceTypeLabel,
   sanitizeAssistantMarkdown,
 } from "@/lib/chat-presentation";
+import {
+  GEMINI_CHAT_CONSENT_VERSION,
+  MAX_GEMINI_CHAT_USER_MESSAGE_CHARACTERS,
+  minimizeGeminiChatMessages,
+} from "@/lib/chat-privacy";
 
 type Role = "user" | "assistant";
 
@@ -156,7 +163,7 @@ function AssistantMarkdown({ children }: { children: string }) {
 
 function PlanCheckCard() {
   return (
-    <section className="rounded-xl border border-[#dd550c]/30 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_8px_22px_rgba(15,23,42,0.04)]">
+    <section className="rounded-xl border border-[#dd550c]/30 bg-white p-3 shadow-sm">
       <div className="flex items-start gap-3">
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#dd550c]/25 bg-[#fff7f1] text-[#b84300]">
           <ClipboardCheck aria-hidden="true" size={17} />
@@ -216,7 +223,7 @@ function PlanningTopicsPanel({
 
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
         <section>
-          <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          <h2 className="text-[12px] font-semibold text-slate-500">
             Planning topics
           </h2>
           <div className="mt-3 space-y-2">
@@ -234,7 +241,7 @@ function PlanningTopicsPanel({
         <PlanCheckCard />
 
         <section>
-          <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          <h2 className="text-[12px] font-semibold text-slate-500">
             Ask about Auburn planning
           </h2>
           <div className="mt-3 space-y-2">
@@ -347,7 +354,7 @@ function SourcesPanel({ message }: { message?: ChatMessage }) {
                   ) : null}
                 </div>
                 {source.sourceType ? (
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#03244d]">
+                  <p className="mt-1 text-[11px] font-semibold text-[#03244d]">
                     {formatSourceTypeLabel(source.sourceType)}
                   </p>
                 ) : null}
@@ -406,7 +413,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         }
       >
         {!isUser ? (
-          <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#03244d]">
+          <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold text-[#03244d]">
             <BookOpen aria-hidden="true" size={15} />
             Auburn Academic Planner
           </div>
@@ -511,6 +518,11 @@ export function ChatWorkspace() {
   const [isLoading, setIsLoading] = useState(false);
   const [leftOpen, setLeftOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [geminiConsentGranted, setGeminiConsentGranted] = useState(false);
+  const [privacyStatus, setPrivacyStatus] = useState(
+    "Nothing has been sent to Gemini.",
+  );
+  const requestAbortController = useRef<AbortController | null>(null);
 
   const latestAssistantMessage = useMemo(
     () => messages.findLast((message) => message.role === "assistant"),
@@ -520,6 +532,21 @@ export function ChatWorkspace() {
   async function submitQuestion(question: string) {
     const trimmed = question.trim();
     if (!trimmed || isLoading) {
+      return;
+    }
+
+    if (trimmed.length > MAX_GEMINI_CHAT_USER_MESSAGE_CHARACTERS) {
+      setPrivacyStatus(
+        `Questions are limited to ${MAX_GEMINI_CHAT_USER_MESSAGE_CHARACTERS.toLocaleString("en-US")} characters. Shorten this question before sending.`,
+      );
+      return;
+    }
+
+    if (!geminiConsentGranted) {
+      setDraft(trimmed);
+      setPrivacyStatus(
+        "Question ready. Review and accept the Gemini consent before sending.",
+      );
       return;
     }
 
@@ -533,17 +560,19 @@ export function ChatWorkspace() {
     setMessages(nextMessages);
     setDraft("");
     setIsLoading(true);
+    const abortController = new AbortController();
+    requestAbortController.current = abortController;
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: nextMessages.map((message) => ({
-            role: message.role,
-            content: message.content,
-          })),
+          geminiConsent: true,
+          geminiConsentVersion: GEMINI_CHAT_CONSENT_VERSION,
+          messages: minimizeGeminiChatMessages(nextMessages),
         }),
+        signal: abortController.signal,
       });
 
       const payload = (await response.json()) as Partial<ChatResponse> & {
@@ -552,6 +581,13 @@ export function ChatWorkspace() {
 
       if (!response.ok) {
         throw new Error(payload.error ?? "The assistant could not respond.");
+      }
+
+      if (
+        abortController.signal.aborted ||
+        requestAbortController.current !== abortController
+      ) {
+        return;
       }
 
       setMessages((current) => [
@@ -569,24 +605,53 @@ export function ChatWorkspace() {
         },
       ]);
     } catch (error) {
-      setMessages((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content:
-            error instanceof Error
-              ? error.message
-              : "The assistant could not respond.",
-          sources: [],
-          confidence: "Low",
-          advisorVerificationNote: advisorNote,
-          error: true,
-        },
-      ]);
+      const requestWasCleared =
+        abortController.signal.aborted ||
+        requestAbortController.current !== abortController;
+      if (
+        !requestWasCleared &&
+        !(error instanceof DOMException && error.name === "AbortError")
+      ) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content:
+              error instanceof Error
+                ? error.message
+                : "The assistant could not respond.",
+            sources: [],
+            confidence: "Low",
+            advisorVerificationNote: advisorNote,
+            error: true,
+          },
+        ]);
+      }
     } finally {
-      setIsLoading(false);
+      if (requestAbortController.current === abortController) {
+        requestAbortController.current = null;
+        setIsLoading(false);
+      }
     }
+  }
+
+  function grantGeminiConsent() {
+    setGeminiConsentGranted(true);
+    setPrivacyStatus(
+      "Gemini Chat enabled for this browser session. Your question has not been sent yet.",
+    );
+  }
+
+  function resetChatAndRevokeConsent() {
+    requestAbortController.current?.abort();
+    requestAbortController.current = null;
+    setGeminiConsentGranted(false);
+    setMessages([]);
+    setDraft("");
+    setIsLoading(false);
+    setSourcesOpen(false);
+    setPrivacyStatus("Chat cleared. Gemini consent is off.");
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -666,7 +731,7 @@ export function ChatWorkspace() {
           <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5">
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
               {messages.length === 0 ? (
-                <section className="rounded-xl border border-slate-200 bg-white p-5 text-center shadow-[0_1px_2px_rgba(15,23,42,0.05),0_12px_32px_rgba(15,23,42,0.04)] sm:p-8">
+                <section className="rounded-xl border border-slate-200 bg-white p-5 text-center shadow-sm sm:p-8">
                   <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-[#03244d] text-white">
                     <MessageSquareText aria-hidden="true" size={23} />
                   </div>
@@ -716,15 +781,59 @@ export function ChatWorkspace() {
           </div>
 
           <div className="shrink-0 border-t border-slate-200 bg-white px-3 py-3 sm:px-4 lg:px-5">
+            {!geminiConsentGranted ? (
+              <fieldset className="mx-auto mb-3 w-full max-w-3xl rounded-lg border border-[#03244d]/20 bg-[#eef4fa] p-3 text-[#03244d]">
+                <legend className="px-1 text-[13px] font-semibold">
+                  Before your first question
+                </legend>
+                <div className="flex gap-2.5 text-[12px] leading-5">
+                  <ShieldCheck
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0"
+                    size={17}
+                  />
+                  <div>
+                    <p>
+                      Chat sends your current question and up to five recent
+                      messages to Google Gemini with retrieved Auburn source
+                      context. Google processes that content to generate the
+                      answer.
+                    </p>
+                    <p className="mt-1 text-slate-600">
+                      Do not include names, student IDs, or private student
+                      records. Consent lasts only for this browser session.
+                    </p>
+                  </div>
+                </div>
+                <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-md border border-[#03244d]/15 bg-white px-3 py-2 text-[12px] font-semibold leading-5 text-slate-800">
+                  <input
+                    checked={geminiConsentGranted}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#b84300] focus:ring-[#dd550c]"
+                    onChange={(event) => {
+                      if (event.currentTarget.checked) {
+                        grantGeminiConsent();
+                      }
+                    }}
+                    type="checkbox"
+                  />
+                  <span>
+                    I agree to send this Chat content to Google Gemini for this
+                    session.
+                  </span>
+                </label>
+              </fieldset>
+            ) : null}
+
             <form className="mx-auto flex w-full max-w-3xl gap-2 sm:gap-3" onSubmit={handleSubmit}>
               <label className="sr-only" htmlFor="chat-input">
                 Ask about Auburn academic requirements
               </label>
               <input
-                aria-describedby="chat-privacy-note"
+                aria-describedby="chat-privacy-note chat-consent-status"
                 className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-[14px] text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15 sm:h-12 sm:px-4"
                 disabled={isLoading}
                 id="chat-input"
+                maxLength={MAX_GEMINI_CHAT_USER_MESSAGE_CHARACTERS}
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder="Ask about Auburn academic requirements..."
                 type="text"
@@ -732,32 +841,53 @@ export function ChatWorkspace() {
               />
               <button
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-[#b84300] text-white transition hover:bg-[#8f3200] disabled:cursor-not-allowed disabled:bg-slate-300 sm:h-12 sm:w-12"
-                disabled={isLoading || !draft.trim()}
+                disabled={isLoading || !geminiConsentGranted || !draft.trim()}
                 type="submit"
               >
                 <span className="sr-only">Send question</span>
                 <Send aria-hidden="true" size={18} />
               </button>
             </form>
-            <div className="mx-auto mt-2 flex w-full max-w-3xl items-start gap-1.5 text-[11px] leading-4 text-slate-500">
-              <Info
-                aria-hidden="true"
-                className="mt-px shrink-0 text-slate-400"
-                size={14}
-              />
-              <p id="chat-privacy-note">
-                Messages and recent chat context are sent to Google Gemini to
-                generate a response. Do not include names, student IDs, or
-                other private student records. Read the{" "}
-                <Link
-                  className="font-semibold text-[#03244d] underline underline-offset-2 hover:text-[#b84300]"
-                  href="/privacy"
+            <div className="mx-auto mt-2 flex w-full max-w-3xl flex-wrap items-start justify-between gap-2 text-[11px] leading-4 text-slate-500">
+              <div className="flex min-w-0 items-start gap-1.5">
+                <Info
+                  aria-hidden="true"
+                  className="mt-px shrink-0 text-slate-400"
+                  size={14}
+                />
+                <p id="chat-privacy-note">
+                  {geminiConsentGranted
+                    ? "Gemini Chat is on for this session. Error responses are omitted from the recent context."
+                    : "Nothing is sent to Gemini until you choose to enable Chat."}{" "}
+                  Read the{" "}
+                  <Link
+                    className="font-semibold text-[#03244d] underline underline-offset-2 hover:text-[#b84300]"
+                    href="/privacy"
+                  >
+                    privacy details
+                  </Link>
+                  .
+                </p>
+              </div>
+              {geminiConsentGranted ? (
+                <button
+                  className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 font-semibold text-slate-600 transition hover:border-[#dd550c] hover:text-[#03244d]"
+                  onClick={resetChatAndRevokeConsent}
+                  type="button"
                 >
-                  privacy details
-                </Link>
-                .
-              </p>
+                  <RotateCcw aria-hidden="true" size={13} />
+                  Reset chat and revoke consent
+                </button>
+              ) : null}
             </div>
+            <p
+              aria-live="polite"
+              className="sr-only"
+              id="chat-consent-status"
+              role="status"
+            >
+              {privacyStatus}
+            </p>
           </div>
         </section>
 

@@ -107,6 +107,14 @@ test("generated path uses Bulletin order only for Degree Works-backed items", as
     generatedPath.orderingSource.bulletinOrderingHint?.matchedMajorTitle,
     "Software Engineering",
   );
+  assert.deepEqual(generatedPath.feasibility, {
+    degreeWorksGrounding: "checked",
+    creditCaps: "checked",
+    bulletinSequence: "catalog_matched_hint",
+    prerequisitesAndCorequisites: "not_checked",
+    courseOfferings: "not_checked",
+    seatAvailability: "not_checked",
+  });
 });
 
 test("generated path warns and falls back when the audit catalog year differs", async () => {
@@ -214,6 +222,12 @@ test("generated path falls back to Degree Works order without a Bulletin match",
   assert.equal(generatedPath.orderingSource.bulletinOrderingHint, null);
   assert.equal(generatedPath.placedItems[0].label, "ARTS 3010");
   assert.equal(generatedPath.confidence, "medium");
+  assert.equal(generatedPath.feasibility.bulletinSequence, "not_available");
+  assert.ok(
+    generatedPath.terms[0].warnings.some((warning) =>
+      warning.includes("credit cap only"),
+    ),
+  );
 });
 
 test("generated path caps draft credits to current-progress credits needed", () => {

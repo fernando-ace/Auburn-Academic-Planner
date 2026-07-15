@@ -7,12 +7,20 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
+import { ChangeEvent, MouseEvent, useEffect, useMemo, useState } from "react";
 
 import { StakeholderMoreMenu } from "@/components/stakeholder-more-menu";
 import { EmptyState } from "@/components/ui-primitives";
 import { getPdfUploadSizeError } from "@/lib/api/pdf-upload-policy";
 import type { GeneratedPathPreferences } from "@/lib/plan/generated-planned-path";
+import {
+  createPlanningHubDeviceDraft,
+  formatPlanningHubDraftTruncation,
+  formatPlanningHubManualDraft,
+  PLANNING_HUB_DRAFT_STORAGE_KEY,
+  readPlanningHubDeviceDraft,
+  type PlanningHubDeviceDraft,
+} from "@/lib/plan/planning-hub-device-draft";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
 import {
   CombinedDegreeWorksParsedDetails,
@@ -22,6 +30,7 @@ import {
   PlannedPathFixListCard,
 } from "./components/combined-analysis-details";
 import { CurrentProgressResultDetails } from "./components/current-progress-details";
+import { PlanningHubDraftControls } from "./components/planning-hub-draft-controls";
 import {
   DegreeWorksWorkflowUploadSection,
   type PlannedPathInputMode,
@@ -39,6 +48,12 @@ const currentDegreeWorksUploadEndpoint =
 const generatedPlannedPathEndpoint = "/api/plan/generate-path";
 const manualPlannedPathEndpoint =
   "/api/plan/analyze-degreeworks/manual";
+const defaultGeneratedPathPreferences: GeneratedPathPreferences = {
+  startTerm: "Fall 2026",
+  maxCreditsPerTerm: 15,
+  includeSummer: false,
+  maxSummerCredits: 6,
+};
 
 export default function PlanCheckPage() {
   const [selectedCombinedDegreeWorksPdfFile, setSelectedCombinedDegreeWorksPdfFile] =
@@ -50,12 +65,9 @@ export default function PlanCheckPage() {
   const [manualPlannedCoursesText, setManualPlannedCoursesText] =
     useState("");
   const [generatedPathPreferences, setGeneratedPathPreferences] =
-    useState<GeneratedPathPreferences>({
-      startTerm: "Fall 2026",
-      maxCreditsPerTerm: 15,
-      includeSummer: false,
-      maxSummerCredits: 6,
-    });
+    useState<GeneratedPathPreferences>(() => ({
+      ...defaultGeneratedPathPreferences,
+    }));
   const [combinedDegreeWorksResult, setCombinedDegreeWorksResult] =
     useState<CombinedDegreeWorksUploadResult | null>(null);
   const [currentDegreeWorksResult, setCurrentDegreeWorksResult] =
@@ -67,11 +79,42 @@ export default function PlanCheckPage() {
     combinedDegreeWorksUploadValidationError,
     setCombinedDegreeWorksUploadValidationError,
   ] = useState<string | null>(null);
-  const [advisorSummaryCopyStatus, setAdvisorSummaryCopyStatus] = useState<
+  const [advisorSummaryActionStatus, setAdvisorSummaryActionStatus] = useState<
     string | null
   >(null);
+  const [savedDeviceDraft, setSavedDeviceDraft] =
+    useState<PlanningHubDeviceDraft | null>(null);
+  const [deviceDraftStatus, setDeviceDraftStatus] = useState<string | null>(null);
   const [isCombinedDegreeWorksLoading, setIsCombinedDegreeWorksLoading] =
     useState(false);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      try {
+        const readResult = readPlanningHubDeviceDraft(
+          window.localStorage.getItem(PLANNING_HUB_DRAFT_STORAGE_KEY),
+        );
+
+        if (readResult.status === "valid") {
+          setSavedDeviceDraft(readResult.draft);
+          return;
+        }
+
+        if (readResult.status === "expired" || readResult.status === "invalid") {
+          window.localStorage.removeItem(PLANNING_HUB_DRAFT_STORAGE_KEY);
+          setDeviceDraftStatus(
+            readResult.status === "expired"
+              ? "An expired device draft was deleted."
+              : "An unreadable device draft was deleted.",
+          );
+        }
+      } catch {
+        setDeviceDraftStatus("Device draft storage is unavailable in this browser.");
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   const advisorMeetingSummary = useMemo(
     () =>
@@ -389,15 +432,10 @@ export default function PlanCheckPage() {
     setCurrentDegreeWorksResult(null);
     setCombinedDegreeWorksError(null);
     setCombinedDegreeWorksUploadValidationError(null);
-    setAdvisorSummaryCopyStatus(null);
+    setAdvisorSummaryActionStatus(null);
     setManualPlannedCoursesText("");
     setPlannedPathInputMode("pdf");
-    setGeneratedPathPreferences({
-      startTerm: "Fall 2026",
-      maxCreditsPerTerm: 15,
-      includeSummer: false,
-      maxSummerCredits: 6,
-    });
+    setGeneratedPathPreferences({ ...defaultGeneratedPathPreferences });
     setActiveStep("current_progress");
   }
 
@@ -448,10 +486,10 @@ export default function PlanCheckPage() {
 
     if (!navigator.clipboard?.writeText) {
       if (copyWithFallback()) {
-        setAdvisorSummaryCopyStatus("Summary copied.");
+        setAdvisorSummaryActionStatus("Summary copied.");
       } else {
         selectVisibleSummary();
-        setAdvisorSummaryCopyStatus(
+        setAdvisorSummaryActionStatus(
           "Summary selected. Press Ctrl+C to copy it.",
         );
       }
@@ -460,17 +498,126 @@ export default function PlanCheckPage() {
 
     void navigator.clipboard
       .writeText(advisorMeetingSummary)
-      .then(() => setAdvisorSummaryCopyStatus("Summary copied."))
+      .then(() => setAdvisorSummaryActionStatus("Summary copied."))
       .catch(() => {
         if (copyWithFallback()) {
-          setAdvisorSummaryCopyStatus("Summary copied.");
+          setAdvisorSummaryActionStatus("Summary copied.");
         } else {
           selectVisibleSummary();
-          setAdvisorSummaryCopyStatus(
+          setAdvisorSummaryActionStatus(
             "Summary selected. Press Ctrl+C to copy it.",
           );
         }
       });
+  }
+
+  function downloadAdvisorMeetingSummary() {
+    if (!advisorMeetingSummary) {
+      return;
+    }
+
+    const blob = new Blob([advisorMeetingSummary], {
+      type: "text/plain;charset=utf-8",
+    });
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = `auburn-advisor-notes-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(objectUrl);
+    setAdvisorSummaryActionStatus("Advisor notes downloaded.");
+  }
+
+  function saveDeviceDraft() {
+    try {
+      const draft = createPlanningHubDeviceDraft({
+        activeStep,
+        generatedPathPreferences,
+        manualPlannedCoursesText,
+        plannedPathInputMode,
+      });
+      window.localStorage.setItem(
+        PLANNING_HUB_DRAFT_STORAGE_KEY,
+        JSON.stringify(draft),
+      );
+      setSavedDeviceDraft(draft);
+      const truncationMessage = formatPlanningHubDraftTruncation(
+        draft.truncation,
+      );
+      setDeviceDraftStatus(
+        truncationMessage
+          ? `Draft saved with limits: ${truncationMessage}. Shorten the manual plan and save again to keep every recognized item.`
+          : draft.manualPlan
+          ? "Manual plan draft saved on this device. Only recognized course codes, term labels, planned credit totals, and planning settings were included."
+          : plannedPathInputMode === "manual" && manualPlannedCoursesText.trim()
+            ? "Path settings saved only. No recognized Auburn course codes were found, so pasted text was not included."
+            : "Path settings saved only. Current Progress analysis and results were not included.",
+      );
+    } catch {
+      setDeviceDraftStatus("The draft could not be saved in this browser.");
+    }
+  }
+
+  function restoreDeviceDraft() {
+    if (!savedDeviceDraft) {
+      return;
+    }
+
+    let restoredDraft: PlanningHubDeviceDraft;
+    try {
+      const readResult = readPlanningHubDeviceDraft(
+        window.localStorage.getItem(PLANNING_HUB_DRAFT_STORAGE_KEY),
+      );
+      if (readResult.status !== "valid") {
+        if (readResult.status === "expired" || readResult.status === "invalid") {
+          window.localStorage.removeItem(PLANNING_HUB_DRAFT_STORAGE_KEY);
+        }
+        setSavedDeviceDraft(null);
+        setDeviceDraftStatus(
+          readResult.status === "expired"
+            ? "The saved device draft expired and was deleted."
+            : readResult.status === "invalid"
+              ? "The saved device draft was unreadable and was deleted."
+              : "The saved device draft is no longer available.",
+        );
+        return;
+      }
+      restoredDraft = readResult.draft;
+    } catch {
+      setDeviceDraftStatus("Device draft storage is unavailable in this browser.");
+      return;
+    }
+
+    setSelectedCombinedDegreeWorksPdfFile(null);
+    setCombinedDegreeWorksResult(null);
+    setCurrentDegreeWorksResult(null);
+    setCombinedDegreeWorksError(null);
+    setCombinedDegreeWorksUploadValidationError(null);
+    setAdvisorSummaryActionStatus(null);
+    setSavedDeviceDraft(restoredDraft);
+    setActiveStep(restoredDraft.resumeAt);
+    setPlannedPathInputMode(restoredDraft.plannedPathInputMode);
+    setGeneratedPathPreferences(restoredDraft.generatedPathPreferences);
+    setManualPlannedCoursesText(
+      formatPlanningHubManualDraft(restoredDraft.manualPlan),
+    );
+    setDeviceDraftStatus(
+      restoredDraft.manualPlan
+        ? "Manual plan draft restored. Re-upload Current Progress to rebuild a requirements comparison."
+        : "Path settings restored. Re-upload Current Progress to rebuild an analysis.",
+    );
+  }
+
+  function deleteDeviceDraft() {
+    try {
+      window.localStorage.removeItem(PLANNING_HUB_DRAFT_STORAGE_KEY);
+      setSavedDeviceDraft(null);
+      setDeviceDraftStatus("Saved draft deleted from this browser.");
+    } catch {
+      setDeviceDraftStatus("The saved draft could not be deleted in this browser.");
+    }
   }
 
   function isPdfFile(file: File) {
@@ -585,12 +732,24 @@ export default function PlanCheckPage() {
         hasPlannedPathResult={Boolean(combinedDegreeWorksResult)}
       />
 
+      <PlanningHubDraftControls
+        draft={savedDeviceDraft}
+        onDelete={deleteDeviceDraft}
+        onRestore={restoreDeviceDraft}
+        onSave={saveDeviceDraft}
+        saveIncludesManualPlan={
+          activeStep === "planned_path" && plannedPathInputMode === "manual"
+        }
+        status={deviceDraftStatus}
+      />
+
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:py-7">
         <section className={`min-w-0 ${hasResultOrStatus ? "order-first" : "order-last"}`}>
           {advisorMeetingSummary && !combinedDegreeWorksResult && !currentDegreeWorksResult ? (
             <AdvisorMeetingSummary
-              copyStatus={advisorSummaryCopyStatus}
               onCopySummary={copyAdvisorMeetingSummary}
+              onDownloadSummary={downloadAdvisorMeetingSummary}
+              status={advisorSummaryActionStatus}
               summary={advisorMeetingSummary}
             />
           ) : null}
@@ -626,8 +785,9 @@ export default function PlanCheckPage() {
               advisorSummarySlot={
                 advisorMeetingSummary ? (
                 <AdvisorMeetingSummary
-                  copyStatus={advisorSummaryCopyStatus}
                   onCopySummary={copyAdvisorMeetingSummary}
+                  onDownloadSummary={downloadAdvisorMeetingSummary}
+                  status={advisorSummaryActionStatus}
                   summary={advisorMeetingSummary}
                   title="Current Progress Notes"
                 />
@@ -651,16 +811,18 @@ export default function PlanCheckPage() {
 
           {combinedDegreeWorksResult && activeStep === "advisor_summary" && advisorMeetingSummary ? (
             <AdvisorMeetingSummary
-              copyStatus={advisorSummaryCopyStatus}
               onCopySummary={copyAdvisorMeetingSummary}
+              onDownloadSummary={downloadAdvisorMeetingSummary}
+              status={advisorSummaryActionStatus}
               summary={advisorMeetingSummary}
             />
           ) : null}
 
           {!combinedDegreeWorksResult && currentDegreeWorksResult && activeStep === "advisor_summary" && advisorMeetingSummary ? (
             <AdvisorMeetingSummary
-              copyStatus={advisorSummaryCopyStatus}
               onCopySummary={copyAdvisorMeetingSummary}
+              onDownloadSummary={downloadAdvisorMeetingSummary}
+              status={advisorSummaryActionStatus}
               summary={advisorMeetingSummary}
             />
           ) : null}

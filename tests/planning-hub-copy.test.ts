@@ -9,8 +9,12 @@ const projectRoot = path.resolve(testDir, "..");
 
 test("Planning Hub public copy is Degree Works-native", async () => {
   const files = await readUiSources([
+    "src/app/limitations/page.tsx",
+    "src/app/methodology/page.tsx",
     "src/app/plan-check/page.tsx",
+    "src/app/plan-check/components/advisor-meeting-summary.tsx",
     "src/app/plan-check/components/plan-check-input-sections.tsx",
+    "src/app/plan-check/components/planning-hub-draft-controls.tsx",
     "src/app/plan-check/components/combined-analysis-details.tsx",
     "src/app/plan-check/components/current-progress-details.tsx",
   ]);
@@ -27,6 +31,20 @@ test("Planning Hub public copy is Degree Works-native", async () => {
   assert.match(files, /Use the print icon in the top-right toolbar/);
   assert.match(files, /Degree Works-native/);
   assert.match(files, /Generated path settings/);
+  assert.match(files, /Nothing is saved automatically/);
+  assert.match(files, /Current Progress can save path settings only/);
+  assert.match(files, /Save path settings only/);
+  assert.match(files, /Save manual plan on this device/);
+  assert.match(files, /Download notes/);
+  assert.match(files, /Draft saved with limits/);
+  assert.match(files, /planned credit totals/);
+  assert.match(files, /hint is explicitly unconfirmed/);
+  assert.match(files, /extracted audit evidence, and analysis results are never included/);
+  assert.match(
+    files,
+    /does not verify prerequisites, corequisites, actual term offerings, or live seat availability/,
+  );
+  assert.match(files, /explicit session consent is required/);
   assert.match(
     files,
     /Upload Current Progress too to compare this plan against your actual\s+remaining Degree Works requirements\./,

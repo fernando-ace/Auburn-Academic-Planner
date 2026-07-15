@@ -45,7 +45,7 @@ export function ParserNotes({
   return (
     <div className="grid gap-3">
       <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+        <p className="text-[12px] font-semibold text-slate-500">
           Parser confidence
         </p>
         <p className="mt-1 text-[16px] font-semibold leading-6 text-slate-950">

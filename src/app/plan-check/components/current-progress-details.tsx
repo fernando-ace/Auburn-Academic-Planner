@@ -41,7 +41,7 @@ export function CurrentProgressResultDetails({
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+            <p className="text-[13px] font-semibold text-[#9b3900]">
               Current Progress
             </p>
             <h2 className="mt-2 text-[22px] font-semibold leading-8 text-slate-950">
@@ -355,7 +355,7 @@ function GeneratedPlannedPathCard({
     <section className="rounded-lg border border-[#03244d]/20 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">
+          <p className="text-[13px] font-semibold text-[#9b3900]">
             Generated Planned Path
           </p>
           <h2 className="mt-2 text-[22px] font-semibold leading-8 text-slate-950">
@@ -397,6 +397,8 @@ function GeneratedPlannedPathCard({
           follows the order of Degree Works Still needed evidence.
         </p>
       )}
+
+      <DraftFeasibilitySummary feasibility={generatedPath.feasibility} />
 
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         {generatedPath.terms.length > 0 ? (
@@ -502,10 +504,124 @@ function GeneratedPlannedPathCard({
   );
 }
 
+function DraftFeasibilitySummary({
+  feasibility,
+}: {
+  feasibility: GeneratedPathForDisplay["feasibility"];
+}) {
+  const checks = getDraftFeasibilityChecks(feasibility);
+
+  return (
+    <section
+      aria-labelledby="draft-feasibility-heading"
+      className="mt-4 border-l-2 border-[#dd550c] bg-slate-50 px-3 py-3 sm:px-4"
+    >
+      <h3
+        className="text-[15px] font-semibold leading-6 text-[#03244d]"
+        id="draft-feasibility-heading"
+      >
+        What this draft checked
+      </h3>
+      <p className="mt-1 text-[12px] leading-5 text-slate-600">
+        These statuses separate planner checks from registration details that
+        still need live or advisor verification.
+      </p>
+      <ul className="mt-3 grid gap-x-5 gap-y-3 sm:grid-cols-2">
+        {checks.map((check) => {
+          const Icon = check.checked ? CheckCircle2 : AlertCircle;
+
+          return (
+            <li className="flex items-start gap-2" key={check.label}>
+              <Icon
+                aria-hidden="true"
+                className={`mt-0.5 shrink-0 ${
+                  check.checked ? "text-[#2f7d32]" : "text-[#b84300]"
+                }`}
+                size={16}
+              />
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold leading-5 text-slate-900">
+                  {check.label}: {check.status}
+                </p>
+                <p className="mt-0.5 text-[12px] leading-5 text-slate-600">
+                  {check.detail}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function getDraftFeasibilityChecks(
+  feasibility: GeneratedPathForDisplay["feasibility"],
+) {
+  const bulletinSequence =
+    feasibility.bulletinSequence === "catalog_matched_hint"
+      ? {
+          status: "Planning hint",
+          detail:
+            "A catalog-matched Bulletin sample plan informed course order only.",
+        }
+      : feasibility.bulletinSequence === "unconfirmed_catalog_hint"
+        ? {
+            status: "Unconfirmed hint",
+            detail:
+              "A Bulletin sample plan informed order, but its catalog year was not confirmed.",
+          }
+        : {
+            status: "Not available",
+            detail: "No matching Bulletin sample-plan sequence was applied.",
+          };
+
+  return [
+    {
+      label: "Degree Works grounding",
+      status: "Checked",
+      detail:
+        "Remaining requirements come from the uploaded Current Progress worksheet.",
+      checked: feasibility.degreeWorksGrounding === "checked",
+    },
+    {
+      label: "Credit caps",
+      status: "Checked",
+      detail:
+        "New draft courses are placed against the selected credit limits; registered and current courses stay locked.",
+      checked: feasibility.creditCaps === "checked",
+    },
+    {
+      label: "Bulletin sequence",
+      status: bulletinSequence.status,
+      detail: bulletinSequence.detail,
+      checked: false,
+    },
+    {
+      label: "Prerequisites and corequisites",
+      status: "Not checked",
+      detail: "Confirm course dependencies before registration.",
+      checked: false,
+    },
+    {
+      label: "Course offerings",
+      status: "Not checked",
+      detail: "Confirm each course is offered in the drafted term.",
+      checked: false,
+    },
+    {
+      label: "Seat availability",
+      status: "Not checked",
+      detail: "Check live registration capacity before building a schedule.",
+      checked: false,
+    },
+  ];
+}
+
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
+      <p className="text-[12px] font-semibold text-slate-500">{label}</p>
       <p className="mt-1 break-words text-[16px] font-semibold leading-6 text-slate-950">{value}</p>
     </div>
   );
@@ -640,7 +756,7 @@ function CourseCodeBucket({
 
   return (
     <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">{title}</p>
+      <p className="text-[12px] font-semibold text-slate-500">{title}</p>
       <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">{items.length}</p>
       {items.length > 0 ? (
         <div className="mt-2 grid gap-1.5">
@@ -671,7 +787,7 @@ function CourseCodeBucket({
 function ExternalCreditBucket({ records }: { records: ExternalCreditRecord[] }) {
   return (
     <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">AP/transfer satisfied</p>
+      <p className="text-[12px] font-semibold text-slate-500">AP/transfer satisfied</p>
       <p className="mt-1 text-[18px] font-semibold leading-6 text-slate-950">{records.length}</p>
       {records.length > 0 ? (
         <div className="mt-2 grid gap-1.5">

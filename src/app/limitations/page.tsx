@@ -16,7 +16,11 @@ export default function LimitationsPage() {
         },
         {
           title: "Manual planned courses",
-          body: "Pasted planned-course text helps students check draft plans quickly, but it only sees the courses the student enters. It should be reviewed with the student’s current Degree Works audit and advisor.",
+          body: "Pasted planned-course text helps students check draft plans quickly, but it only sees the courses the student enters. It should be reviewed with the student's current Degree Works audit and advisor.",
+        },
+        {
+          title: "Schedule feasibility",
+          body: "Generated paths check Degree Works grounding and selected credit caps. A catalog-matched Bulletin sample plan may provide a season or ordering hint, but the planner does not verify prerequisites, corequisites, actual term offerings, or live seat availability. Confirm those details before registration.",
         },
       ]}
     />

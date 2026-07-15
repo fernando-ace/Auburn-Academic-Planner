@@ -11,6 +11,11 @@ import {
   resolveBulletinSamplePlanOrdering,
   type BulletinSamplePlanOrdering,
 } from "./bulletin-sample-plan.ts";
+import {
+  classifyGeneratedTermFeasibility,
+  summarizeGeneratedPathFeasibility,
+  type GeneratedPathFeasibilitySummary,
+} from "./course-feasibility.ts";
 
 export type GeneratedPathPreferences = {
   startTerm?: string;
@@ -85,6 +90,7 @@ export type GeneratedPlannedPath = {
     } | null;
     bulletinOrderingWarning: string | null;
   };
+  feasibility: GeneratedPathFeasibilitySummary;
   confidence: DegreeWorksParserConfidence;
   notes: string[];
 };
@@ -111,6 +117,8 @@ export function buildGeneratedPlannedPath({
   const resolvedPreferences = resolveGeneratedPathPreferences(preferences);
   const orderingResolution = resolveBulletinSamplePlanOrdering(audit);
   const ordering = orderingResolution.ordering;
+  const auditCatalogYear =
+    audit.catalogYear ?? audit.detectedProgram.catalogYear ?? null;
   const excludedCurrentCourseCodes = currentCourseCodes(audit);
   const unavailable = new Set(excludedCurrentCourseCodes);
   const advisorReviewItems: GeneratedPathAdvisorReviewItem[] = [];
@@ -137,9 +145,11 @@ export function buildGeneratedPlannedPath({
     return left.requirementLabel.localeCompare(right.requirementLabel);
   });
   const terms = placeItemsInTerms({
+    auditCatalogYear,
     initialTerms: lockedTerms,
     items: sortedItems,
     maxDraftCredits: audit.creditsNeeded ?? null,
+    ordering,
     preferences: resolvedPreferences,
     unplacedItems,
   });
@@ -168,6 +178,10 @@ export function buildGeneratedPlannedPath({
         : null,
       bulletinOrderingWarning: orderingResolution.warning,
     },
+    feasibility: summarizeGeneratedPathFeasibility({
+      auditCatalogYear,
+      ordering,
+    }),
     confidence: generatedPathConfidence({
       advisorReviewItems,
       audit,
@@ -503,15 +517,19 @@ function buildAdvisorChoicePlaceholders({
 }
 
 function placeItemsInTerms({
+  auditCatalogYear,
   initialTerms = [],
   items,
   maxDraftCredits,
+  ordering,
   preferences,
   unplacedItems,
 }: {
+  auditCatalogYear: string | null;
   initialTerms?: GeneratedPlannedPathTerm[];
   items: PlaceableItem[];
   maxDraftCredits: number | null;
+  ordering: BulletinSamplePlanOrdering | null;
   preferences: ResolvedGeneratedPathPreferences;
   unplacedItems: GeneratedPathAdvisorReviewItem[];
 }) {
@@ -588,7 +606,12 @@ function placeItemsInTerms({
     .map((term) => ({
       ...term,
       plannedCredits: Number(term.plannedCredits.toFixed(1)),
-      warnings: termWarnings(term, preferences),
+      warnings: termWarnings({
+        auditCatalogYear,
+        ordering,
+        preferences,
+        term,
+      }),
     }));
 }
 
@@ -607,10 +630,17 @@ function buildTerm(
   };
 }
 
-function termWarnings(
-  term: GeneratedPlannedPathTerm,
-  preferences: ResolvedGeneratedPathPreferences,
-) {
+function termWarnings({
+  auditCatalogYear,
+  ordering,
+  preferences,
+  term,
+}: {
+  auditCatalogYear: string | null;
+  ordering: BulletinSamplePlanOrdering | null;
+  preferences: ResolvedGeneratedPathPreferences;
+  term: GeneratedPlannedPathTerm;
+}) {
   const warnings = [...term.warnings];
   const cap = creditCapForTerm(term.label, preferences);
 
@@ -623,6 +653,15 @@ function termWarnings(
       "One or more items is an advisor-choice placeholder, not a specific registered course.",
     );
   }
+
+  warnings.push(
+    ...classifyGeneratedTermFeasibility({
+      auditCatalogYear,
+      items: term.items,
+      ordering,
+      termLabel: term.label,
+    }).warnings,
+  );
 
   return Array.from(new Set(warnings));
 }

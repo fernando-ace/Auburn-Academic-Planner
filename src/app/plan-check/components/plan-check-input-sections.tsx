@@ -118,7 +118,7 @@ export function DegreeWorksWorkflowUploadSection({
           <div className="max-w-3xl lg:py-1">
             <div className="flex items-center gap-2">
               <FileUp aria-hidden="true" className="text-[#dd550c]" size={20} />
-              <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#9b3900]">Degree Works workflows</p>
+              <p className="text-[13px] font-semibold text-[#9b3900]">Degree Works workflows</p>
             </div>
             <h2 className="mt-2 text-[24px] font-semibold leading-8 text-slate-950">
               {heading}
@@ -210,7 +210,7 @@ export function DegreeWorksWorkflowUploadSection({
               </details>
             ) : null}
             <p className="mt-3 text-[12px] leading-5 text-slate-600">
-              Privacy: PDFs and pasted planned courses are processed for this check and are not permanently stored.
+              Privacy: PDFs, pasted raw text, and analysis results are not permanently stored. Saving a minimized device draft is optional.
             </p>
           </div>
 
@@ -416,7 +416,7 @@ export function DegreeWorksWorkflowUploadSection({
                       value={manualPlannedCoursesText}
                     />
                     <p className="mt-2 text-[12px] leading-5 text-slate-600" id="manual-planned-courses-help">
-                      Format each term like <code className="rounded-sm bg-slate-100 px-1 py-0.5 font-semibold text-slate-700">Fall 2026 Credits: 6</code>, then list its courses below. This keeps courses in the right term. The text is not permanently stored.
+                      Format each term like <code className="rounded-sm bg-slate-100 px-1 py-0.5 font-semibold text-slate-700">Fall 2026 Credits: 6</code>, then list its courses below. Pasted text is not stored unless you choose Save manual plan on this device, which keeps only recognized course codes, term labels, planned credit totals, and planning settings.
                     </p>
                   </>
                 ) : (
@@ -669,7 +669,7 @@ function PlanStepButton({
           {complete ? <CheckCircle2 aria-hidden="true" size={15} /> : label}
         </span>
         <span className="min-w-0">
-          <span className="block text-[11px] font-semibold uppercase tracking-[0.08em]">
+          <span className="block text-[11px] font-semibold">
             Step {label}
           </span>
           <span className="block font-semibold">{text}</span>
@@ -701,7 +701,7 @@ function FormattedInstruction({ text }: { text: string }) {
 function CompactFact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
+      <p className="text-[11px] font-semibold text-slate-500">{label}</p>
       <p className="mt-0.5 break-words font-semibold text-slate-900">{value}</p>
     </div>
   );

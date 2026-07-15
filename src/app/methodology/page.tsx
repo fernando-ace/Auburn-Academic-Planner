@@ -12,7 +12,11 @@ export default function MethodologyPage() {
         },
         {
           title: "AI boundary",
-          body: "Planning Hub does not call Gemini. Gemini is limited to the Chat route, where answers are source-grounded by uploaded Auburn academic materials and include confidence and advisor verification guidance.",
+          body: "Planning Hub does not call Gemini. Gemini is limited to the Chat route, where explicit session consent is required and answers are source-grounded by uploaded Auburn academic materials with confidence and advisor verification guidance.",
+        },
+        {
+          title: "Schedule evidence",
+          body: "Generated paths place Degree Works-backed items within selected credit caps. A program-matched checked-in Bulletin sample plan can inform order. An exact catalog-year match is labeled as matched; if Current Progress has no catalog year, the hint is explicitly unconfirmed; a known catalog-year mismatch is not applied. Sample plans are never treated as prerequisite, offering, or seat-availability rules.",
         },
         {
           title: "Advisor verification",
