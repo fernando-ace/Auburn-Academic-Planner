@@ -109,6 +109,36 @@ test("generated path uses Bulletin order only for Degree Works-backed items", as
   );
 });
 
+test("generated path warns and falls back when the audit catalog year differs", async () => {
+  const audit = await analyzeFixture("worksheet-current-audit-sample.txt");
+  const generatedPath = buildGeneratedPlannedPath({
+    audit: {
+      ...audit,
+      catalogYear: "2022-2023",
+      detectedProgram: {
+        ...audit.detectedProgram,
+        catalogYear: "2022-2023",
+      },
+    },
+    preferences: { startTerm: "Fall 2026", maxCreditsPerTerm: 15 },
+  });
+
+  assert.equal(generatedPath.orderingSource.bulletinOrderingHint, null);
+  assert.match(
+    generatedPath.orderingSource.bulletinOrderingWarning ?? "",
+    /2022-2023/,
+  );
+  assert.match(
+    generatedPath.orderingSource.bulletinOrderingWarning ?? "",
+    /2025-2026/,
+  );
+  assert.deepEqual(
+    generatedPath.placedItems.map((item) => item.label),
+    ["COMP 3220", "COMP 3270", "ELEC 2200"],
+  );
+  assert.ok(generatedPath.notes.some((note) => note.includes("was not applied")));
+});
+
 test("generated path keeps broad requirements as advisor-review placeholders", async () => {
   const audit = await analyzeFixture("worksheet-business-audit-sample.txt");
   const generatedPath = buildGeneratedPlannedPath({

@@ -2,6 +2,7 @@ import { validatePdfUpload } from "../../../../../lib/api/pdf-upload-validation.
 import { checkRateLimit } from "../../../../../lib/api/rate-limit.ts";
 import { analyzeCombinedDegreeWorksText } from "../../../../../lib/plan/combined-degreeworks-analysis.ts";
 import { parseCurrentProgressAnalysisInput } from "../../../../../lib/plan/current-progress-analysis-input.ts";
+import { detectDegreeWorksDocumentType } from "../../../../../lib/plan/degreeworks-document-type.ts";
 import { comparePlannedPathToCurrentProgress } from "../../../../../lib/plan/planned-path-coverage.ts";
 
 export const runtime = "nodejs";
@@ -37,16 +38,50 @@ export async function POST(request: Request) {
     return Response.json({ error: upload.error }, { status: upload.status });
   }
 
+  const documentTypeDetection = detectDegreeWorksDocumentType(upload.text);
+
+  if (documentTypeDetection.documentType === "worksheet_audit") {
+    return Response.json(
+      {
+        error:
+          "This PDF looks like a Current Progress Worksheet, not a Planned Path. Export Planned Path from Degree Works and upload that PDF here.",
+        detectedDocumentType: documentTypeDetection.documentType,
+      },
+      { status: 422 },
+    );
+  }
+
   const combinedAnalysis = analyzeCombinedDegreeWorksText({
     text: upload.text,
   });
-  const currentProgressAnalysis = parseCurrentProgressAnalysisInput(
+  const plannedPathConfidence =
+    documentTypeDetection.documentType === "planned_path"
+      ? combinedAnalysis.parserConfidence
+      : "low";
+  const parserWarnings =
+    documentTypeDetection.documentType === "unknown"
+      ? [
+          ...combinedAnalysis.parserWarnings,
+          "This PDF was not confidently detected as a Degree Works Planned Path, so comparison confidence is limited to low.",
+        ]
+      : combinedAnalysis.parserWarnings;
+  const currentProgressInput = parseCurrentProgressAnalysisInput(
     currentProgressAnalysisValue,
   );
+  if (currentProgressInput.status === "invalid") {
+    return Response.json(
+      { error: currentProgressInput.error },
+      { status: 400 },
+    );
+  }
+
+  const currentProgressAnalysis =
+    currentProgressInput.status === "valid" ? currentProgressInput.value : null;
   const plannedPathCoverage = currentProgressAnalysis
     ? comparePlannedPathToCurrentProgress({
         currentAudit: currentProgressAnalysis,
         plannedCourseCodes: combinedAnalysis.parsedCourseCodes,
+        plannedPathConfidence,
       })
     : null;
 
@@ -55,6 +90,8 @@ export async function POST(request: Request) {
     documentType: "planned_path",
     selectedTargetPath: "degreeworks_native",
     ...combinedAnalysis,
+    parserWarnings,
+    parserConfidence: plannedPathConfidence,
     ...(plannedPathCoverage ? { plannedPathCoverage } : {}),
     notes: [
       "This combined Degree Works PDF analysis is not an official degree audit.",

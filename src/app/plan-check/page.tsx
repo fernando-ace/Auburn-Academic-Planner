@@ -11,6 +11,8 @@ import { ChangeEvent, MouseEvent, useMemo, useState } from "react";
 
 import { StakeholderMoreMenu } from "@/components/stakeholder-more-menu";
 import { EmptyState } from "@/components/ui-primitives";
+import { getPdfUploadSizeError } from "@/lib/api/pdf-upload-policy";
+import type { GeneratedPathPreferences } from "@/lib/plan/generated-planned-path";
 import { AdvisorMeetingSummary } from "./components/advisor-meeting-summary";
 import {
   CombinedDegreeWorksParsedDetails,
@@ -29,7 +31,6 @@ import type {
   CombinedDegreeWorksUploadResult,
   CurrentDegreeWorksUploadResult,
 } from "./types";
-import type { GeneratedPathPreferences } from "@/lib/plan/generated-planned-path";
 
 const combinedDegreeWorksUploadEndpoint =
   "/api/plan/analyze-degreeworks/upload";
@@ -302,6 +303,14 @@ export default function PlanCheckPage() {
         "Choose a PDF file before running the combined Degree Works analysis.",
       );
       event.target.value = "";
+      return;
+    }
+
+    const uploadSizeError = getPdfUploadSizeError(file.size);
+    if (uploadSizeError) {
+      setSelectedCombinedDegreeWorksPdfFile(null);
+      setCombinedDegreeWorksUploadValidationError(uploadSizeError);
+      event.target.value = "";
     }
   }
 
@@ -352,6 +361,16 @@ export default function PlanCheckPage() {
       return;
     }
 
+    const uploadSizeError = getPdfUploadSizeError(
+      selectedCombinedDegreeWorksPdfFile.size,
+    );
+    if (uploadSizeError) {
+      setCombinedDegreeWorksResult(null);
+      setCurrentDegreeWorksResult(null);
+      setCombinedDegreeWorksUploadValidationError(uploadSizeError);
+      return;
+    }
+
     if (activeStep === "current_progress") {
       void runCurrentDegreeWorksUploadPlanCheck(
         selectedCombinedDegreeWorksPdfFile,
@@ -383,11 +402,7 @@ export default function PlanCheckPage() {
   }
 
   function changeActiveStep(step: PlanCheckStep) {
-    if (
-      step === "advisor_summary" &&
-      !combinedDegreeWorksResult &&
-      !currentDegreeWorksResult?.generatedPlannedPath
-    ) {
+    if (step === "advisor_summary" && !advisorSummaryAvailable) {
       return;
     }
 
@@ -500,6 +515,14 @@ export default function PlanCheckPage() {
     activeStep === "current_progress"
       ? currentProgressFileSummary
       : plannedPathFileSummary ?? currentProgressFileSummary;
+  const hasPlannedPathComparison = Boolean(
+    combinedDegreeWorksResult?.plannedPathCoverage,
+  );
+  const advisorSummaryAvailable = Boolean(
+    advisorMeetingSummary &&
+      (currentDegreeWorksResult?.generatedPlannedPath ||
+        hasPlannedPathComparison),
+  );
 
   return (
     <main className="min-h-dvh bg-slate-100 text-slate-950">
@@ -534,11 +557,7 @@ export default function PlanCheckPage() {
       <DegreeWorksWorkflowUploadSection
         activeStep={activeStep}
         analyzedFileSummary={analyzedFileSummary}
-        advisorSummaryAvailable={Boolean(
-          advisorMeetingSummary &&
-            (combinedDegreeWorksResult ||
-              currentDegreeWorksResult?.generatedPlannedPath),
-        )}
+        advisorSummaryAvailable={advisorSummaryAvailable}
         generatedPathPreferences={generatedPathPreferences}
         isLoading={isCombinedDegreeWorksLoading}
         onAnalyze={checkCombinedDegreeWorksUploadedPdf}
@@ -562,6 +581,7 @@ export default function PlanCheckPage() {
         selectedFile={selectedCombinedDegreeWorksPdfFile}
         validationError={combinedDegreeWorksUploadValidationError}
         hasCurrentProgressResult={Boolean(currentDegreeWorksResult)}
+        hasPlannedPathComparison={hasPlannedPathComparison}
         hasPlannedPathResult={Boolean(combinedDegreeWorksResult)}
       />
 

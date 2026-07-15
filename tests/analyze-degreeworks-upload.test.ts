@@ -16,6 +16,20 @@ UNIV 4AA0 University Graduation 0
 Total planned credits 122.0
 `;
 
+const currentProgressWorksheetText = `
+Auburn University Degree Works Worksheet
+Audit date 01/15/2026
+Credits required 122
+Credits applied 96
+Unmet conditions for this set of requirements: 26 Credits needed
+Bachelor of Software Engineering INCOMPLETE
+Still needed: 3 Credits in COMP 3220
+Still needed: 3 Credits in COMP 3270
+Preregistered
+Fall Through
+Disclaimer: This audit is a guide and is not official graduation certification.
+`;
+
 test("POST parses a Degree Works-native planned path upload", async () => {
   const response = await POST(
     formDataRequest(await pdfFileFromText(plannedPathText, "universal-plan.pdf")),
@@ -148,6 +162,40 @@ test("POST rejects a request without a file field", async () => {
 
   assert.equal(response.status, 400);
   assert.equal(result.error, 'Upload a PDF file using the "file" form field.');
+});
+
+test("POST rejects a Current Progress worksheet uploaded as Planned Path", async () => {
+  const response = await POST(
+    formDataRequest(
+      await pdfFileFromText(currentProgressWorksheetText, "current-progress.pdf"),
+    ),
+  );
+  const result = await response.json();
+
+  assert.equal(response.status, 422);
+  assert.equal(result.detectedDocumentType, "worksheet_audit");
+  assert.match(result.error, /Current Progress Worksheet/);
+  assert.match(result.error, /Planned Path/);
+});
+
+test("POST limits confidence when a PDF is not confidently a Planned Path", async () => {
+  const response = await POST(
+    formDataRequest(
+      await pdfFileFromText(
+        "Fall 2026 Credits: 6 ACCT 2110 PHIL 1020",
+        "ambiguous-plan.pdf",
+      ),
+    ),
+  );
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(result.parserConfidence, "low");
+  assert.ok(
+    result.parserWarnings.some((warning: string) =>
+      warning.includes("not confidently detected"),
+    ),
+  );
 });
 
 async function pdfFileFromText(text: string, fileName: string) {

@@ -22,6 +22,11 @@ export type BulletinSamplePlanOrdering = {
   coursesByCode: Record<string, BulletinSamplePlanCourse>;
 };
 
+export type BulletinSamplePlanOrderingResolution = {
+  ordering: BulletinSamplePlanOrdering | null;
+  warning: string | null;
+};
+
 type MajorManifestEntry = {
   title?: string;
   fileName?: string;
@@ -38,6 +43,12 @@ const cachedPlansByFile = new Map<string, BulletinSamplePlanOrdering | null>();
 export function findBulletinSamplePlanOrdering(
   audit: CurrentDegreeAuditAnalysis,
 ): BulletinSamplePlanOrdering | null {
+  return resolveBulletinSamplePlanOrdering(audit).ordering;
+}
+
+export function resolveBulletinSamplePlanOrdering(
+  audit: CurrentDegreeAuditAnalysis,
+): BulletinSamplePlanOrderingResolution {
   const manifest = readMajorManifest();
   const labels = [
     audit.detectedProgram.major,
@@ -52,26 +63,69 @@ export function findBulletinSamplePlanOrdering(
     .map(normalizeLabel)
     .filter(Boolean);
 
-  const candidate = manifest
+  const candidates = manifest
     .map((entry) => ({
       entry,
       score: scoreManifestEntry(entry, labels),
     }))
     .filter(({ entry, score }) => score > 0 && Boolean(entry.fileName))
-    .sort((left, right) => right.score - left.score)[0]?.entry;
+    .sort((left, right) => right.score - left.score);
+
+  if (candidates.length === 0) {
+    return { ordering: null, warning: null };
+  }
+
+  const auditCatalogYear =
+    audit.catalogYear ?? audit.detectedProgram.catalogYear ?? null;
+  const normalizedAuditCatalogYear = normalizeCatalogYear(auditCatalogYear);
+  const matchingCatalogCandidate =
+    auditCatalogYear && !normalizedAuditCatalogYear
+      ? undefined
+      : normalizedAuditCatalogYear
+        ? candidates.find(
+            ({ entry }) =>
+              normalizeCatalogYear(entry.catalogYear) ===
+              normalizedAuditCatalogYear,
+          )
+        : candidates[0];
+
+  if (!matchingCatalogCandidate) {
+    const availableCatalogYears = Array.from(
+      new Set(
+        candidates
+          .map(({ entry }) => entry.catalogYear?.trim())
+          .filter((year): year is string => Boolean(year)),
+      ),
+    );
+    const availableText =
+      availableCatalogYears.length > 0
+        ? ` Available checked-in catalog year${availableCatalogYears.length === 1 ? " is" : "s are"} ${availableCatalogYears.join(", ")}.`
+        : " The checked-in sample plan does not identify a catalog year.";
+
+    return {
+      ordering: null,
+      warning: `Degree Works catalog year ${auditCatalogYear} does not match a checked-in Auburn Bulletin sample plan.${availableText} The Bulletin ordering hint was not applied; courses remain in Degree Works Still needed order.`,
+    };
+  }
+
+  const candidate = matchingCatalogCandidate.entry;
 
   if (!candidate?.fileName) {
-    return null;
+    return { ordering: null, warning: null };
   }
 
   const plan = readSamplePlan(candidate);
   if (!plan) {
-    return null;
+    return { ordering: null, warning: null };
   }
 
   return {
-    ...plan,
-    confidence: scoreManifestEntry(candidate, labels) >= 100 ? "high" : "medium",
+    ordering: {
+      ...plan,
+      confidence:
+        scoreManifestEntry(candidate, labels) >= 100 ? "high" : "medium",
+    },
+    warning: null,
   };
 }
 
@@ -248,6 +302,20 @@ function splitProgramLabel(label: string) {
 
 function normalizeLabel(label?: string | null) {
   return (label ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function normalizeCatalogYear(value?: string | null) {
+  const match = /\b((?:19|20)\d{2})\s*[-\u2013\u2014/]\s*((?:19|20)?\d{2})\b/.exec(
+    value ?? "",
+  );
+  if (!match) {
+    return null;
+  }
+
+  const startYear = match[1];
+  const endYear =
+    match[2].length === 2 ? `${startYear.slice(0, 2)}${match[2]}` : match[2];
+  return `${startYear}-${endYear}`;
 }
 
 function extractCourseCodesFromCell(

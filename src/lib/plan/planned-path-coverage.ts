@@ -27,9 +27,11 @@ export type PlannedPathCoverage = {
 export function comparePlannedPathToCurrentProgress({
   currentAudit,
   plannedCourseCodes,
+  plannedPathConfidence,
 }: {
   currentAudit: CurrentDegreeAuditAnalysis;
   plannedCourseCodes: string[];
+  plannedPathConfidence: DegreeWorksParserConfidence;
 }): PlannedPathCoverage {
   const planned = new Set(plannedCourseCodes.map(normalizeCourseCode));
   const completed = new Set(
@@ -99,11 +101,13 @@ export function comparePlannedPathToCurrentProgress({
     confidence: getCoverageConfidence({
       currentAudit,
       plannedCourseCodes,
+      plannedPathConfidence,
       advisorReviewItems,
       uncoveredStillNeededItems,
     }),
     notes: [
       "This compares planned-path courses against Degree Works Still needed items from Current Progress.",
+      "Coverage confidence is capped by both the Current Progress and Planned Path parser confidence.",
       "Exact course and core or elective option matches can be covered by planned courses; section references and broad elective credit-hour requirements stay advisor-review items.",
       "Completed, AP/transfer, preregistered, and in-progress courses from Current Progress are not treated as new planned-path coverage.",
     ],
@@ -231,27 +235,35 @@ function shouldKeepInAdvisorReview(
 function getCoverageConfidence({
   currentAudit,
   plannedCourseCodes,
+  plannedPathConfidence,
   advisorReviewItems,
   uncoveredStillNeededItems,
 }: {
   currentAudit: CurrentDegreeAuditAnalysis;
   plannedCourseCodes: string[];
+  plannedPathConfidence: DegreeWorksParserConfidence;
   advisorReviewItems: string[];
   uncoveredStillNeededItems: PlannedPathCoverageMatch[];
 }): DegreeWorksParserConfidence {
   if (
     currentAudit.confidence === "low" ||
+    plannedPathConfidence === "low" ||
     plannedCourseCodes.length === 0 ||
     currentAudit.stillNeededItems.length === 0
   ) {
     return "low";
   }
 
-  if (advisorReviewItems.length > 0 || uncoveredStillNeededItems.length > 0) {
+  if (
+    currentAudit.confidence === "medium" ||
+    plannedPathConfidence === "medium" ||
+    advisorReviewItems.length > 0 ||
+    uncoveredStillNeededItems.length > 0
+  ) {
     return "medium";
   }
 
-  return currentAudit.confidence;
+  return "high";
 }
 
 function normalizeCourseCode(code: string) {

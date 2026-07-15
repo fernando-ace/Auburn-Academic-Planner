@@ -15,6 +15,7 @@ import {
   parseDegreeWorksStillNeededItems,
   type DegreeWorksStillNeededItem,
 } from "./degreeworks-still-needed.ts";
+import { redactDegreeWorksEvidence } from "./degreeworks-evidence-redaction.ts";
 
 export type CurrentDegreeAuditBlockStatus =
   | "complete"
@@ -781,9 +782,7 @@ function normalizeWhitespace(text: string) {
 }
 
 function sanitizeParserEvidence(text: string) {
-  return text
-    .replace(/\bAuburn\s+University\s+[A-Za-z ,.'-]+-\s*\*+\d+\b/gi, "Auburn University")
-    .replace(/\bStudent\s+name\b[\s\S]{0,80}?\bStudent\s+ID\s+\*+\d+\b/gi, "Student record")
+  return redactDegreeWorksEvidence(text)
     .replace(/\bOverall\s+GPA\s+\d+(?:\.\d+)?\b/gi, "")
     .replace(/\bGPA:\s*\d+(?:\.\d+)?\b/gi, "")
     .replace(/\s+/g, " ")

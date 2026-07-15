@@ -25,8 +25,11 @@ export function PlannedPathOverviewCard({
             Planned path overview
           </h2>
           <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
-            Degree Works plan review for a future path. This is not an official
-            degree audit; advisor verification is required.
+            {result.plannedPathCoverage
+              ? "Comparison against the remaining requirements parsed from Current Progress."
+              : "Course and term parsing only; no Degree Works requirements were compared."}{" "}
+            This is not an official degree audit; advisor verification is
+            required.
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[32rem]">

@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   extractBulletinSamplePlanOrdering,
   findBulletinSamplePlanOrdering,
+  resolveBulletinSamplePlanOrdering,
 } from "../src/lib/plan/bulletin-sample-plan.ts";
 import { analyzeCurrentDegreeAuditText } from "../src/lib/plan/current-degree-audit-analysis.ts";
 
@@ -52,4 +53,27 @@ test("matches checked-in Bulletin plan to detected Current Progress program", as
   assert.ok(ordering);
   assert.match(ordering.matchedMajorTitle, /Business Administration/);
   assert.ok(ordering.coursesByCode["ACCT 2110"]);
+});
+
+test("does not apply a Bulletin ordering hint from a different catalog year", async () => {
+  const audit = analyzeCurrentDegreeAuditText(
+    await readFile(
+      path.join(fixtureDirectory, "worksheet-current-audit-sample.txt"),
+      "utf8",
+    ),
+  );
+  const mismatchedAudit = {
+    ...audit,
+    catalogYear: "2022-2023",
+    detectedProgram: {
+      ...audit.detectedProgram,
+      catalogYear: "2022-2023",
+    },
+  };
+  const resolution = resolveBulletinSamplePlanOrdering(mismatchedAudit);
+
+  assert.equal(resolution.ordering, null);
+  assert.match(resolution.warning ?? "", /2022-2023/);
+  assert.match(resolution.warning ?? "", /2025-2026/);
+  assert.match(resolution.warning ?? "", /was not applied/);
 });

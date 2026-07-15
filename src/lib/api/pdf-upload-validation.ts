@@ -1,6 +1,10 @@
 import { extractPdfText, hasPdfHeader } from "../pdf/pdf-text.ts";
+import {
+  MAX_PDF_UPLOAD_BYTES,
+  MAX_PDF_UPLOAD_MIB,
+} from "./pdf-upload-policy.ts";
 
-export const MAX_PDF_UPLOAD_BYTES = 10 * 1024 * 1024;
+export { MAX_PDF_UPLOAD_BYTES } from "./pdf-upload-policy.ts";
 export const MAX_EXTRACTED_PDF_TEXT_LENGTH = 1_000_000;
 
 type PdfUploadFailure = {
@@ -37,7 +41,10 @@ export async function validatePdfUpload(
 
   const maxBytes = options.maxBytes ?? MAX_PDF_UPLOAD_BYTES;
   if (value.size > maxBytes) {
-    return failure(413, "Uploaded PDF must be 10 MiB or smaller.");
+    return failure(
+      413,
+      `Uploaded PDF must be ${MAX_PDF_UPLOAD_MIB} MiB or smaller.`,
+    );
   }
 
   let pdfData: Uint8Array;

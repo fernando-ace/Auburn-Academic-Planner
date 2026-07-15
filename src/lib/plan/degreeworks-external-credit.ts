@@ -1,3 +1,5 @@
+import { redactDegreeWorksEvidence } from "./degreeworks-evidence-redaction.ts";
+
 export type ExternalCreditSourceType =
   | "advanced_placement"
   | "transfer"
@@ -28,7 +30,7 @@ const transferTextPattern = /\bTransfer\b|\bTR\b|\btransferred\b/i;
 export function extractExternalCreditRecords(
   text: string,
 ): ExternalCreditRecord[] {
-  const normalizedText = normalizeWhitespace(text);
+  const normalizedText = normalizeWhitespace(redactDegreeWorksEvidence(text));
   const records: ExternalCreditRecord[] = [];
 
   for (const match of normalizedText.matchAll(satisfiedByPattern)) {
@@ -81,7 +83,7 @@ export function parseSatisfiedByEvidence(
   ExternalCreditRecord,
   "satisfiesCourseCode" | "satisfiesCourseTitle"
 > | null {
-  const evidence = normalizeWhitespace(rawEvidence);
+  const evidence = normalizeWhitespace(redactDegreeWorksEvidence(rawEvidence));
   const match = compactExternalSourcePattern.exec(evidence);
 
   if (!match) {

@@ -8,7 +8,7 @@ import {
   type DegreeWorksStillNeededRequirementType,
 } from "./degreeworks-still-needed.ts";
 import {
-  findBulletinSamplePlanOrdering,
+  resolveBulletinSamplePlanOrdering,
   type BulletinSamplePlanOrdering,
 } from "./bulletin-sample-plan.ts";
 
@@ -83,6 +83,7 @@ export type GeneratedPlannedPath = {
       fileName: string;
       confidence: "high" | "medium" | "low";
     } | null;
+    bulletinOrderingWarning: string | null;
   };
   confidence: DegreeWorksParserConfidence;
   notes: string[];
@@ -108,7 +109,8 @@ export function buildGeneratedPlannedPath({
   preferences?: GeneratedPathPreferences | null;
 }): GeneratedPlannedPath {
   const resolvedPreferences = resolveGeneratedPathPreferences(preferences);
-  const ordering = findBulletinSamplePlanOrdering(audit);
+  const orderingResolution = resolveBulletinSamplePlanOrdering(audit);
+  const ordering = orderingResolution.ordering;
   const excludedCurrentCourseCodes = currentCourseCodes(audit);
   const unavailable = new Set(excludedCurrentCourseCodes);
   const advisorReviewItems: GeneratedPathAdvisorReviewItem[] = [];
@@ -164,6 +166,7 @@ export function buildGeneratedPlannedPath({
             confidence: ordering.confidence,
           }
         : null,
+      bulletinOrderingWarning: orderingResolution.warning,
     },
     confidence: generatedPathConfidence({
       advisorReviewItems,
@@ -172,7 +175,10 @@ export function buildGeneratedPlannedPath({
       placedItems,
       unplacedItems,
     }),
-    notes: generatedPathNotes({ ordering }),
+    notes: generatedPathNotes({
+      ordering,
+      orderingWarning: orderingResolution.warning,
+    }),
   };
 }
 
@@ -774,14 +780,17 @@ function generatedPathConfidence({
 
 function generatedPathNotes({
   ordering,
+  orderingWarning,
 }: {
   ordering: BulletinSamplePlanOrdering | null;
+  orderingWarning: string | null;
 }) {
   return [
     "Generated from Degree Works Current Progress evidence; it is not an official degree audit.",
-    ordering
-      ? `A checked-in Auburn Bulletin sample plan for ${ordering.matchedMajorTitle} was used only to order matching Degree Works-backed items.`
-      : "No matching Auburn Bulletin sample plan was found, so remaining Degree Works-backed items were ordered from the audit.",
+    orderingWarning ??
+      (ordering
+        ? `A checked-in Auburn Bulletin sample plan for ${ordering.matchedMajorTitle} was used only to order matching Degree Works-backed items.`
+        : "No matching Auburn Bulletin sample plan was found, so remaining Degree Works-backed items were ordered from the audit."),
     "Course availability, prerequisites, substitutions, AP/transfer, Fall Through, electives, and advisor-approved alternatives require advisor verification.",
   ];
 }

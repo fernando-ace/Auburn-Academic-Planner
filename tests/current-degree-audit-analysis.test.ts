@@ -108,6 +108,34 @@ test("parses registered Degree Works rows without leaking adjacent evidence", as
   );
 });
 
+test("redacts obvious student identifiers from all parser output evidence", () => {
+  const analysis = analyzeCurrentDegreeAuditText(`
+    Auburn University Degree Works Worksheet
+    Student name Jane Q Student
+    Student ID 900000000
+    Email jane.student@example.com
+    Phone (334) 555-0199
+    Date of birth 01/02/2004
+    Degree Bachelor of Software Engineering
+    Program BSWE Software Engineering
+    Credits required 122
+    Incomplete Major requirements
+    Still needed: COMP 3220
+    Satisfied by: COMP 1210 Fundamentals of Computing I Grade A Credits 3 Term Fall 2024
+    Satisfied by: MATH 1610 Calculus I Grade B Credits 4 Term Fall 2024
+    Satisfied by: ENGL 1100 English Composition I Grade A Credits 3 Term Spring 2025
+    Satisfied by: COMP 2210 Fundamentals of Computing II Grade B Credits 3 Term Spring 2025
+    Satisfied by: MATH 1620 Calculus II Grade A Credits 4 Term Spring 2025
+  `);
+  const serialized = JSON.stringify(analysis);
+
+  assert.doesNotMatch(serialized, /Jane Q Student/);
+  assert.doesNotMatch(serialized, /900000000/);
+  assert.doesNotMatch(serialized, /jane\.student@example\.com/);
+  assert.doesNotMatch(serialized, /334.{0,4}555.{0,4}0199/);
+  assert.doesNotMatch(serialized, /01\/02\/2004/);
+});
+
 test("extracts AP/transfer and fall-through status evidence", async () => {
   const analysis = await analyzeFixture("worksheet-transfer-ap-sample.txt");
   const gapReport = buildCurrentStateGapReport({ audit: analysis });
@@ -173,6 +201,7 @@ test("compares planned path coverage against current audit still-needed items", 
   const coverage = comparePlannedPathToCurrentProgress({
     currentAudit: analysis,
     plannedCourseCodes: ["ACCT 2110", "PHIL 1020", "FREE 9999"],
+    plannedPathConfidence: "high",
   });
 
   assert.ok(
@@ -188,4 +217,16 @@ test("compares planned path coverage against current audit still-needed items", 
     ),
   );
   assert.ok(coverage.plannedButUnmatchedCourses.includes("FREE 9999"));
+});
+
+test("planned-path parser confidence caps coverage confidence", async () => {
+  const analysis = await analyzeFixture("worksheet-business-audit-sample.txt");
+  const coverage = comparePlannedPathToCurrentProgress({
+    currentAudit: analysis,
+    plannedCourseCodes: ["ACCT 2110", "PHIL 1020"],
+    plannedPathConfidence: "low",
+  });
+
+  assert.notEqual(analysis.confidence, "low");
+  assert.equal(coverage.confidence, "low");
 });

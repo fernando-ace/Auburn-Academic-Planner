@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   FileSearch,
   GraduationCap,
+  Info,
   List,
   Loader2,
   Menu,
@@ -481,8 +482,10 @@ function MobileDrawer({
   return (
     <div className={`fixed inset-0 z-50 bg-slate-950/35 ${visibilityClass}`}>
       <div
-        className={`absolute inset-y-0 flex w-[min(88vw,360px)] flex-col bg-white shadow-xl ${
-          side === "right" ? "right-0" : "left-0"
+        className={`absolute inset-y-0 flex w-[min(88vw,360px)] flex-col bg-white shadow-sm ${
+          side === "right"
+            ? "right-0 border-l border-slate-200"
+            : "left-0 border-r border-slate-200"
         }`}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
@@ -718,6 +721,7 @@ export function ChatWorkspace() {
                 Ask about Auburn academic requirements
               </label>
               <input
+                aria-describedby="chat-privacy-note"
                 className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-[14px] text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15 sm:h-12 sm:px-4"
                 disabled={isLoading}
                 id="chat-input"
@@ -735,6 +739,25 @@ export function ChatWorkspace() {
                 <Send aria-hidden="true" size={18} />
               </button>
             </form>
+            <div className="mx-auto mt-2 flex w-full max-w-3xl items-start gap-1.5 text-[11px] leading-4 text-slate-500">
+              <Info
+                aria-hidden="true"
+                className="mt-px shrink-0 text-slate-400"
+                size={14}
+              />
+              <p id="chat-privacy-note">
+                Messages and recent chat context are sent to Google Gemini to
+                generate a response. Do not include names, student IDs, or
+                other private student records. Read the{" "}
+                <Link
+                  className="font-semibold text-[#03244d] underline underline-offset-2 hover:text-[#b84300]"
+                  href="/privacy"
+                >
+                  privacy details
+                </Link>
+                .
+              </p>
+            </div>
           </div>
         </section>
 

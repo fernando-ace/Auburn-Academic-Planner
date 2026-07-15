@@ -23,7 +23,8 @@
     "test": "node --test --no-warnings --experimental-strip-types tests/*.test.ts",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "validate": "npm test && npm run check:sources && npm run sources:check-scope && npm run check:course-prefixes && npm run lint && npm run typecheck && npm run build"
+    "validate": "npm test && npm run check:sources && npm run sources:check-scope && npm run check:course-prefixes && npm run lint && npm run typecheck && npm run build",
+    "qa": "npm run validate && npm run check:a11y"
   },
   "dependencies": {
     "@google/genai": "^2.8.0",

@@ -58,13 +58,23 @@ export async function POST(request: Request) {
     );
   }
 
-  const currentProgressAnalysis = parseCurrentProgressAnalysisInput(
+  const currentProgressInput = parseCurrentProgressAnalysisInput(
     (body as { currentProgressAnalysis?: unknown }).currentProgressAnalysis,
   );
+  if (currentProgressInput.status === "invalid") {
+    return Response.json(
+      { error: currentProgressInput.error },
+      { status: 400 },
+    );
+  }
+
+  const currentProgressAnalysis =
+    currentProgressInput.status === "valid" ? currentProgressInput.value : null;
   const plannedPathCoverage = currentProgressAnalysis
     ? comparePlannedPathToCurrentProgress({
         currentAudit: currentProgressAnalysis,
         plannedCourseCodes: combinedAnalysis.parsedCourseCodes,
+        plannedPathConfidence: combinedAnalysis.parserConfidence,
       })
     : null;
 

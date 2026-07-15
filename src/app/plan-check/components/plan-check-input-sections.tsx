@@ -32,6 +32,7 @@ export function DegreeWorksWorkflowUploadSection({
   analyzedFileSummary,
   generatedPathPreferences,
   hasCurrentProgressResult = false,
+  hasPlannedPathComparison = false,
   hasPlannedPathResult = false,
   isLoading,
   onAnalyze,
@@ -58,6 +59,7 @@ export function DegreeWorksWorkflowUploadSection({
   generatedPathPreferences: GeneratedPathPreferences;
   isLoading: boolean;
   hasCurrentProgressResult?: boolean;
+  hasPlannedPathComparison?: boolean;
   hasPlannedPathResult?: boolean;
   onAnalyze: MouseEventHandler<HTMLButtonElement>;
   onClearAnalysis?: MouseEventHandler<HTMLButtonElement>;
@@ -105,12 +107,12 @@ export function DegreeWorksWorkflowUploadSection({
     : isPlannedPath
       ? hasCurrentProgressResult
         ? "Optional: upload a plan PDF or paste planned courses to compare your own path against Current Progress evidence."
-        : "Optional: upload a plan PDF or paste planned courses to validate a future path. Current Progress generates the more useful draft path."
+        : "Optional: upload a plan PDF or paste planned courses to parse a future path. Add Current Progress to compare it against remaining requirements."
       : "Use the copyable summary below to prepare for an advisor conversation. It is not an official degree audit.";
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6 lg:pt-5">
-      <div className="overflow-hidden rounded-xl border border-[#dd550c]/30 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06),0_18px_45px_rgba(15,23,42,0.06)]">
+      <div className="overflow-hidden rounded-xl border border-[#dd550c]/30 bg-white shadow-sm">
         <div className="h-1 bg-[#dd550c]" />
         <div className={`grid gap-5 p-4 sm:p-5 ${hasAnyResult ? "lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-5" : "lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-8 lg:p-6"}`}>
           <div className="max-w-3xl lg:py-1">
@@ -125,10 +127,11 @@ export function DegreeWorksWorkflowUploadSection({
               {description}
             </p>
 
-            <ol className="mt-4 grid gap-2 text-[13px] leading-5 text-slate-600 sm:grid-cols-3">
+            <ol className="mt-4 grid grid-cols-3 gap-1.5 text-[13px] leading-5 text-slate-600 sm:gap-2">
               <PlanStepButton
                 active={isCurrentProgress}
                 complete={hasCurrentProgressResult}
+                completeStatus="Analyzed"
                 disabled={isLoading}
                 label="1"
                 onClick={() => onStepChange("current_progress")}
@@ -137,21 +140,25 @@ export function DegreeWorksWorkflowUploadSection({
               />
               <PlanStepButton
                 active={isPlannedPath}
-                complete={hasPlannedPathResult}
+                complete={hasPlannedPathComparison}
+                completeStatus="Compared"
                 disabled={isLoading}
                 label="2"
                 onClick={() => onStepChange("planned_path")}
                 step="planned_path"
+                statusOverride={hasPlannedPathResult && !hasPlannedPathComparison ? "Parsed only" : undefined}
                 text="Compare Own Plan"
               />
               <PlanStepButton
                 active={isAdvisorSummary}
                 complete={advisorSummaryAvailable}
+                completeStatus="Ready"
                 disabled={isLoading || !advisorSummaryAvailable}
                 label="3"
                 locked={!advisorSummaryAvailable}
                 onClick={() => onStepChange("advisor_summary")}
                 step="advisor_summary"
+                statusOverride={hasPlannedPathResult && !hasPlannedPathComparison ? "Needs Current Progress" : undefined}
                 text="Advisor Summary"
               />
             </ol>
@@ -168,13 +175,15 @@ export function DegreeWorksWorkflowUploadSection({
                 {isCurrentProgress
                   ? "Current Progress preserves completed, preregistered, AP/transfer, Fall Through, still-needed, and unknown statuses instead of flattening everything into planned courses."
                   : isPlannedPath
-                    ? "Optional plan comparison parses future courses and checks them against Current Progress still-needed evidence."
+                    ? hasCurrentProgressResult
+                      ? "Optional plan comparison parses future courses and checks them against Current Progress still-needed evidence."
+                      : "This step can parse courses and terms on its own. Current Progress is required for a requirements comparison."
                     : "Advisor Summary reflects the generated path, plus optional plan comparison when provided."}
               </p>
             )}
 
             {!isAdvisorSummary ? (
-              <details className="mt-4 rounded-lg border border-[#dd550c]/25 bg-[#fff7f1] p-3 text-[13px] leading-5 text-slate-700" open={isCurrentProgress || (isPlannedPath && plannedPathInputMode === "pdf" && !hasPlannedPathResult)}>
+              <details className="mt-4 rounded-lg border border-[#dd550c]/25 bg-[#fff7f1] p-3 text-[13px] leading-5 text-slate-700">
                 <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-slate-950">
                   <FileText aria-hidden="true" className="shrink-0 text-[#dd550c]" size={17} />
                   <span>
@@ -215,7 +224,7 @@ export function DegreeWorksWorkflowUploadSection({
             </p>
             <p className="mt-2 text-[12px] leading-5 text-slate-500">
               {isAdvisorSummary
-                ? "The final preparation notes appear below after a Planned Path check."
+                ? "Preparation notes appear below after Current Progress is analyzed or a plan comparison is complete."
                 : "Degree Works-native analysis is used for all readable Auburn audits."}
             </p>
 
@@ -291,13 +300,13 @@ export function DegreeWorksWorkflowUploadSection({
                   </button>
                 ) : null}
               </div>
-            ) : isPlannedPath && hasPlannedPathResult ? (
+            ) : isPlannedPath && hasPlannedPathResult && hasPlannedPathComparison ? (
               <div className="mt-4 grid gap-3">
                 <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-[13px] leading-5 text-emerald-900">
                   <div className="flex gap-2">
                     <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0" size={16} />
                     <p>
-                      Your own plan is checked. Continue to Advisor Summary for the copyable meeting notes.
+                      Your own plan was compared with Current Progress. Continue to Advisor Summary for copyable meeting notes.
                     </p>
                   </div>
                 </div>
@@ -318,6 +327,35 @@ export function DegreeWorksWorkflowUploadSection({
                 >
                   <ArrowLeft aria-hidden="true" size={16} />
                   Back to Current Progress
+                </button>
+                {onClearAnalysis ? (
+                  <button
+                    className={secondaryButtonClass}
+                    onClick={onClearAnalysis}
+                    type="button"
+                  >
+                    Start another check
+                  </button>
+                ) : null}
+              </div>
+            ) : isPlannedPath && hasPlannedPathResult ? (
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-[13px] leading-5 text-sky-950">
+                  <div className="flex gap-2">
+                    <FileText aria-hidden="true" className="mt-0.5 shrink-0" size={16} />
+                    <p>
+                      Course list parsed, not compared. Add Current Progress to check this plan against your remaining Degree Works requirements.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className={primaryButtonClass}
+                  disabled={isLoading}
+                  onClick={() => onStepChange("current_progress")}
+                  type="button"
+                >
+                  Add Current Progress to compare
+                  <ArrowRight aria-hidden="true" size={16} />
                 </button>
                 {onClearAnalysis ? (
                   <button
@@ -369,15 +407,16 @@ export function DegreeWorksWorkflowUploadSection({
                       Planned courses
                     </label>
                     <textarea
+                      aria-describedby="manual-planned-courses-help"
                       className="mt-2 min-h-40 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15"
                       disabled={isLoading}
                       id="manual-planned-courses"
                       onChange={onManualPlannedCoursesChange}
-                      placeholder={"Fall 2026: BIOL 1020, CHEM 1030\nSpring 2027: MATH 1610, CSES 2040"}
+                      placeholder={"Total Planned Credits: 12\nFall 2026 Credits: 6\nBIOL 1020, CHEM 1030\nSpring 2027 Credits: 6\nMATH 1610, CSES 2040"}
                       value={manualPlannedCoursesText}
                     />
-                    <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                      Paste course prefixes and numbers from a draft plan. This text is processed for this request and is not permanently stored.
+                    <p className="mt-2 text-[12px] leading-5 text-slate-600" id="manual-planned-courses-help">
+                      Format each term like <code className="rounded-sm bg-slate-100 px-1 py-0.5 font-semibold text-slate-700">Fall 2026 Credits: 6</code>, then list its courses below. This keeps courses in the right term. The text is not permanently stored.
                     </p>
                   </>
                 ) : (
@@ -566,26 +605,32 @@ function GeneratedPathPreferencesControls({
 function PlanStepButton({
   active,
   complete,
+  completeStatus = "Complete",
   disabled,
   label,
   locked = false,
   onClick,
   step,
+  statusOverride,
   text,
 }: {
   active: boolean;
   complete: boolean;
+  completeStatus?: string;
   disabled: boolean;
   label: string;
   locked?: boolean;
   onClick: () => void;
   step: PlanCheckStep;
+  statusOverride?: string;
   text: string;
 }) {
-  const statusText = active
-    ? "Current step"
-    : complete
-      ? "Complete"
+  const statusText = statusOverride
+    ? statusOverride
+    : active
+      ? "Current step"
+      : complete
+      ? completeStatus
       : locked
         ? "Available after generated path"
         : "Available";
@@ -600,7 +645,7 @@ function PlanStepButton({
       <button
         aria-current={active ? "step" : undefined}
         aria-label={`Step ${label}: ${text}. ${statusText}`}
-        className={`flex min-h-[4.75rem] w-full items-center gap-2 rounded-md border px-3 py-2 text-left transition ${
+        className={`flex min-h-[6.5rem] w-full flex-col items-start gap-1.5 rounded-md border px-2 py-2 text-left transition sm:min-h-[4.75rem] sm:flex-row sm:items-center sm:gap-2 sm:px-3 ${
           active
             ? "border-[#dd550c]/35 bg-[#fff7f1] text-slate-900"
             : complete

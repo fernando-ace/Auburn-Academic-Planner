@@ -34,15 +34,24 @@ export async function POST(request: Request) {
     );
   }
 
-  const currentProgressAnalysis = parseCurrentProgressAnalysisInput(
+  const currentProgressInput = parseCurrentProgressAnalysisInput(
     (body as { currentProgressAnalysis?: unknown }).currentProgressAnalysis,
   );
-  if (!currentProgressAnalysis) {
+  if (currentProgressInput.status === "invalid") {
+    return Response.json(
+      { error: currentProgressInput.error },
+      { status: 400 },
+    );
+  }
+
+  if (currentProgressInput.status === "absent") {
     return Response.json(
       { error: "Current Progress analysis is required before generating a path." },
       { status: 400 },
     );
   }
+
+  const currentProgressAnalysis = currentProgressInput.value;
 
   const currentStateGapReport = buildCurrentStateGapReport({
     audit: currentProgressAnalysis,

@@ -23,7 +23,7 @@ test("rejects a non-PDF upload", async () => {
   if (!result.ok) assert.equal(result.status, 400);
 });
 
-test("rejects a PDF larger than 10 MiB", async () => {
+test("rejects a PDF larger than the deployment-safe upload limit", async () => {
   const result = await validatePdfUpload(
     new File(
       [new Uint8Array(MAX_PDF_UPLOAD_BYTES + 1)],
@@ -33,7 +33,10 @@ test("rejects a PDF larger than 10 MiB", async () => {
   );
 
   assert.equal(result.ok, false);
-  if (!result.ok) assert.equal(result.status, 413);
+  if (!result.ok) {
+    assert.equal(result.status, 413);
+    assert.match(result.error, /4 MiB or smaller/);
+  }
 });
 
 test("rejects a file without a PDF header", async () => {

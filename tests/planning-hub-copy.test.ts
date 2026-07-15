@@ -21,6 +21,8 @@ test("Planning Hub public copy is Degree Works-native", async () => {
   assert.match(files, /I only have my own plan/);
   assert.match(files, /Compare my own plan/);
   assert.match(files, /Continue to Advisor Summary/);
+  assert.match(files, /Course list parsed, not compared/);
+  assert.match(files, /Fall 2026 Credits: 6/);
   assert.match(files, /How to export Current Progress/);
   assert.match(files, /Use the print icon in the top-right toolbar/);
   assert.match(files, /Degree Works-native/);
@@ -39,6 +41,7 @@ test("Planning Hub public copy is Degree Works-native", async () => {
   assert.doesNotMatch(files, /source-backed exact rules/i);
   assert.doesNotMatch(files, /Local rule evidence/);
   assert.doesNotMatch(files, /Program audit details/);
+  assert.doesNotMatch(files, /Your own plan is checked/);
   assert.doesNotMatch(files, /Degree Works will open a printable plan page/);
 });
 
