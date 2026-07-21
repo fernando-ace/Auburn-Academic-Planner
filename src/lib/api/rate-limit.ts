@@ -20,6 +20,11 @@ type RateLimitBlocked = {
   error: string;
 };
 
+type UpstashRedisCredentials = {
+  url: string;
+  token: string;
+};
+
 export type RateLimitResult = RateLimitAllowed | RateLimitBlocked;
 
 const inMemoryBuckets = new Map<string, { count: number; resetAt: number }>();
@@ -39,12 +44,14 @@ export async function checkRateLimit(
     return checkInMemoryRateLimit(key, options);
   }
 
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  const upstashConfiguration = resolveUpstashRedisConfiguration();
 
-  if (url && token) {
+  if (upstashConfiguration.credentials) {
     try {
-      const limiter = getUpstashLimiter(options);
+      const limiter = getUpstashLimiter(
+        options,
+        upstashConfiguration.credentials,
+      );
       const result = await limiter.limit(key);
 
       if (result.reason === "timeout") {
@@ -70,7 +77,9 @@ export async function checkRateLimit(
   }
 
   warnOnce(
-    url || token ? "upstash-partial-config" : "upstash-not-configured",
+    upstashConfiguration.hasAnyConfiguredValue
+      ? "upstash-partial-config"
+      : "upstash-not-configured",
     "Distributed rate limiting is not fully configured; using the bounded local fallback.",
   );
   return checkInMemoryRateLimit(key, options);
@@ -83,24 +92,24 @@ export function resetInMemoryRateLimits() {
 }
 
 export function getRateLimitConfigurationStatus() {
-  const hasUrl = Boolean(process.env.UPSTASH_REDIS_REST_URL?.trim());
-  const hasToken = Boolean(process.env.UPSTASH_REDIS_REST_TOKEN?.trim());
+  const configured = Boolean(resolveUpstashRedisConfiguration().credentials);
 
   return {
-    mode: hasUrl && hasToken ? "distributed" : "local_fallback",
-    fullyConfigured: hasUrl && hasToken,
+    mode: configured ? "distributed" : "local_fallback",
+    fullyConfigured: configured,
   } as const;
 }
 
 export async function checkRateLimitConnectivity() {
-  const configuration = getRateLimitConfigurationStatus();
-  if (!configuration.fullyConfigured) {
+  const configuration = resolveUpstashRedisConfiguration();
+  if (!configuration.credentials) {
     return "not_configured" as const;
   }
 
   try {
     const response = await createUpstashRedis(
       UPSTASH_HEALTH_CHECK_TIMEOUT_MS,
+      configuration.credentials,
     ).ping();
     return response === "PONG" ? ("ready" as const) : ("unavailable" as const);
   } catch {
@@ -132,7 +141,10 @@ function checkInMemoryRateLimit(
   return { ok: true };
 }
 
-function getUpstashLimiter({ namespace, limit, windowSeconds }: RateLimitOptions) {
+function getUpstashLimiter(
+  { namespace, limit, windowSeconds }: RateLimitOptions,
+  credentials: UpstashRedisCredentials,
+) {
   const cacheKey = `${namespace}:${limit}:${windowSeconds}`;
   const cached = upstashLimiters.get(cacheKey);
 
@@ -141,7 +153,7 @@ function getUpstashLimiter({ namespace, limit, windowSeconds }: RateLimitOptions
   }
 
   const limiter = new Ratelimit({
-    redis: createUpstashRedis(UPSTASH_RATE_LIMIT_TIMEOUT_MS),
+    redis: createUpstashRedis(UPSTASH_RATE_LIMIT_TIMEOUT_MS, credentials),
     limiter: Ratelimit.slidingWindow(limit, `${windowSeconds} s`),
     analytics: false,
     prefix: `auburn-academic-planner:${namespace}`,
@@ -152,13 +164,52 @@ function getUpstashLimiter({ namespace, limit, windowSeconds }: RateLimitOptions
   return limiter;
 }
 
-function createUpstashRedis(timeoutMs: number) {
+function createUpstashRedis(
+  timeoutMs: number,
+  credentials: UpstashRedisCredentials,
+) {
   return new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    url: credentials.url,
+    token: credentials.token,
     retry: false,
     signal: () => AbortSignal.timeout(timeoutMs),
   });
+}
+
+function resolveUpstashRedisConfiguration() {
+  const canonical = {
+    url: process.env.UPSTASH_REDIS_REST_URL?.trim(),
+    token: process.env.UPSTASH_REDIS_REST_TOKEN?.trim(),
+  };
+  const marketplace = {
+    url: process.env.UPSTASH_REDIS_REST_KV_REST_API_URL?.trim(),
+    token: process.env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN?.trim(),
+  };
+
+  if (canonical.url || canonical.token) {
+    return {
+      credentials:
+        canonical.url && canonical.token
+          ? { url: canonical.url, token: canonical.token }
+          : null,
+      hasAnyConfiguredValue: true,
+    };
+  }
+
+  if (marketplace.url || marketplace.token) {
+    return {
+      credentials:
+        marketplace.url && marketplace.token
+          ? { url: marketplace.url, token: marketplace.token }
+          : null,
+      hasAnyConfiguredValue: true,
+    };
+  }
+
+  return {
+    credentials: null,
+    hasAnyConfiguredValue: false,
+  };
 }
 
 function clientIpFromRequest(request: Request) {

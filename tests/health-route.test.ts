@@ -12,6 +12,10 @@ const originalEnv = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   GEMINI_FILE_SEARCH_STORE_NAME: process.env.GEMINI_FILE_SEARCH_STORE_NAME,
   RELEASE_HEALTH_TOKEN: process.env.RELEASE_HEALTH_TOKEN,
+  UPSTASH_REDIS_REST_KV_REST_API_TOKEN:
+    process.env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN,
+  UPSTASH_REDIS_REST_KV_REST_API_URL:
+    process.env.UPSTASH_REDIS_REST_KV_REST_API_URL,
   UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
   VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
@@ -30,8 +34,7 @@ test("shallow health clearly reports missing configuration without a live check"
   delete process.env.GEMINI_API_KEY;
   delete process.env.GEMINI_FILE_SEARCH_STORE_NAME;
   delete process.env.RELEASE_HEALTH_TOKEN;
-  delete process.env.UPSTASH_REDIS_REST_TOKEN;
-  delete process.env.UPSTASH_REDIS_REST_URL;
+  clearUpstashEnv();
 
   const response = await GET(healthRequest());
   const result = await response.json();
@@ -95,6 +98,38 @@ test("deep health reports ready only after a live Upstash ping", async () => {
       connectivity: "ready",
     },
   });
+});
+
+test("deep health accepts Vercel Marketplace Upstash credentials", async () => {
+  configureRequiredServices();
+  delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  delete process.env.UPSTASH_REDIS_REST_URL;
+  process.env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN = "marketplace-token";
+  process.env.UPSTASH_REDIS_REST_KV_REST_API_URL =
+    "https://marketplace-redis.example";
+  process.env.VERCEL_GIT_COMMIT_SHA =
+    "0123456789abcdef0123456789abcdef01234567";
+  let requestedUrl = "";
+  globalThis.fetch = (async (input) => {
+    requestedUrl = input instanceof Request ? input.url : String(input);
+    return new Response(JSON.stringify([{ result: "UE9ORw==" }]), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  const response = await GET(
+    healthRequest("?check=deep", releaseHealthToken),
+  );
+  const result = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(result.status, "ready");
+  assert.deepEqual(result.services.requestProtection, {
+    configuration: "configured",
+    connectivity: "ready",
+  });
+  assert.match(requestedUrl, /^https:\/\/marketplace-redis\.example\//);
 });
 
 test("deep health fails closed within its bounded Upstash timeout", async () => {
@@ -182,6 +217,13 @@ function configureRequiredServices() {
   process.env.RELEASE_HEALTH_TOKEN = releaseHealthToken;
   process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
   process.env.UPSTASH_REDIS_REST_URL = "https://redis.example";
+}
+
+function clearUpstashEnv() {
+  delete process.env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN;
+  delete process.env.UPSTASH_REDIS_REST_KV_REST_API_URL;
+  delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  delete process.env.UPSTASH_REDIS_REST_URL;
 }
 
 function setNodeVersion(version: string) {

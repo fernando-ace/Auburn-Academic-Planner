@@ -71,11 +71,23 @@ Chat allows at most two Gemini generation attempts total. The second attempt is 
 
 Planning Hub PDF analysis, upload validation, source integrity checks, tests, and builds do not call Gemini.
 
-Production request protection for `/chat` and Planning Hub API routes uses Upstash Redis when these server-side variables are present:
+Production request protection for `/chat` and Planning Hub API routes uses Upstash Redis when either complete server-side credential pair is present. The direct pair is preferred:
 
 ```env
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
+```
+
+The current Vercel Marketplace integration instead injects this compatible alternative pair:
+
+```env
+UPSTASH_REDIS_REST_KV_REST_API_URL=...
+UPSTASH_REDIS_REST_KV_REST_API_TOKEN=...
+```
+
+When both pairs are complete, the direct pair wins; values are never mixed between pairs. `KV_URL`, `REDIS_URL`, and read-only tokens are intentionally ignored because distributed rate limiting requires a write-capable REST credential pair. Configure the release probe separately:
+
+```env
 RELEASE_HEALTH_TOKEN=...
 ```
 
