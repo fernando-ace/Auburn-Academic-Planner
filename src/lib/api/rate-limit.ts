@@ -35,27 +35,22 @@ export async function checkRateLimit(
   const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
   const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
 
-  if (!url || !token) {
-    return {
-      ok: false,
-      status: 503,
-      error:
-        "Request protection is not configured for production. Try again later.",
-    };
+  if (url && token) {
+    const limiter = getUpstashLimiter(options);
+    const result = await limiter.limit(key);
+
+    if (!result.success) {
+      return {
+        ok: false,
+        status: 429,
+        error: "Too many requests. Try again in a few minutes.",
+      };
+    }
+
+    return { ok: true };
   }
 
-  const limiter = getUpstashLimiter(options);
-  const result = await limiter.limit(key);
-
-  if (!result.success) {
-    return {
-      ok: false,
-      status: 429,
-      error: "Too many requests. Try again in a few minutes.",
-    };
-  }
-
-  return { ok: true };
+  return checkInMemoryRateLimit(key, options);
 }
 
 export function resetInMemoryRateLimits() {

@@ -55,7 +55,7 @@ npm run sources:upload -- --dry-run
 
 `sources:fetch:dry-run` prints the eligible curated source inventory without fetching URLs. `sources:discover-majors:dry-run` reads only the checked-in Undergraduate Majors index and shows discovered Bulletin major counts without writing files. `sources:fetch:majors:dry-run` shows the bounded all-major fetch plan without fetching URLs. `check:sources` validates curated files, major files when present, manifests, and seed scope. `sources:upload -- --dry-run` prints curated, all-major, and total Gemini File Search upload counts without making an API call.
 
-## Gemini Chat
+## Runtime Configuration
 
 Gemini configuration is required only for `/chat` and optional source-upload/evaluation scripts:
 
@@ -65,6 +65,15 @@ GEMINI_FILE_SEARCH_STORE_NAME=...
 ```
 
 Planning Hub PDF analysis, upload validation, source integrity checks, tests, and builds do not call Gemini.
+
+Production request protection for `/chat` and Planning Hub API routes uses Upstash Redis when these server-side variables are present:
+
+```env
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+If Upstash is not configured, the app falls back to an in-memory per-runtime rate limiter so demos and low-traffic deployments keep working. Use Upstash for distributed production rate limits across server instances and restarts.
 
 ## Trust And Safety
 
