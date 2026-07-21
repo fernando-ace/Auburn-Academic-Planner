@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_URL,
+  SOCIAL_IMAGE_ALT,
+} from "@/lib/site-metadata";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,13 +19,39 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  applicationName: "Auburn Academic Planner",
+  metadataBase: SITE_URL,
+  applicationName: SITE_NAME,
   title: {
-    default: "Auburn Academic Planner",
-    template: "%s | Auburn Academic Planner",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "A source-grounded academic planning assistant for Auburn students.",
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/plan-check",
+  },
+  manifest: "/manifest.webmanifest",
+  openGraph: {
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: "/plan-check",
+    siteName: SITE_NAME,
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: SOCIAL_IMAGE_ALT,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: ["/opengraph-image"],
+  },
   robots: {
     index: true,
     follow: true,

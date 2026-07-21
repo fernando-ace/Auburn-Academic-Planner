@@ -16,7 +16,7 @@ Use only synthetic or redacted student materials in this template.
 
 - Participant group:
 - Device and browser:
-- Task: run Current Progress, Planned Path, and Advisor Summary.
+- Task: run Current Progress, review the generated path and Advisor Summary, then optionally compare their own plan.
 - Time to first useful result:
 - Confusing step:
 - Did the student understand advisor verification is required?
@@ -25,8 +25,9 @@ Use only synthetic or redacted student materials in this template.
 ## Metrics
 
 - Current Progress completion rate:
-- Planned Path completion rate:
-- Manual planned-course completion rate:
+- Generated-path usefulness rate:
+- Own-plan comparison completion rate:
+- Manual own-plan completion rate:
 - PDF parse failure rate:
 - Rate-limit events:
 - Accessibility issue count:

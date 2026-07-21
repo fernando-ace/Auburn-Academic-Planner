@@ -1,5 +1,3 @@
-import { connection } from "next/server";
-
 import {
   buildGeneratedPathStartTermOptions,
   getDefaultGeneratedPathStartTerm,
@@ -7,12 +5,12 @@ import {
 import type { GeneratedPathPreferences } from "@/lib/plan/generated-planned-path";
 import { PlanCheckClient } from "./plan-check-client";
 
-export default async function PlanCheckPage() {
-  await connection();
+export const revalidate = 300;
 
-  const requestTime = new Date();
+export default function PlanCheckPage() {
+  const renderedAt = new Date();
   const initialGeneratedPathPreferences: GeneratedPathPreferences = {
-    startTerm: getDefaultGeneratedPathStartTerm(requestTime),
+    startTerm: getDefaultGeneratedPathStartTerm(renderedAt),
     maxCreditsPerTerm: 15,
     includeSummer: false,
     maxSummerCredits: 6,
@@ -21,7 +19,7 @@ export default async function PlanCheckPage() {
   return (
     <PlanCheckClient
       generatedPathStartTermOptions={buildGeneratedPathStartTermOptions(
-        requestTime,
+        renderedAt,
       )}
       initialGeneratedPathPreferences={initialGeneratedPathPreferences}
     />

@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-
 import { StakeholderPage } from "@/components/stakeholder-page";
+import { buildPageMetadata } from "@/lib/site-metadata";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Pilot Readiness Template",
   description: "A reusable advisor review, usability, and failure-tracking template.",
-};
+  path: "/pilot-review/template",
+});
 
 export default function PilotReviewTemplatePage() {
   return (
@@ -19,11 +19,11 @@ export default function PilotReviewTemplatePage() {
         },
         {
           title: "Student usability test",
-          body: "Record participant group, device/browser, task completion for Current Progress, Planned Path, and Advisor Summary, confusing steps, advisor-verification comprehension, and whether PDF upload or manual planned-course entry was used.",
+          body: "Record participant group, device/browser, task completion for Current Progress, the generated path, Advisor Summary, and optional own-plan comparison; note confusing steps, advisor-verification comprehension, and whether a Plan PDF or manual courses were used.",
         },
         {
           title: "Metrics and failure log",
-          body: "Track completion rates, parse failures, rate-limit events, accessibility issues, advisor-review counts, scenario, symptom, severity, owner, and status. Use synthetic or redacted materials only.",
+          body: "Track Current Progress completion, generated-path usefulness, own-plan comparison completion, parse failures, rate-limit events, accessibility issues, advisor-review counts, scenario, symptom, severity, owner, and status. Use synthetic or redacted materials only.",
         },
       ]}
     />

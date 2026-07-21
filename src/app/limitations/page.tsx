@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-
 import { StakeholderPage } from "@/components/stakeholder-page";
+import { buildPageMetadata } from "@/lib/site-metadata";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Limitations",
   description: "Known planner boundaries that students and reviewers should verify.",
-};
+  path: "/limitations",
+});
 
 export default function LimitationsPage() {
   return (

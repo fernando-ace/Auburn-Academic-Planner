@@ -70,8 +70,8 @@ test("home route points students to Planning Hub first", async () => {
     "utf8",
   );
 
-  assert.match(source, /redirect\("\/plan-check"\)/);
-  assert.doesNotMatch(source, /redirect\("\/chat"\)/);
+  assert.match(source, /permanentRedirect\("\/plan-check"\)/);
+  assert.doesNotMatch(source, /permanentRedirect\("\/chat"\)/);
 });
 
 test("More menu contains stakeholder links without promoting them in Planning Hub empty state", async () => {
@@ -91,6 +91,7 @@ test("More menu contains stakeholder links without promoting them in Planning Hu
     "Accessibility",
     "Limitations",
     "Pilot Review",
+    "Feedback",
   ]) {
     assert.match(moreMenu, new RegExp(label));
   }
@@ -100,6 +101,33 @@ test("More menu contains stakeholder links without promoting them in Planning Hu
   assert.doesNotMatch(planningHub, /\/accessibility/);
   assert.doesNotMatch(planningHub, /\/limitations/);
   assert.doesNotMatch(planningHub, /\/pilot-review/);
+});
+
+test("pilot documentation leads with the generated path and keeps own-plan comparison optional", async () => {
+  const readme = await readFile(path.join(projectRoot, "README.md"), "utf8");
+  const supportingCopy = await readUiSources([
+    "docs/pilot-readiness.md",
+    "src/app/pilot-review/template/page.tsx",
+  ]);
+
+  assert.match(readme, /automatically generated draft path/i);
+  assert.match(readme, /generates a first draft path/i);
+  assert.match(readme, /Compare Own Plan optionally parses/i);
+  assert.match(readme, /optional own-plan comparison/i);
+  assert.ok(
+    readme.indexOf("generates a first draft path") <
+      readme.indexOf("Compare Own Plan optionally parses"),
+  );
+  assert.doesNotMatch(readme, /Planned Path is strongest/i);
+  assert.doesNotMatch(readme, /Planned Path comparison matches/i);
+
+  assert.match(supportingCopy, /generated path/i);
+  assert.match(supportingCopy, /generated-path usefulness/i);
+  assert.match(supportingCopy, /optional own-plan comparison/i);
+  assert.doesNotMatch(
+    supportingCopy,
+    /Task: run Current Progress, Planned Path, and Advisor Summary/,
+  );
 });
 
 test("Chat workspace no longer links to Rule Audit or CSSE-centered copy", async () => {

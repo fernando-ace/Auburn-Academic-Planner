@@ -7,11 +7,11 @@ The app is an independent student-built pilot and is not currently an official o
 ## Current MVP
 
 - `/chat` - source-grounded Auburn academic Q&A using curated Auburn academic sources plus balanced RAG-only Auburn Bulletin undergraduate major pages.
-- `/plan-check` - Planning Hub with Current Progress, Planned Path, Planned Path comparison, advisor meeting summary, and details/evidence.
-- Current Progress parses Worksheet/Audit PDFs for detected program, credits required/applied/needed, incomplete blocks, Still needed requirements, completed/preregistered/in-progress/AP-transfer/Fall Through evidence, and advisor-safe next steps.
-- Planned Path parses Plan PDFs for planned courses, planned credits, detected terms, parser confidence, and advisor-safe notes.
-- Planned Path is strongest when compared against Current Progress: it answers whether a future Degree Works Plan appears to cover what the Current Progress audit says is still needed.
-- Planned Path comparison matches planned courses against Current Progress Still needed items and keeps electives, option lists, block references, AP/transfer, Fall Through, substitutions, and unclear requirements as advisor-review items.
+- `/plan-check` - Planning Hub with Current Progress, an automatically generated draft path, optional own-plan comparison, Advisor Summary, and details/evidence.
+- Current Progress parses Worksheet/Audit PDFs for detected program, credits required/applied/needed, incomplete blocks, Still needed requirements, completed/preregistered/in-progress/AP-transfer/Fall Through evidence, and advisor-safe next steps. It also generates a first draft path within the student's selected term and credit limits.
+- Compare Own Plan optionally parses a Degree Works Plan PDF or pasted planned courses for planned credits, detected terms, parser confidence, and advisor-safe notes.
+- Own-plan comparison is strongest when Current Progress is available: it answers whether a future Degree Works Plan appears to cover what the Current Progress audit says is still needed.
+- Own-plan comparison matches planned courses against Current Progress Still needed items and keeps electives, option lists, block references, AP/transfer, Fall Through, substitutions, and unclear requirements as advisor-review items.
 - PDF uploads are processed server-side for the request and are not permanently stored by the app. Each PDF is limited to 3 MiB; the multipart request is capped at 4,000,000 bytes so a serialized Current Progress comparison stays below Vercel's 4.5 MB function request limit.
 
 ## Demo Flow
@@ -19,9 +19,10 @@ The app is an independent student-built pilot and is not currently an official o
 1. Start the app with `npm run dev`.
 2. Open `http://localhost:3000/plan-check`.
 3. Upload a synthetic or redacted Degree Works Worksheet/Audit PDF under `Current Progress`.
-4. Switch to `Planned Path` and upload a synthetic or redacted Degree Works Plan PDF.
-5. Review the comparison, advisor meeting summary, and collapsed evidence details.
-6. Open `http://localhost:3000/chat` for Auburn-wide academic source questions.
+4. Review the generated draft path, advisor meeting summary, and collapsed evidence details.
+5. Optionally choose `Compare Own Plan` and upload a synthetic/redacted Degree Works Plan PDF or paste planned courses.
+6. Review whether that own plan appears to cover the Current Progress evidence and note every advisor-review item.
+7. Open `http://localhost:3000/chat` for Auburn-wide academic source questions.
 
 Use only synthetic/redacted PDFs for demos. Do not commit real student records, names, IDs, GPAs, advisor emails, screenshots, or private academic records.
 
@@ -50,10 +51,11 @@ npm run sources:fetch:majors:dry-run
 npm run sources:fetch:majors
 npm run sources:check-scope
 npm run check:sources
+npm run sources:check-live
 npm run sources:upload -- --dry-run
 ```
 
-`sources:fetch:dry-run` prints the eligible curated source inventory without fetching URLs. `sources:discover-majors:dry-run` reads only the checked-in Undergraduate Majors index and shows discovered Bulletin major counts without writing files. `sources:fetch:majors:dry-run` shows the bounded all-major fetch plan without fetching URLs. `check:sources` validates curated files, major files when present, manifests, and seed scope. `sources:upload -- --dry-run` prints curated, all-major, and total Gemini File Search upload counts without making an API call.
+`sources:fetch:dry-run` prints the eligible curated source inventory without fetching URLs. `sources:discover-majors:dry-run` reads only the checked-in Undergraduate Majors index and shows discovered Bulletin major counts without writing files. `sources:fetch:majors:dry-run` shows the bounded all-major fetch plan without fetching URLs. `check:sources` validates curated files, major files when present, manifests, and seed scope. `sources:check-live` is a read-only network check that compares every checked-in source with its current Auburn page; run it weekly and immediately before a source refresh or production release. It is intentionally separate from normal validation so transient Auburn availability does not break local QA. `sources:upload -- --dry-run` prints curated, all-major, and total Gemini File Search upload counts without making an API call.
 
 ## Runtime Configuration
 
@@ -77,6 +79,12 @@ UPSTASH_REDIS_REST_TOKEN=...
 ```
 
 If Upstash is not configured, unavailable, or slower than the bounded request-protection timeout, the app falls back to a bounded in-memory per-runtime rate limiter so local demos keep working. `/api/health` is a clearly labeled shallow configuration check; `/api/health?check=deep` also verifies live Upstash connectivity with a bounded timeout. Configure Upstash and require a successful deep check before production rollout so limits hold across server instances and restarts.
+
+```env
+SITE_URL=https://your-production-origin.example
+```
+
+`SITE_URL` sets canonical, sitemap, robots, and social-sharing URLs. It must be the final HTTPS production origin. The current public Vercel origin is used as a safe fallback until a custom Auburn-reviewed domain exists.
 
 ## Trust And Safety
 

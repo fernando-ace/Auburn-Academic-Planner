@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-
 import { StakeholderPage } from "@/components/stakeholder-page";
+import { buildPageMetadata } from "@/lib/site-metadata";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Methodology",
   description: "How the planner produces Degree Works-native, advisor-safe output.",
-};
+  path: "/methodology",
+});
 
 export default function MethodologyPage() {
   return (

@@ -10,6 +10,7 @@ export const stakeholderLinks = [
   { href: "/accessibility", label: "Accessibility" },
   { href: "/limitations", label: "Limitations" },
   { href: "/pilot-review", label: "Pilot Review" },
+  { href: "/feedback", label: "Feedback" },
 ] as const;
 
 export function StakeholderMoreMenu({ align = "right" }: { align?: "left" | "right" }) {

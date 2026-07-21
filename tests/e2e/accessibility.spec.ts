@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+import { getSiteUrl } from "../../src/lib/site-metadata";
+
 const routes = [
   { path: "/plan-check", title: "Planning Hub | Auburn Academic Planner" },
   { path: "/chat", title: "Source-Grounded Chat | Auburn Academic Planner" },
@@ -8,6 +10,7 @@ const routes = [
   { path: "/methodology", title: "Methodology | Auburn Academic Planner" },
   { path: "/accessibility", title: "Accessibility | Auburn Academic Planner" },
   { path: "/limitations", title: "Limitations | Auburn Academic Planner" },
+  { path: "/feedback", title: "Feedback | Auburn Academic Planner" },
   { path: "/pilot-review", title: "Pilot Review | Auburn Academic Planner" },
   {
     path: "/pilot-review/template",
@@ -40,6 +43,81 @@ for (const route of routes) {
     });
   }
 }
+
+test("public metadata identifies canonical routes and share assets", async (
+  { page, request },
+  testInfo,
+) => {
+  const expectedOrigin = getSiteUrl().origin;
+  const rootResponse = await request.get("/", { maxRedirects: 0 });
+  expect(rootResponse.status()).toBe(308);
+  expect(rootResponse.headers().location).toBe("/plan-check");
+
+  const response = await page.goto("/plan-check");
+  expect(response?.status()).toBe(200);
+  if (testInfo.project.name.endsWith("-production")) {
+    expect(response?.headers()["cache-control"]).toMatch(/s-maxage=/i);
+    expect(response?.headers()["cache-control"]).not.toMatch(/private|no-store/i);
+  }
+
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${expectedOrigin}/plan-check`,
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    "Planning Hub | Auburn Academic Planner",
+  );
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    "content",
+    "summary_large_image",
+  );
+  const manifestHref = await page.locator('link[rel="manifest"]').getAttribute("href");
+  expect(manifestHref).toBeTruthy();
+
+  const manifestResponse = await request.get(manifestHref as string);
+  expect(manifestResponse.ok()).toBe(true);
+  const manifest = await manifestResponse.json();
+  expect(manifest.start_url).toBe("/plan-check");
+  expect(manifest.icons).toContainEqual(
+    expect.objectContaining({ src: "/icon-192", sizes: "192x192" }),
+  );
+  expect(manifest.icons).toContainEqual(
+    expect.objectContaining({ src: "/icon", sizes: "512x512" }),
+  );
+
+  const robotsResponse = await request.get("/robots.txt");
+  expect(robotsResponse.ok()).toBe(true);
+  const robots = await robotsResponse.text();
+  expect(robots).toContain("Disallow: /api/");
+  expect(robots).toContain(`Sitemap: ${expectedOrigin}/sitemap.xml`);
+
+  const sitemapResponse = await request.get("/sitemap.xml");
+  expect(sitemapResponse.ok()).toBe(true);
+  const sitemap = await sitemapResponse.text();
+  expect(sitemap).toContain(`${expectedOrigin}/plan-check`);
+  expect(sitemap).toContain(`${expectedOrigin}/feedback`);
+
+  const socialImageUrl = await page
+    .locator('meta[property="og:image"]')
+    .getAttribute("content");
+  const appleIconUrl = await page
+    .locator('link[rel="apple-touch-icon"]')
+    .getAttribute("href");
+  expect(socialImageUrl).toBeTruthy();
+  expect(appleIconUrl).toBeTruthy();
+  expect(socialImageUrl).toBe(`${expectedOrigin}/opengraph-image`);
+
+  const socialImagePath = new URL(socialImageUrl as string).pathname;
+  const appleIconPath = new URL(
+    appleIconUrl as string,
+    "http://127.0.0.1:3100",
+  ).pathname;
+  expect((await request.get(socialImagePath)).ok()).toBe(true);
+  expect((await request.get(appleIconPath)).ok()).toBe(true);
+  expect((await request.get("/icon-192")).ok()).toBe(true);
+  expect((await request.get("/icon")).ok()).toBe(true);
+});
 
 test("unknown routes render the accessible recovery page", async ({ page }) => {
   const runtimeErrors = monitorRuntimeErrors(page);

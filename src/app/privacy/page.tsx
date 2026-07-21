@@ -1,11 +1,13 @@
-import type { Metadata } from "next";
+import Link from "next/link";
 
 import { StakeholderPage } from "@/components/stakeholder-page";
+import { buildPageMetadata } from "@/lib/site-metadata";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Privacy",
   description: "How the independent pilot handles planning inputs and Chat data.",
-};
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (
@@ -51,16 +53,16 @@ export default function PrivacyPage() {
         },
         {
           title: "Feedback and incident reporting",
-          body: "The linked GitHub tracker is public and is only for non-sensitive product feedback. Do not post names, student IDs, Degree Works records, security details, or other private information there. A private privacy and security reporting channel must be established before any sponsored campus use.",
+          body: "The Feedback page prepares non-sensitive product feedback locally and offers copy, email-draft, and public GitHub options. It does not submit the form to this application. Do not include names, student IDs, Degree Works records, security details, or other private information. A private privacy and security reporting channel must be established before any sponsored campus use.",
         },
       ]}
     >
-      <a
+      <Link
         className="inline-flex min-h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-[13px] font-semibold text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d]"
-        href="https://github.com/fernando-ace/Auburn-Academic-Planner/issues/new?template=product-feedback.yml"
+        href="/feedback"
       >
         Send non-sensitive product feedback
-      </a>
+      </Link>
     </StakeholderPage>
   );
 }

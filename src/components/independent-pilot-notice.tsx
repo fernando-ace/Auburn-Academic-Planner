@@ -11,12 +11,12 @@ export function IndependentPilotNotice() {
         or Auburn-endorsed service. Verify academic decisions in Degree Works and
         with an advisor. <Link className="font-semibold underline underline-offset-2" href="/limitations">Review scope</Link>{" "}
         or{" "}
-        <a
+        <Link
           className="font-semibold underline underline-offset-2"
-          href="https://github.com/fernando-ace/Auburn-Academic-Planner/issues/new?template=product-feedback.yml"
+          href="/feedback"
         >
           send feedback
-        </a>
+        </Link>
         .
       </p>
     </aside>

@@ -21,6 +21,7 @@
     "eval:rag": "node --no-warnings --experimental-strip-types scripts/eval-rag.ts",
     "eval:rag:list": "node --no-warnings --experimental-strip-types scripts/eval-rag.ts --list",
     "check:sources": "node --no-warnings --experimental-strip-types scripts/check-source-integrity.ts",
+    "sources:check-live": "node --no-warnings --experimental-strip-types scripts/check-live-source-freshness.ts",
     "sources:check-scope": "node --no-warnings --experimental-strip-types scripts/check-source-scope.ts",
     "smoke:production": "node --no-warnings --experimental-strip-types scripts/smoke-production.ts",
     "courses:prefixes:generate": "node --no-warnings --experimental-strip-types scripts/generate-auburn-course-prefixes.ts",

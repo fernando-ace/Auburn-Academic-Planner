@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 import { MAX_PDF_UPLOAD_BYTES } from "../../src/lib/api/pdf-upload-policy";
 import { PLANNING_HUB_DRAFT_STORAGE_KEY } from "../../src/lib/plan/planning-hub-device-draft";
 
-test("request-time term settings hydrate cleanly across a browser date rollover", async ({
+test("server-supplied term settings hydrate cleanly across a browser date rollover", async ({
   page,
 }) => {
   const hydrationErrors: string[] = [];
@@ -67,6 +67,44 @@ test("request-time term settings hydrate cleanly across a browser date rollover"
   ).toBe(false);
   expect(hydrationErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test("Feedback prepares a portable summary without submitting it to the app", async ({
+  page,
+}) => {
+  await page.goto("/feedback");
+
+  await page.getByLabel("Feedback type").selectOption("Accessibility barrier");
+  await page.getByLabel("Page or task").fill("Planning Hub Current Progress upload");
+  await page.getByLabel("Expected result").fill("The result heading receives focus.");
+  await page.getByLabel("What happened").fill("Focus stayed on the upload control.");
+  await page
+    .getByLabel("Browser, device, or assistive technology")
+    .fill("Safari on iPhone with VoiceOver");
+  await page.getByLabel("Why this matters").fill("The result was easy to miss.");
+
+  await expect(page.getByText("Nothing has been copied or sent.")).toBeVisible();
+  const emailHref = await page
+    .getByRole("link", { name: "Open email draft" })
+    .getAttribute("href");
+  expect(emailHref).toMatch(/^mailto:\?subject=/);
+  const decodedEmailHref = decodeURIComponent(emailHref as string);
+  expect(decodedEmailHref).toContain("Feedback type: Accessibility barrier");
+  expect(decodedEmailHref).toContain("Planning Hub Current Progress upload");
+  expect(decodedEmailHref).toContain("Safari on iPhone with VoiceOver");
+  await expect(
+    page.getByRole("link", {
+      name: "Public GitHub form (sign-in required)",
+    }),
+  ).toHaveAttribute("target", "_blank");
+
+  await page.getByLabel("What happened").fill("x ".repeat(600));
+  await expect(
+    page.getByRole("button", { name: "Email draft too long" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText(/Copy the summary instead so an email application/),
+  ).toBeVisible();
 });
 
 test("Current Progress PDF generates a draft path and advisor summary", async ({
@@ -219,6 +257,7 @@ test("Planning API errors are announced beside the triggering form on mobile", a
 });
 
 test("manual plan device draft is opt-in, minimized, restorable, and deletable", async ({
+  browser,
   page,
 }) => {
   await page.goto("/plan-check");
@@ -254,39 +293,47 @@ test("manual plan device draft is opt-in, minimized, restorable, and deletable",
   expect(serializedDraft).not.toContain("903123456");
   expect(serializedDraft).not.toContain("Dr. Example");
 
-  const browserContext = page.context();
-  await page.close();
-  const restoredPage = await browserContext.newPage();
-  await restoredPage.goto("/plan-check");
-  const restoreButton = restoredPage.getByRole("button", {
-    name: "Restore plan",
+  const storageState = await page.context().storageState();
+  const restoredContext = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+    storageState,
   });
-  await expect(restoreButton).toBeEnabled();
-  await restoreButton.click();
+  try {
+    const restoredPage = await restoredContext.newPage();
+    await restoredPage.goto("/plan-check");
+    const restoreButton = restoredPage.getByRole("button", {
+      name: "Restore plan",
+    });
+    await expect(restoreButton).toBeEnabled();
+    await restoreButton.click();
 
-  const restoredPlan = restoredPage.getByLabel("Planned courses");
-  await expect(restoredPlan).toHaveValue(/Fall 2026 Credits: 6/);
-  await expect(restoredPlan).toHaveValue(/COMP 1210, MATH 1610/);
-  await expect(restoredPlan).not.toHaveValue(/Aubie Tiger/);
-  await expect(restoredPage.getByRole("status")).toContainText(
-    "Manual plan draft restored",
-  );
+    const restoredPlan = restoredPage.getByLabel("Planned courses");
+    await expect(restoredPlan).toHaveValue(/Fall 2026 Credits: 6/);
+    await expect(restoredPlan).toHaveValue(/COMP 1210, MATH 1610/);
+    await expect(restoredPlan).not.toHaveValue(/Aubie Tiger/);
+    await expect(restoredPage.getByRole("status")).toContainText(
+      "Manual plan draft restored",
+    );
 
-  await restoredPage
-    .getByRole("button", { name: "Delete saved draft" })
-    .click();
-  await expect(restoredPage.getByRole("status")).toContainText(
-    "Saved draft deleted",
-  );
-  expect(
-    await restoredPage.evaluate(
-      (storageKey) => window.localStorage.getItem(storageKey),
-      PLANNING_HUB_DRAFT_STORAGE_KEY,
-    ),
-  ).toBeNull();
+    await restoredPage
+      .getByRole("button", { name: "Delete saved draft" })
+      .click();
+    await expect(restoredPage.getByRole("status")).toContainText(
+      "Saved draft deleted",
+    );
+    expect(
+      await restoredPage.evaluate(
+        (storageKey) => window.localStorage.getItem(storageKey),
+        PLANNING_HUB_DRAFT_STORAGE_KEY,
+      ),
+    ).toBeNull();
+  } finally {
+    await restoredContext.close();
+  }
 });
 
 test("Current Progress saves settings only and rechecks expiry before restore", async ({
+  browser,
   page,
 }) => {
   await page.goto("/plan-check");
@@ -317,51 +364,60 @@ test("Current Progress saves settings only and rechecks expiry before restore", 
   expect(serializedDraft).not.toContain("sourceFileName");
   expect(serializedDraft).not.toContain("currentProgressAnalysis");
 
-  const browserContext = page.context();
-  await page.close();
-  const restoredPage = await browserContext.newPage();
-  await restoredPage.goto("/plan-check");
-  const restoreSettingsButton = restoredPage.getByRole("button", {
-    name: "Restore settings",
+  const storageState = await page.context().storageState();
+  const restoredContext = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+    storageState,
   });
-  await expect(restoreSettingsButton).toBeEnabled();
-  await restoreSettingsButton.click();
-  await expect(restoredPage.getByLabel("Max fall/spring credits")).toHaveValue(
-    "18",
-  );
-  await expect(restoredPage.getByLabel("Include summer terms")).toBeChecked();
-  await expect(restoredPage.getByRole("status")).toContainText(
-    "Path settings restored",
-  );
-
-  await restoredPage.evaluate((storageKey) => {
-    const serialized = window.localStorage.getItem(storageKey);
-    if (!serialized) {
-      throw new Error("Expected saved settings draft.");
-    }
-    const draft = JSON.parse(serialized) as Record<string, unknown>;
-    const now = Date.now();
-    window.localStorage.setItem(
-      storageKey,
-      JSON.stringify({
-        ...draft,
-        savedAt: new Date(now - 29 * 24 * 60 * 60 * 1000).toISOString(),
-        expiresAt: new Date(now - 1000).toISOString(),
-      }),
+  try {
+    const restoredPage = await restoredContext.newPage();
+    await restoredPage.goto("/plan-check");
+    const restoreSettingsButton = restoredPage.getByRole("button", {
+      name: "Restore settings",
+    });
+    await expect(restoreSettingsButton).toBeEnabled();
+    await restoreSettingsButton.click();
+    await expect(
+      restoredPage.getByLabel("Max fall/spring credits"),
+    ).toHaveValue("18");
+    await expect(
+      restoredPage.getByLabel("Include summer terms"),
+    ).toBeChecked();
+    await expect(restoredPage.getByRole("status")).toContainText(
+      "Path settings restored",
     );
-  }, PLANNING_HUB_DRAFT_STORAGE_KEY);
 
-  await restoreSettingsButton.click();
-  await expect(restoredPage.getByRole("status")).toContainText(
-    "saved device draft expired and was deleted",
-  );
-  await expect(restoreSettingsButton).toBeDisabled();
-  expect(
-    await restoredPage.evaluate(
-      (storageKey) => window.localStorage.getItem(storageKey),
-      PLANNING_HUB_DRAFT_STORAGE_KEY,
-    ),
-  ).toBeNull();
+    await restoredPage.evaluate((storageKey) => {
+      const serialized = window.localStorage.getItem(storageKey);
+      if (!serialized) {
+        throw new Error("Expected saved settings draft.");
+      }
+      const draft = JSON.parse(serialized) as Record<string, unknown>;
+      const now = Date.now();
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          ...draft,
+          savedAt: new Date(now - 29 * 24 * 60 * 60 * 1000).toISOString(),
+          expiresAt: new Date(now - 1000).toISOString(),
+        }),
+      );
+    }, PLANNING_HUB_DRAFT_STORAGE_KEY);
+
+    await restoreSettingsButton.click();
+    await expect(restoredPage.getByRole("status")).toContainText(
+      "saved device draft expired and was deleted",
+    );
+    await expect(restoreSettingsButton).toBeDisabled();
+    expect(
+      await restoredPage.evaluate(
+        (storageKey) => window.localStorage.getItem(storageKey),
+        PLANNING_HUB_DRAFT_STORAGE_KEY,
+      ),
+    ).toBeNull();
+  } finally {
+    await restoredContext.close();
+  }
 });
 
 test("Chat API rejects an empty conversation before model execution", async ({

@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-
 import { StakeholderPage } from "@/components/stakeholder-page";
+import { buildPageMetadata } from "@/lib/site-metadata";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Accessibility",
   description: "Accessibility targets, testing, and feedback for the pilot.",
-};
+  path: "/accessibility",
+});
 
 export default function AccessibilityPage() {
   return (
@@ -23,7 +23,7 @@ export default function AccessibilityPage() {
         },
         {
           title: "Pilot feedback",
-          body: "Accessibility review should include real assistive-technology checks with redacted or synthetic materials before any sponsored campus use. Report a barrier through the public project feedback tracker so the device, browser, assistive technology, task, and impact can be reproduced.",
+          body: "Accessibility review should include real assistive-technology checks with redacted or synthetic materials before any sponsored campus use. The Feedback page can prepare a reproducible device, browser, assistive-technology, task, and impact summary without requiring a GitHub account or sending it to this application.",
         },
       ]}
     />
