@@ -128,7 +128,22 @@ test("sanitizes assistant markdown without removing supported markdown syntax", 
   );
 
   assert.equal(result, "**Requirements**\n\nalert('no')\n- `ENGL 1100`");
-  assert.doesNotMatch(result, /<script>|<\/script>/);
+});
+
+test("sanitizes nested, mixed-case, and quoted HTML tag syntax", () => {
+  assert.equal(
+    sanitizeAssistantMarkdown("<<x>script>alert('nested')<</x>/script>"),
+    "alert('nested')",
+  );
+  assert.equal(
+    sanitizeAssistantMarkdown("<SCRIPT>alert('case')</SCRIPT>"),
+    "alert('case')",
+  );
+  assert.equal(
+    sanitizeAssistantMarkdown('<span title="1 > 0">Auburn</span>'),
+    "Auburn",
+  );
+  assert.equal(sanitizeAssistantMarkdown("1 < 2"), "1 < 2");
 });
 
 test("cleans OCR, page, and HTML extraction noise from source previews", () => {

@@ -258,46 +258,59 @@ test("Planning API errors are announced beside the triggering form on mobile", a
 
 test("manual plan device draft is opt-in, minimized, restorable, and deletable", async ({
   browser,
-  page,
-}) => {
-  await page.goto("/plan-check");
-  await page.getByTestId("planning-step-planned_path").click();
-  await page.getByRole("button", { name: "Paste courses" }).click();
-  await page.getByLabel("Planned courses").fill([
-    "Student: Aubie Tiger",
-    "Student ID: 903123456",
-    "Total Planned Credits: 6",
-    "Fall 2026 Credits: 6",
-    "COMP 1210, MATH 1610",
-    "Private note: meet with Dr. Example",
-  ].join("\n"));
+}, testInfo) => {
+  const baseURL = testInfo.project.use.baseURL;
+  if (typeof baseURL !== "string") {
+    throw new Error("Planning Hub browser tests require a configured baseURL.");
+  }
 
-  expect(
-    await page.evaluate(
-      (storageKey) => window.localStorage.getItem(storageKey),
-      PLANNING_HUB_DRAFT_STORAGE_KEY,
-    ),
-  ).toBeNull();
+  const sourceContext = await browser.newContext({ baseURL });
+  const storageState = await (async () => {
+    try {
+      const page = await sourceContext.newPage();
+      await page.goto("/plan-check");
+      await page.getByTestId("planning-step-planned_path").click();
+      await page.getByRole("button", { name: "Paste courses" }).click();
+      await page.getByLabel("Planned courses").fill([
+        "Student: Aubie Tiger",
+        "Student ID: 903123456",
+        "Total Planned Credits: 6",
+        "Fall 2026 Credits: 6",
+        "COMP 1210, MATH 1610",
+        "Private note: meet with Dr. Example",
+      ].join("\n"));
 
-  await page
-    .getByRole("button", { name: "Save manual plan on this device" })
-    .click();
-  await expect(page.getByRole("status")).toContainText("Manual plan draft saved");
+      expect(
+        await page.evaluate(
+          (storageKey) => window.localStorage.getItem(storageKey),
+          PLANNING_HUB_DRAFT_STORAGE_KEY,
+        ),
+      ).toBeNull();
 
-  const serializedDraft = await page.evaluate(
-    (storageKey) => window.localStorage.getItem(storageKey),
-    PLANNING_HUB_DRAFT_STORAGE_KEY,
-  );
-  expect(serializedDraft).toContain("COMP 1210");
-  expect(serializedDraft).not.toContain("Aubie Tiger");
-  expect(serializedDraft).not.toContain("903123456");
-  expect(serializedDraft).not.toContain("Dr. Example");
+      await page
+        .getByRole("button", { name: "Save manual plan on this device" })
+        .click();
+      await expect(page.getByRole("status")).toContainText(
+        "Manual plan draft saved",
+      );
 
-  const storageState = await page.context().storageState();
-  const restoredContext = await browser.newContext({
-    baseURL: new URL(page.url()).origin,
-    storageState,
-  });
+      const serializedDraft = await page.evaluate(
+        (storageKey) => window.localStorage.getItem(storageKey),
+        PLANNING_HUB_DRAFT_STORAGE_KEY,
+      );
+      expect(serializedDraft).toContain("COMP 1210");
+      expect(serializedDraft).not.toContain("Aubie Tiger");
+      expect(serializedDraft).not.toContain("903123456");
+      expect(serializedDraft).not.toContain("Dr. Example");
+
+      const state = await sourceContext.storageState();
+      return state;
+    } finally {
+      await sourceContext.close();
+    }
+  })();
+
+  const restoredContext = await browser.newContext({ baseURL, storageState });
   try {
     const restoredPage = await restoredContext.newPage();
     await restoredPage.goto("/plan-check");
@@ -334,41 +347,54 @@ test("manual plan device draft is opt-in, minimized, restorable, and deletable",
 
 test("Current Progress saves settings only and rechecks expiry before restore", async ({
   browser,
-  page,
-}) => {
-  await page.goto("/plan-check");
-  await page.getByLabel("Max fall/spring credits").fill("18");
-  await page.getByLabel("Include summer terms").check();
-
-  await page.getByRole("button", { name: "Save path settings only" }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Path settings saved only",
-  );
-
-  const serializedDraft = await page.evaluate(
-    (storageKey) => window.localStorage.getItem(storageKey),
-    PLANNING_HUB_DRAFT_STORAGE_KEY,
-  );
-  expect(serializedDraft).not.toBeNull();
-  if (!serializedDraft) {
-    throw new Error("Expected a Current Progress settings draft.");
+}, testInfo) => {
+  const baseURL = testInfo.project.use.baseURL;
+  if (typeof baseURL !== "string") {
+    throw new Error("Planning Hub browser tests require a configured baseURL.");
   }
-  expect(
-    (
-      JSON.parse(serializedDraft) as {
-        generatedPathPreferences: { maxCreditsPerTerm: number };
-      }
-    ).generatedPathPreferences.maxCreditsPerTerm,
-  ).toBe(18);
-  expect(serializedDraft).not.toContain("manualPlan");
-  expect(serializedDraft).not.toContain("sourceFileName");
-  expect(serializedDraft).not.toContain("currentProgressAnalysis");
 
-  const storageState = await page.context().storageState();
-  const restoredContext = await browser.newContext({
-    baseURL: new URL(page.url()).origin,
-    storageState,
-  });
+  const sourceContext = await browser.newContext({ baseURL });
+  const storageState = await (async () => {
+    try {
+      const page = await sourceContext.newPage();
+      await page.goto("/plan-check");
+      await page.getByLabel("Max fall/spring credits").fill("18");
+      await page.getByLabel("Include summer terms").check();
+
+      await page
+        .getByRole("button", { name: "Save path settings only" })
+        .click();
+      await expect(page.getByRole("status")).toContainText(
+        "Path settings saved only",
+      );
+
+      const serializedDraft = await page.evaluate(
+        (storageKey) => window.localStorage.getItem(storageKey),
+        PLANNING_HUB_DRAFT_STORAGE_KEY,
+      );
+      expect(serializedDraft).not.toBeNull();
+      if (!serializedDraft) {
+        throw new Error("Expected a Current Progress settings draft.");
+      }
+      expect(
+        (
+          JSON.parse(serializedDraft) as {
+            generatedPathPreferences: { maxCreditsPerTerm: number };
+          }
+        ).generatedPathPreferences.maxCreditsPerTerm,
+      ).toBe(18);
+      expect(serializedDraft).not.toContain("manualPlan");
+      expect(serializedDraft).not.toContain("sourceFileName");
+      expect(serializedDraft).not.toContain("currentProgressAnalysis");
+
+      const state = await sourceContext.storageState();
+      return state;
+    } finally {
+      await sourceContext.close();
+    }
+  })();
+
+  const restoredContext = await browser.newContext({ baseURL, storageState });
   try {
     const restoredPage = await restoredContext.newPage();
     await restoredPage.goto("/plan-check");

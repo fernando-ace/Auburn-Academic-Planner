@@ -331,12 +331,81 @@ function filterBroadTopicSources(
   return null;
 }
 
+function isAsciiLetter(value: string | undefined) {
+  if (!value) {
+    return false;
+  }
+
+  const code = value.charCodeAt(0);
+  return (
+    (code >= "A".charCodeAt(0) && code <= "Z".charCodeAt(0)) ||
+    (code >= "a".charCodeAt(0) && code <= "z".charCodeAt(0))
+  );
+}
+
+function startsHtmlTag(value: string, index: number) {
+  const next = value[index + 1];
+
+  if (isAsciiLetter(next) || next === "!" || next === "?") {
+    return true;
+  }
+
+  return next === "/" && isAsciiLetter(value[index + 2]);
+}
+
+function stripHtmlTags(value: string) {
+  const output: string[] = [];
+
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] !== "<" || !startsHtmlTag(value, index)) {
+      output.push(value[index]);
+      continue;
+    }
+
+    let quote: '"' | "'" | null = null;
+    let closingIndex = -1;
+
+    for (let cursor = index + 1; cursor < value.length; cursor += 1) {
+      const character = value[cursor];
+
+      if (quote) {
+        if (character === quote) {
+          quote = null;
+        }
+        continue;
+      }
+
+      if (character === '"' || character === "'") {
+        quote = character;
+      } else if (character === ">") {
+        closingIndex = cursor;
+        break;
+      }
+    }
+
+    if (closingIndex === -1) {
+      output.push(value[index]);
+      continue;
+    }
+
+    index = closingIndex;
+  }
+
+  return output.join("");
+}
+
 export function sanitizeAssistantMarkdown(value: string) {
-  return value
+  let sanitized = value
     .replace(/\r\n?/g, "\n")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
-    .replace(/<\/?[a-z][^>]*>/gi, "")
-    .trim();
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+  let previous: string;
+
+  do {
+    previous = sanitized;
+    sanitized = stripHtmlTags(sanitized);
+  } while (sanitized !== previous);
+
+  return sanitized.trim();
 }
 
 export function cleanSourcePreview(value?: string, maxLength = 240) {
