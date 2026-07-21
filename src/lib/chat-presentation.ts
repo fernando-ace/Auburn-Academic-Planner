@@ -20,6 +20,8 @@ export type PresentableChatSource = {
 const DEGREE_WORKS_INTENT =
   /\bdegree\s*works\b|\bmy\s+(?:degree\s+)?plan\b|\bsample\s+plan\b|\buploaded\s+(?:pdf|document|file)\b|\bdashboard\b|\bparsed\s+courses?\b|\bcertificate\s+courses?\s+in\s+my\s+plan\b/i;
 
+const DIRECT_DEGREE_WORKS_INTENT = /\bdegree\s*works\b/i;
+
 const PROGRAM_LABELS: Record<string, string> = {
   software_engineering: "Software Engineering",
   computer_science: "Computer Science",
@@ -41,13 +43,18 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
 };
 
 const TRANSFER_CREDIT_INTENT =
-  /\btransfer\s+credits?\b|\btransfer\b.*\bcredits?\b|\bcredits?\b.*\btransfer\b|\bcredit\s+tables?\b|\bap\s+credit\b/i;
+  /\btransfer\s+(?:credits?|hours?)\b|\btransfer\b.*\b(?:credits?|hours?)\b|\b(?:credits?|hours?)\b.*\btransfer\b|\bcredit\s+tables?\b|\bap\s+credit\b/i;
 
 const CORE_CURRICULUM_INTENT =
   /\bcore\s+curriculum\b|\bgeneral\s+education\b|\bcore\s+requirements?\b/i;
 
 const MAJOR_REQUIREMENT_INTENT =
-  /\b(?:requirements?|requires?|require)\b.*\b(?:major|program|degree)\b|\b(?:requirements?|requires?|require)\b.*\bfor\b|\bmajor\b.*\b(?:requirements?|requires?|require)\b|\bprogram\b.*\b(?:requirements?|requires?|require)\b/i;
+  /\b(?:requirements?|required|requires?|require)\b.*\b(?:major|program|degree)\b|\b(?:requirements?|required|requires?|require)\b.*\bfor\b|\bmajor\b.*\b(?:requirements?|required|requires?|require)\b|\bprogram\b.*\b(?:requirements?|required|requires?|require)\b/i;
+
+const MAJOR_TOTAL_HOURS_INTENT =
+  /\b(?:how\s+many|total)\b.*\bhours?\b.*\b(?:major|program|curriculum)\b|\b(?:major|program|curriculum)\b.*\btotal\b.*\bhours?\b/i;
+
+const NAMED_MAJOR_CURRICULUM_INTENT = /\bmajor\s+curriculum\b/i;
 
 const MAJOR_QUERY_STOP_WORDS = new Set([
   "auburn",
@@ -157,12 +164,19 @@ function titleBase(title: string) {
 }
 
 function majorQuestionCandidates(question: string) {
-  if (!MAJOR_REQUIREMENT_INTENT.test(question)) {
+  if (
+    !MAJOR_REQUIREMENT_INTENT.test(question) &&
+    !MAJOR_TOTAL_HOURS_INTENT.test(question) &&
+    !NAMED_MAJOR_CURRICULUM_INTENT.test(question)
+  ) {
     return [];
   }
 
   const candidates: string[] = [];
   const patterns = [
+    /\brequired\s+for\s+(?:the\s+)?(.+?)\s+(?:major|program|degree)\b/i,
+    /\b(?:how\s+many|what(?:'s|\s+is)\s+the)\s+(?:total\s+)?(?:credit\s+)?hours?\s+(?:are\s+)?(?:in|for)\s+(?:auburn(?:\s+university)?(?:'s)?\s+)?(?:the\s+)?(.+?)\s+(?:major\s+)?curriculum\b/i,
+    /\bin\s+(?:auburn(?:\s+university)?(?:'s)?\s+)?(?:the\s+)?(.+?)\s+major\s+curriculum\b/i,
     /\brequirements?\s+for\s+(?:the\s+)?(.+?)(?:\s+(?:major|program|degree))?(?:\?|$)/i,
     /\bwhat\s+are\s+the\s+requirements?\s+for\s+(?:the\s+)?(.+?)(?:\s+(?:major|program|degree))?(?:\?|$)/i,
     /\bwhat\s+does\s+(?:the\s+)?(.+?)\s+(?:major|program|degree)\s+require\b/i,
@@ -263,10 +277,22 @@ function filterMajorSpecificSources(
     return null;
   }
 
+  const hasExactMajorTitle = scoredSources.some(
+    ({ source }) =>
+      isBulletinMajorSource(source) &&
+      candidates.includes(normalizeText(source.title)),
+  );
+  const minimumRelatedMajorScore = bestMajorScore >= 105 ? 95 : 1;
+
   return scoredSources
     .filter(
       ({ source, majorScore }) =>
-        majorScore > 0 || (isBroadPolicySource(source) && !isBulletinMajorSource(source)),
+        (majorScore >= minimumRelatedMajorScore &&
+          (!hasExactMajorTitle ||
+            candidates.includes(normalizeText(source.title)))) ||
+        (!hasExactMajorTitle &&
+          isBroadPolicySource(source) &&
+          !isBulletinMajorSource(source)),
     )
     .map(({ source, index, majorScore }) => ({
       source,
@@ -285,15 +311,24 @@ function filterBroadTopicSources(
       ? TRANSFER_SOURCE_TYPES
       : null;
 
-  if (!sourceTypes) {
-    return null;
+  if (sourceTypes) {
+    const broadSources = sources.filter(
+      (source) => source.sourceType && sourceTypes.has(source.sourceType),
+    );
+
+    if (broadSources.length > 0) {
+      return broadSources;
+    }
   }
 
-  const broadSources = sources.filter(
-    (source) => source.sourceType && sourceTypes.has(source.sourceType),
-  );
+  if (DIRECT_DEGREE_WORKS_INTENT.test(question)) {
+    const degreeWorksSources = sources.filter(isDegreeWorksSource);
+    if (degreeWorksSources.length > 0) {
+      return degreeWorksSources;
+    }
+  }
 
-  return broadSources.length > 0 ? broadSources : null;
+  return null;
 }
 
 export function sanitizeAssistantMarkdown(value: string) {

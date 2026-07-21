@@ -19,9 +19,21 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import { FormEvent, useMemo, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type RefObject,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import ReactMarkdown from "react-markdown";
 
+import { IndependentPilotNotice } from "@/components/independent-pilot-notice";
 import { StakeholderMoreMenu } from "@/components/stakeholder-more-menu";
 import {
   cleanSourcePreview,
@@ -86,6 +98,16 @@ const planningTopics = [
 
 const advisorNote =
   "Advisor verification required: use this as preparation and verify your plan with an Auburn academic advisor.";
+const conversationBottomThreshold = 96;
+const subscribeToHydration = () => () => undefined;
+const drawerFocusableSelector = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
 
 function confidenceClass(confidence?: ChatMessage["confidence"]) {
   if (confidence === "High") {
@@ -400,8 +422,52 @@ function SourcesPanel({ message }: { message?: ChatMessage }) {
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  onRetry,
+}: {
+  message: ChatMessage;
+  onRetry?: () => void;
+}) {
   const isUser = message.role === "user";
+
+  if (!isUser && message.error) {
+    return (
+      <article className="flex justify-start">
+        <div
+          className="max-w-[min(92%,46rem)] rounded-md border border-rose-200 bg-rose-50 px-3.5 py-3 text-rose-950 shadow-sm sm:px-4"
+          role="alert"
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertCircle
+              aria-hidden="true"
+              className="mt-0.5 shrink-0 text-rose-700"
+              size={18}
+            />
+            <div className="min-w-0">
+              <p className="text-[14px] font-semibold leading-6">
+                Chat couldn&apos;t answer that question
+              </p>
+              <p className="mt-1 text-[13px] leading-5 text-rose-900">
+                No academic guidance was returned from this attempt. Try again
+                in a moment, or ask a new question.
+              </p>
+              {onRetry ? (
+                <button
+                  className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-md border border-rose-300 bg-white px-3 text-[13px] font-semibold text-rose-800 transition hover:border-rose-400 hover:bg-rose-100"
+                  onClick={onRetry}
+                  type="button"
+                >
+                  <RotateCcw aria-hidden="true" size={14} />
+                  Try again
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -478,29 +544,108 @@ function MobileDrawer({
   side = "left",
   title,
   onClose,
+  returnFocusRef,
 }: {
   children: React.ReactNode;
   side?: "left" | "right";
   title: string;
   onClose: () => void;
+  returnFocusRef: RefObject<HTMLElement | null>;
 }) {
-  const visibilityClass = side === "right" ? "xl:hidden" : "lg:hidden";
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const returnTarget = returnFocusRef.current;
+    closeButtonRef.current?.focus();
+
+    return () => {
+      if (returnTarget?.isConnected) {
+        returnTarget.focus();
+      }
+    };
+  }, [returnFocusRef]);
+
+  function handleBackdropClick(event: ReactMouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  }
+
+  function handleDialogKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+
+    const focusableElements = Array.from(
+      dialog.querySelectorAll<HTMLElement>(drawerFocusableSelector),
+    ).filter((element) => element.getClientRects().length > 0);
+
+    if (focusableElements.length === 0) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements.at(-1);
+    if (!lastElement) {
+      return;
+    }
+
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    }
+  }
 
   return (
-    <div className={`fixed inset-0 z-50 bg-slate-950/35 ${visibilityClass}`}>
+    <div
+      className="fixed inset-0 z-50 bg-slate-950/35"
+      data-testid="mobile-drawer-backdrop"
+      onClick={handleBackdropClick}
+    >
       <div
+        aria-labelledby={titleId}
+        aria-modal="true"
         className={`absolute inset-y-0 flex w-[min(88vw,360px)] flex-col bg-white shadow-sm ${
           side === "right"
             ? "right-0 border-l border-slate-200"
             : "left-0 border-r border-slate-200"
         }`}
+        onKeyDown={handleDialogKeyDown}
+        ref={dialogRef}
+        role="dialog"
+        tabIndex={-1}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <p className="text-[14px] font-semibold text-slate-950">{title}</p>
+          <h2
+            className="text-[14px] font-semibold text-slate-950"
+            id={titleId}
+          >
+            {title}
+          </h2>
           <button
             aria-label="Close drawer"
             className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 text-slate-600"
             onClick={onClose}
+            ref={closeButtonRef}
             type="button"
           >
             <X aria-hidden="true" size={18} />
@@ -513,6 +658,11 @@ function MobileDrawer({
 }
 
 export function ChatWorkspace() {
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -522,14 +672,55 @@ export function ChatWorkspace() {
   const [privacyStatus, setPrivacyStatus] = useState(
     "Nothing has been sent to Gemini.",
   );
+  const conversationScrollRef = useRef<HTMLDivElement>(null);
+  const conversationIsNearBottomRef = useRef(true);
+  const leftDrawerReturnFocusRef = useRef<HTMLElement | null>(null);
+  const sourcesDrawerReturnFocusRef = useRef<HTMLElement | null>(null);
   const requestAbortController = useRef<AbortController | null>(null);
 
   const latestAssistantMessage = useMemo(
-    () => messages.findLast((message) => message.role === "assistant"),
+    () =>
+      messages.findLast(
+        (message) => message.role === "assistant" && !message.error,
+      ),
     [messages],
   );
 
-  async function submitQuestion(question: string) {
+  useEffect(() => {
+    const scrollContainer = conversationScrollRef.current;
+    if (
+      !scrollContainer ||
+      messages.length === 0 ||
+      !conversationIsNearBottomRef.current
+    ) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      scrollContainer.scrollTo({
+        behavior: "auto",
+        top: scrollContainer.scrollHeight,
+      });
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [isLoading, messages.length]);
+
+  function handleConversationScroll() {
+    const scrollContainer = conversationScrollRef.current;
+    if (!scrollContainer) {
+      return;
+    }
+
+    const distanceFromBottom =
+      scrollContainer.scrollHeight -
+      scrollContainer.scrollTop -
+      scrollContainer.clientHeight;
+    conversationIsNearBottomRef.current =
+      distanceFromBottom <= conversationBottomThreshold;
+  }
+
+  function submitQuestion(question: string) {
     const trimmed = question.trim();
     if (!trimmed || isLoading) {
       return;
@@ -559,7 +750,14 @@ export function ChatWorkspace() {
     const nextMessages = [...messages, userMessage];
     setMessages(nextMessages);
     setDraft("");
+    void requestAssistantResponse(nextMessages);
+  }
+
+  async function requestAssistantResponse(nextMessages: ChatMessage[]) {
     setIsLoading(true);
+    setPrivacyStatus(
+      "Submitting your question to the Chat service for Gemini processing.",
+    );
     const abortController = new AbortController();
     requestAbortController.current = abortController;
 
@@ -590,8 +788,8 @@ export function ChatWorkspace() {
         return;
       }
 
-      setMessages((current) => [
-        ...current,
+      setMessages([
+        ...nextMessages,
         {
           id: crypto.randomUUID(),
           role: "assistant",
@@ -602,8 +800,11 @@ export function ChatWorkspace() {
           confidence: payload.confidence ?? "Low",
           advisorVerificationNote:
             payload.advisorVerificationNote ?? advisorNote,
-        },
+        } satisfies ChatMessage,
       ]);
+      setPrivacyStatus(
+        "Gemini response received. Your question and recent Chat context were processed for this request.",
+      );
     } catch (error) {
       const requestWasCleared =
         abortController.signal.aborted ||
@@ -612,21 +813,21 @@ export function ChatWorkspace() {
         !requestWasCleared &&
         !(error instanceof DOMException && error.name === "AbortError")
       ) {
-        setMessages((current) => [
-          ...current,
+        setMessages([
+          ...nextMessages,
           {
             id: crypto.randomUUID(),
             role: "assistant",
-            content:
-              error instanceof Error
-                ? error.message
-                : "The assistant could not respond.",
+            content: "The assistant could not respond.",
             sources: [],
             confidence: "Low",
             advisorVerificationNote: advisorNote,
             error: true,
-          },
+          } satisfies ChatMessage,
         ]);
+        setPrivacyStatus(
+          "The Chat request did not complete a Gemini response. It may have reached the service; no academic guidance was returned.",
+        );
       }
     } finally {
       if (requestAbortController.current === abortController) {
@@ -634,6 +835,35 @@ export function ChatWorkspace() {
         setIsLoading(false);
       }
     }
+  }
+
+  function retryQuestion(errorMessageId: string) {
+    if (isLoading) {
+      return;
+    }
+
+    const errorIndex = messages.findIndex(
+      (message) => message.id === errorMessageId && message.error,
+    );
+    if (errorIndex < 0) {
+      return;
+    }
+
+    const retryQuestionMessage = messages
+      .slice(0, errorIndex)
+      .findLast((message) => message.role === "user");
+    if (!retryQuestionMessage) {
+      return;
+    }
+
+    if (errorIndex === messages.length - 1) {
+      const retryMessages = messages.slice(0, errorIndex);
+      setMessages(retryMessages);
+      void requestAssistantResponse(retryMessages);
+      return;
+    }
+
+    submitQuestion(retryQuestionMessage.content);
   }
 
   function grantGeminiConsent() {
@@ -651,6 +881,10 @@ export function ChatWorkspace() {
     setDraft("");
     setIsLoading(false);
     setSourcesOpen(false);
+    conversationIsNearBottomRef.current = true;
+    if (conversationScrollRef.current) {
+      conversationScrollRef.current.scrollTop = 0;
+    }
     setPrivacyStatus("Chat cleared. Gemini consent is off.");
   }
 
@@ -660,35 +894,51 @@ export function ChatWorkspace() {
   }
 
   return (
-    <main className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden bg-slate-100 text-slate-950">
+    <main
+      className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden bg-slate-100 text-slate-950"
+      id="main-content"
+      tabIndex={-1}
+    >
+      <div
+        aria-hidden={leftOpen || sourcesOpen ? true : undefined}
+        className="flex min-h-0 flex-1 flex-col"
+        data-testid="chat-app-content"
+        inert={leftOpen || sourcesOpen}
+      >
       <header className="flex h-14 shrink-0 items-center justify-between bg-[#03244d] px-3 text-white shadow-sm sm:px-4 lg:h-16 lg:px-5">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
             aria-label="Open planning topics"
             className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-white/20 text-white lg:hidden"
-            onClick={() => setLeftOpen(true)}
+            onClick={(event) => {
+              leftDrawerReturnFocusRef.current = event.currentTarget;
+              setLeftOpen(true);
+            }}
             type="button"
           >
             <Menu aria-hidden="true" size={19} />
           </button>
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white text-[#03244d]">
+          <div className="hidden h-9 w-9 shrink-0 place-items-center rounded-md bg-white text-[#03244d] sm:grid">
             <GraduationCap aria-hidden="true" size={20} strokeWidth={2.2} />
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-[15px] font-semibold leading-5 sm:text-[16px]">
-              Auburn Academic Planner
+              <span className="sm:hidden">Auburn Planner</span>
+              <span className="hidden sm:inline">Auburn Academic Planner</span>
             </h1>
-            <p className="truncate text-[12px] text-white/70 lg:hidden">
+            <p className="hidden truncate text-[12px] text-white/70 sm:block lg:hidden">
               Academic Planning Assistant
             </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Link
-            className="inline-flex h-9 items-center rounded-lg bg-[#b84300] px-3 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#8f3200]"
+            aria-label="Planning Hub"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#b84300] text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#8f3200] sm:w-auto sm:px-3"
             href="/plan-check"
           >
-            Planning Hub
+            <ClipboardCheck aria-hidden="true" className="sm:hidden" size={17} />
+            <span className="hidden sm:inline">Planning Hub</span>
           </Link>
           <StakeholderMoreMenu />
           <div className="hidden items-center gap-2 text-[13px] font-medium text-white/90 xl:flex">
@@ -698,13 +948,18 @@ export function ChatWorkspace() {
           <button
             aria-label="Open sources"
             className="grid h-9 w-9 place-items-center rounded-md border border-white/20 text-white xl:hidden"
-            onClick={() => setSourcesOpen(true)}
+            onClick={(event) => {
+              sourcesDrawerReturnFocusRef.current = event.currentTarget;
+              setSourcesOpen(true);
+            }}
             type="button"
           >
             <PanelRightOpen aria-hidden="true" size={19} />
           </button>
         </div>
       </header>
+
+      <IndependentPilotNotice />
 
       <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[256px_minmax(0,1fr)_320px]">
         <div className="hidden min-h-0 lg:block">
@@ -720,7 +975,10 @@ export function ChatWorkspace() {
             </p>
             <button
               className="inline-flex h-8 items-center gap-2 rounded-md border border-slate-200 px-3 text-[13px] font-semibold text-slate-700 transition hover:border-[#dd550c] hover:text-[#03244d] xl:hidden"
-              onClick={() => setSourcesOpen(true)}
+              onClick={(event) => {
+                sourcesDrawerReturnFocusRef.current = event.currentTarget;
+                setSourcesOpen(true);
+              }}
               type="button"
             >
               <PanelRightOpen aria-hidden="true" size={16} />
@@ -728,7 +986,12 @@ export function ChatWorkspace() {
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5">
+          <div
+            className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5"
+            data-testid="chat-scroll-container"
+            onScroll={handleConversationScroll}
+            ref={conversationScrollRef}
+          >
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
               {messages.length === 0 ? (
                 <section className="rounded-xl border border-slate-200 bg-white p-5 text-center shadow-sm sm:p-8">
@@ -760,23 +1023,40 @@ export function ChatWorkspace() {
                   </div>
                 </section>
               ) : (
-                messages.map((message) => (
-                  <MessageBubble key={message.id} message={message} />
-                ))
-              )}
-
-              {isLoading ? (
-                <div className="flex justify-start">
-                  <div className="flex max-w-[92%] items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-600 shadow-sm">
-                    <Loader2
-                      aria-hidden="true"
-                      className="animate-spin text-[#dd550c]"
-                      size={18}
+                <div
+                  aria-busy={isLoading}
+                  aria-label="Academic planning conversation"
+                  aria-live="polite"
+                  aria-relevant="additions"
+                  className="flex flex-col gap-3"
+                  role="log"
+                >
+                  {messages.map((message) => (
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      onRetry={
+                        message.error
+                          ? () => retryQuestion(message.id)
+                          : undefined
+                      }
                     />
-                    Searching uploaded Auburn sources...
-                  </div>
+                  ))}
+
+                  {isLoading ? (
+                    <div className="flex justify-start" role="status">
+                      <div className="flex max-w-[92%] items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-600 shadow-sm">
+                        <Loader2
+                          aria-hidden="true"
+                          className="animate-spin text-[#dd550c]"
+                          size={18}
+                        />
+                        Searching uploaded Auburn sources...
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
 
@@ -809,6 +1089,7 @@ export function ChatWorkspace() {
                   <input
                     checked={geminiConsentGranted}
                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#b84300] focus:ring-[#dd550c]"
+                    disabled={!isHydrated}
                     onChange={(event) => {
                       if (event.currentTarget.checked) {
                         grantGeminiConsent();
@@ -831,7 +1112,7 @@ export function ChatWorkspace() {
               <input
                 aria-describedby="chat-privacy-note chat-consent-status"
                 className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-[14px] text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15 sm:h-12 sm:px-4"
-                disabled={isLoading}
+                disabled={!isHydrated || isLoading}
                 id="chat-input"
                 maxLength={MAX_GEMINI_CHAT_USER_MESSAGE_CHARACTERS}
                 onChange={(event) => setDraft(event.target.value)}
@@ -841,7 +1122,12 @@ export function ChatWorkspace() {
               />
               <button
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-[#b84300] text-white transition hover:bg-[#8f3200] disabled:cursor-not-allowed disabled:bg-slate-300 sm:h-12 sm:w-12"
-                disabled={isLoading || !geminiConsentGranted || !draft.trim()}
+                disabled={
+                  !isHydrated ||
+                  isLoading ||
+                  !geminiConsentGranted ||
+                  !draft.trim()
+                }
                 type="submit"
               >
                 <span className="sr-only">Send question</span>
@@ -895,9 +1181,14 @@ export function ChatWorkspace() {
           <SourcesPanel message={latestAssistantMessage} />
         </div>
       </div>
+      </div>
 
       {leftOpen ? (
-        <MobileDrawer title="Planning topics" onClose={() => setLeftOpen(false)}>
+        <MobileDrawer
+          title="Planning topics"
+          onClose={() => setLeftOpen(false)}
+          returnFocusRef={leftDrawerReturnFocusRef}
+        >
           <PlanningTopicsPanel
             onSelect={(question) => {
               setLeftOpen(false);
@@ -912,6 +1203,7 @@ export function ChatWorkspace() {
           side="right"
           title="Sources"
           onClose={() => setSourcesOpen(false)}
+          returnFocusRef={sourcesDrawerReturnFocusRef}
         >
           <SourcesPanel message={latestAssistantMessage} />
         </MobileDrawer>

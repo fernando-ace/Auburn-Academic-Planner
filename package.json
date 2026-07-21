@@ -2,6 +2,11 @@
   "name": "auburn-academic-planner",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": ">=22.0.0 <23",
+    "npm": ">=10.9.0 <11"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,24 +22,28 @@
     "eval:rag:list": "node --no-warnings --experimental-strip-types scripts/eval-rag.ts --list",
     "check:sources": "node --no-warnings --experimental-strip-types scripts/check-source-integrity.ts",
     "sources:check-scope": "node --no-warnings --experimental-strip-types scripts/check-source-scope.ts",
+    "smoke:production": "node --no-warnings --experimental-strip-types scripts/smoke-production.ts",
     "courses:prefixes:generate": "node --no-warnings --experimental-strip-types scripts/generate-auburn-course-prefixes.ts",
     "check:course-prefixes": "node --no-warnings --experimental-strip-types scripts/check-auburn-course-prefixes.ts",
-    "check:a11y": "playwright test",
+    "check:a11y": "playwright test tests/e2e/accessibility.spec.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:production": "playwright test --config=playwright.production.config.ts --project=chromium-production && playwright test --config=playwright.production.config.ts --project=firefox-production && playwright test --config=playwright.production.config.ts --project=webkit-production",
+    "audit:security": "npm audit --audit-level=moderate",
     "test": "node --test --no-warnings --experimental-strip-types tests/*.test.ts",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "validate": "npm test && npm run check:sources && npm run sources:check-scope && npm run check:course-prefixes && npm run lint && npm run typecheck && npm run build",
-    "qa": "npm run validate && npm run check:a11y"
+    "validate": "npm run audit:security && npm test && npm run check:sources && npm run sources:check-scope && npm run check:course-prefixes && npm run lint && npm run typecheck && npm run build",
+    "qa": "npm run validate && npm run test:e2e:production"
   },
   "dependencies": {
-    "@google/genai": "^2.8.0",
+    "@google/genai": "^2.12.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "cheerio": "^1.2.0",
     "lucide-react": "^1.18.0",
-    "next": "16.2.9",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "react-markdown": "^10.1.0",
     "unpdf": "^1.6.2"
   },
@@ -46,8 +55,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "8.5.20"
   }
 }

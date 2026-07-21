@@ -1,4 +1,10 @@
 import { checkRateLimit } from "../../../../../lib/api/rate-limit.ts";
+import {
+  MAX_PLANNING_JSON_REQUEST_BYTES,
+  privateJsonResponse,
+  readLimitedJsonBody,
+  validateApiRequest,
+} from "../../../../../lib/api/request-security.ts";
 import { analyzeCombinedDegreeWorksText } from "../../../../../lib/plan/combined-degreeworks-analysis.ts";
 import { parseCurrentProgressAnalysisInput } from "../../../../../lib/plan/current-progress-analysis-input.ts";
 import { comparePlannedPathToCurrentProgress } from "../../../../../lib/plan/planned-path-coverage.ts";
@@ -8,6 +14,14 @@ export const runtime = "nodejs";
 export const MAX_MANUAL_PLANNED_COURSES_TEXT_LENGTH = 20_000;
 
 export async function POST(request: Request) {
+  const requestValidation = validateApiRequest(request, "json");
+  if (!requestValidation.ok) {
+    return privateJsonResponse(
+      { error: requestValidation.error },
+      { status: requestValidation.status },
+    );
+  }
+
   const rateLimit = await checkRateLimit(request, {
     namespace: "manual-planned-path",
     limit: 30,
@@ -15,16 +29,31 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.ok) {
-    return Response.json(
+    return privateJsonResponse(
       { error: rateLimit.error },
       { status: rateLimit.status },
     );
   }
 
-  const body = await request.json().catch(() => null);
+  const bodyResult = await readLimitedJsonBody(
+    request,
+    MAX_PLANNING_JSON_REQUEST_BYTES,
+  );
+  if (!bodyResult.ok) {
+    return privateJsonResponse(
+      {
+        error: bodyResult.tooLarge
+          ? "Request body is too large to process safely."
+          : "Request body must be JSON.",
+      },
+      { status: bodyResult.tooLarge ? 413 : 400 },
+    );
+  }
+
+  const body = bodyResult.value;
 
   if (!body || typeof body !== "object") {
-    return Response.json(
+    return privateJsonResponse(
       { error: "Request body must be JSON." },
       { status: 400 },
     );
@@ -34,14 +63,14 @@ export async function POST(request: Request) {
     .plannedCoursesText;
 
   if (typeof plannedCoursesText !== "string" || !plannedCoursesText.trim()) {
-    return Response.json(
+    return privateJsonResponse(
       { error: "Paste at least one planned Auburn course before checking Planned Path." },
       { status: 400 },
     );
   }
 
   if (plannedCoursesText.length > MAX_MANUAL_PLANNED_COURSES_TEXT_LENGTH) {
-    return Response.json(
+    return privateJsonResponse(
       { error: "Pasted planned-course text is too long to process safely." },
       { status: 413 },
     );
@@ -52,7 +81,7 @@ export async function POST(request: Request) {
   });
 
   if (combinedAnalysis.parsedCourseCount === 0) {
-    return Response.json(
+    return privateJsonResponse(
       { error: "No Auburn course codes were found in the pasted planned courses." },
       { status: 422 },
     );
@@ -62,7 +91,7 @@ export async function POST(request: Request) {
     (body as { currentProgressAnalysis?: unknown }).currentProgressAnalysis,
   );
   if (currentProgressInput.status === "invalid") {
-    return Response.json(
+    return privateJsonResponse(
       { error: currentProgressInput.error },
       { status: 400 },
     );
@@ -78,7 +107,7 @@ export async function POST(request: Request) {
       })
     : null;
 
-  return Response.json({
+  return privateJsonResponse({
     sourceFileName: "Manual planned courses",
     documentType: "planned_path",
     selectedTargetPath: "degreeworks_native",

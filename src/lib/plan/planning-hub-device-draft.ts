@@ -1,6 +1,7 @@
 import { parseCourseCodes } from "../courses/course-code-parser.ts";
 import { extractDegreeWorksSemesters } from "./degreeworks-semesters.ts";
 import type { GeneratedPathPreferences } from "./generated-planned-path.ts";
+import { normalizeGeneratedPathStartTerm } from "./generated-path-terms.ts";
 
 export const PLANNING_HUB_DRAFT_STORAGE_KEY =
   "auburn-academic-planner:planning-hub-device-draft:v1";
@@ -414,11 +415,15 @@ function normalizeCourseCodes(courseCodes: string[]) {
 function normalizePreferences(
   preferences: GeneratedPathPreferences,
 ): PlanningHubDeviceDraft["generatedPathPreferences"] {
+  const includeSummer = Boolean(preferences.includeSummer);
   return {
-    startTerm: normalizeTermLabel(preferences.startTerm) ?? "Fall 2026",
-    maxCreditsPerTerm: clampInteger(preferences.maxCreditsPerTerm, 9, 21, 15),
-    includeSummer: Boolean(preferences.includeSummer),
-    maxSummerCredits: clampInteger(preferences.maxSummerCredits, 3, 12, 6),
+    startTerm: normalizeGeneratedPathStartTerm(
+      normalizeTermLabel(preferences.startTerm) ?? "Fall 2026",
+      includeSummer,
+    ),
+    maxCreditsPerTerm: clampInteger(preferences.maxCreditsPerTerm, 3, 21, 15),
+    includeSummer,
+    maxSummerCredits: clampInteger(preferences.maxSummerCredits, 1, 12, 6),
   };
 }
 
@@ -434,19 +439,19 @@ function parsePreferences(
     !startTerm ||
     typeof value.maxCreditsPerTerm !== "number" ||
     !Number.isInteger(value.maxCreditsPerTerm) ||
-    value.maxCreditsPerTerm < 9 ||
+    value.maxCreditsPerTerm < 3 ||
     value.maxCreditsPerTerm > 21 ||
     typeof value.includeSummer !== "boolean" ||
     typeof value.maxSummerCredits !== "number" ||
     !Number.isInteger(value.maxSummerCredits) ||
-    value.maxSummerCredits < 3 ||
+    value.maxSummerCredits < 1 ||
     value.maxSummerCredits > 12
   ) {
     return null;
   }
 
   return {
-    startTerm,
+    startTerm: normalizeGeneratedPathStartTerm(startTerm, value.includeSummer),
     maxCreditsPerTerm: value.maxCreditsPerTerm,
     includeSummer: value.includeSummer,
     maxSummerCredits: value.maxSummerCredits,

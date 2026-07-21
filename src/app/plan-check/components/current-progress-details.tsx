@@ -481,7 +481,6 @@ function GeneratedPlannedPathCard({
         <ResultSection title="Advisor-review items in this draft">
           <ul className="grid gap-2 rounded-md border border-[#dd550c]/20 bg-[#fff7f1] p-3">
             {[...generatedPath.advisorReviewItems, ...generatedPath.unplacedItems]
-              .slice(0, 10)
               .map((item, index) => (
                 <li
                   className="text-[13px] leading-5 text-slate-700"

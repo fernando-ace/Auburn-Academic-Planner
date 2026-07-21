@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
+
 import { StakeholderPage } from "@/components/stakeholder-page";
+
+export const metadata: Metadata = {
+  title: "Pilot Readiness Template",
+  description: "A reusable advisor review, usability, and failure-tracking template.",
+};
 
 export default function PilotReviewTemplatePage() {
   return (

@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
+
 import { StakeholderPage } from "@/components/stakeholder-page";
+
+export const metadata: Metadata = {
+  title: "Limitations",
+  description: "Known planner boundaries that students and reviewers should verify.",
+};
 
 export default function LimitationsPage() {
   return (

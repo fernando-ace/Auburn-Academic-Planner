@@ -2,7 +2,7 @@
 
 Auburn Academic Planner helps Auburn students prepare for advisor conversations with Degree Works-native PDF analysis and source-grounded chat.
 
-The app is intentionally universal: it reads Degree Works Worksheet/Audit PDFs for Current Progress, Degree Works Plan PDFs for Planned Path, and compares a planned path against Current Progress Still needed evidence when both are available. It does not replace Degree Works or an academic advisor.
+The app is an independent student-built pilot and is not currently an official or Auburn-endorsed service. It is intentionally universal: it reads Degree Works Worksheet/Audit PDFs for Current Progress, Degree Works Plan PDFs for Planned Path, and compares a planned path against Current Progress Still needed evidence when both are available. It does not replace Degree Works or an academic advisor.
 
 ## Current MVP
 
@@ -12,7 +12,7 @@ The app is intentionally universal: it reads Degree Works Worksheet/Audit PDFs f
 - Planned Path parses Plan PDFs for planned courses, planned credits, detected terms, parser confidence, and advisor-safe notes.
 - Planned Path is strongest when compared against Current Progress: it answers whether a future Degree Works Plan appears to cover what the Current Progress audit says is still needed.
 - Planned Path comparison matches planned courses against Current Progress Still needed items and keeps electives, option lists, block references, AP/transfer, Fall Through, substitutions, and unclear requirements as advisor-review items.
-- PDF uploads are processed server-side for the request and are not permanently stored by the app.
+- PDF uploads are processed server-side for the request and are not permanently stored by the app. Each PDF is limited to 3 MiB; the multipart request is capped at 4,000,000 bytes so a serialized Current Progress comparison stays below Vercel's 4.5 MB function request limit.
 
 ## Demo Flow
 
@@ -61,8 +61,11 @@ Gemini configuration is required only for `/chat` and optional source-upload/eva
 
 ```env
 GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-3.5-flash
 GEMINI_FILE_SEARCH_STORE_NAME=...
 ```
+
+Chat allows at most two Gemini generation attempts total. The second attempt is used either for one transient timeout/upstream retry or for one compact rewrite when a response exceeds its completion budget, never both. The Chat route has a 120-second maximum duration so those bounded attempts can finish within Vercel's current function-duration limits; final failures still return a controlled, non-cacheable response without exposing prompts or provider details.
 
 Planning Hub PDF analysis, upload validation, source integrity checks, tests, and builds do not call Gemini.
 
@@ -73,7 +76,7 @@ UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 ```
 
-If Upstash is not configured, the app falls back to an in-memory per-runtime rate limiter so demos and low-traffic deployments keep working. Use Upstash for distributed production rate limits across server instances and restarts.
+If Upstash is not configured, unavailable, or slower than the bounded request-protection timeout, the app falls back to a bounded in-memory per-runtime rate limiter so local demos keep working. `/api/health` is a clearly labeled shallow configuration check; `/api/health?check=deep` also verifies live Upstash connectivity with a bounded timeout. Configure Upstash and require a successful deep check before production rollout so limits hold across server instances and restarts.
 
 ## Trust And Safety
 
@@ -97,11 +100,25 @@ npm run lint
 npx tsc --noEmit
 npm run build
 npm run validate
+npm run test:e2e:production
+npm run qa
 ```
 
-For rendered Planning Hub changes, also run browser QA on desktop and mobile widths:
+`npm run validate` includes a moderate-or-higher dependency advisory gate. `npm run qa` then runs the browser suite against `next start` in Chromium, Firefox, and WebKit.
+
+For rendered Planning Hub changes, confirm behavior on desktop, 390 px mobile, and 320 px narrow-mobile widths:
 
 - `http://localhost:3000/plan-check`
 - `http://localhost:3000/chat`
 
 Confirm no console errors, no horizontal overflow, source-grounded chat still works, Planning Hub navigation works, Current Progress works with synthetic universal fixtures, Planned Path works with a generic planned-path fixture, and comparison works when both current and planned PDFs are provided.
+
+After deployment, run the strict remote smoke gate against the exact production origin:
+
+```bash
+DEPLOYED_APP_URL=https://your-production-origin.example npm run smoke:production
+```
+
+The smoke gate requires route-specific page titles, production security headers, a `ready` deep health response with live Upstash connectivity, a working deterministic planning request, Chat validation, a benign source-grounded DegreeWorks answer with its Auburn source and advisor boundary, and non-cacheable student API responses. It intentionally fails when Chat, grounding, or distributed request protection is missing or unreachable.
+
+Before sponsored campus use, enable GitHub private vulnerability reporting, verify security-alert notifications, publish a private incident contact, and complete Auburn FERPA/vendor review. Public GitHub issues are restricted to non-sensitive product feedback; see [SECURITY.md](SECURITY.md).

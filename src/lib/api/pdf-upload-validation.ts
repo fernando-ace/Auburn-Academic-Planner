@@ -6,6 +6,8 @@ import {
 
 export { MAX_PDF_UPLOAD_BYTES } from "./pdf-upload-policy.ts";
 export const MAX_EXTRACTED_PDF_TEXT_LENGTH = 1_000_000;
+export const VERCEL_FUNCTION_REQUEST_BODY_LIMIT_BYTES = 4_500_000;
+export const MAX_PDF_MULTIPART_REQUEST_BYTES = 4_000_000;
 
 type PdfUploadFailure = {
   ok: false;

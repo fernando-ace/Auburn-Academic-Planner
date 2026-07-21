@@ -13,6 +13,6 @@ test("accepts a PDF at the deployment-safe upload limit", () => {
 test("returns a useful client error above the upload limit", () => {
   assert.equal(
     getPdfUploadSizeError(MAX_PDF_UPLOAD_BYTES + 1),
-    "Choose a PDF that is 4 MiB or smaller.",
+    "Choose a PDF that is 3 MiB or smaller.",
   );
 });

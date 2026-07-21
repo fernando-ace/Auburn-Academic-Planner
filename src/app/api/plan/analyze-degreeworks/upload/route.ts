@@ -1,5 +1,13 @@
-import { validatePdfUpload } from "../../../../../lib/api/pdf-upload-validation.ts";
+import {
+  MAX_PDF_MULTIPART_REQUEST_BYTES,
+  validatePdfUpload,
+} from "../../../../../lib/api/pdf-upload-validation.ts";
 import { checkRateLimit } from "../../../../../lib/api/rate-limit.ts";
+import {
+  isDeclaredBodyTooLarge,
+  privateJsonResponse,
+  validateApiRequest,
+} from "../../../../../lib/api/request-security.ts";
 import { analyzeCombinedDegreeWorksText } from "../../../../../lib/plan/combined-degreeworks-analysis.ts";
 import { parseCurrentProgressAnalysisInput } from "../../../../../lib/plan/current-progress-analysis-input.ts";
 import { detectDegreeWorksDocumentType } from "../../../../../lib/plan/degreeworks-document-type.ts";
@@ -8,6 +16,21 @@ import { comparePlannedPathToCurrentProgress } from "../../../../../lib/plan/pla
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const requestValidation = validateApiRequest(request, "multipart");
+  if (!requestValidation.ok) {
+    return privateJsonResponse(
+      { error: requestValidation.error },
+      { status: requestValidation.status },
+    );
+  }
+
+  if (isDeclaredBodyTooLarge(request, MAX_PDF_MULTIPART_REQUEST_BYTES)) {
+    return privateJsonResponse(
+      { error: "Upload request is too large to process safely." },
+      { status: 413 },
+    );
+  }
+
   const rateLimit = await checkRateLimit(request, {
     namespace: "planned-path-pdf",
     limit: 8,
@@ -15,7 +38,7 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.ok) {
-    return Response.json(
+    return privateJsonResponse(
       { error: rateLimit.error },
       { status: rateLimit.status },
     );
@@ -24,7 +47,7 @@ export async function POST(request: Request) {
   const formData = await request.formData().catch(() => null);
 
   if (!formData) {
-    return Response.json(
+    return privateJsonResponse(
       { error: "Request body must be multipart/form-data." },
       { status: 400 },
     );
@@ -35,13 +58,13 @@ export async function POST(request: Request) {
 
   const upload = await validatePdfUpload(uploadedFile);
   if (!upload.ok) {
-    return Response.json({ error: upload.error }, { status: upload.status });
+    return privateJsonResponse({ error: upload.error }, { status: upload.status });
   }
 
   const documentTypeDetection = detectDegreeWorksDocumentType(upload.text);
 
   if (documentTypeDetection.documentType === "worksheet_audit") {
-    return Response.json(
+    return privateJsonResponse(
       {
         error:
           "This PDF looks like a Current Progress Worksheet, not a Planned Path. Export Planned Path from Degree Works and upload that PDF here.",
@@ -69,7 +92,7 @@ export async function POST(request: Request) {
     currentProgressAnalysisValue,
   );
   if (currentProgressInput.status === "invalid") {
-    return Response.json(
+    return privateJsonResponse(
       { error: currentProgressInput.error },
       { status: 400 },
     );
@@ -85,7 +108,7 @@ export async function POST(request: Request) {
       })
     : null;
 
-  return Response.json({
+  return privateJsonResponse({
     sourceFileName: "Uploaded Degree Works PDF",
     documentType: "planned_path",
     selectedTargetPath: "degreeworks_native",

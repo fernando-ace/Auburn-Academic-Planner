@@ -296,5 +296,33 @@ test("generated path preferences are sanitized", () => {
 
   assert.match(preferences.startTerm, /^(Fall|Spring|Summer) 20\d{2}$/);
   assert.equal(preferences.maxCreditsPerTerm, 21);
-  assert.equal(preferences.maxSummerCredits, 3);
+  assert.equal(preferences.maxSummerCredits, 1);
+  assert.equal(preferences.maxTerms, 12);
+});
+
+test("generated path preferences allow a part-time course load", () => {
+  const preferences = resolveGeneratedPathPreferences({
+    maxCreditsPerTerm: 1,
+    maxSummerCredits: 0,
+  });
+
+  assert.equal(preferences.maxCreditsPerTerm, 3);
+  assert.equal(preferences.maxSummerCredits, 1);
+});
+
+test("disabled Summer normalizes a Summer start to Fall and never emits a Summer term", async () => {
+  const audit = await analyzeFixture("worksheet-current-audit-sample.txt");
+  const generatedPath = buildGeneratedPlannedPath({
+    audit,
+    preferences: {
+      startTerm: "Summer 2027",
+      maxCreditsPerTerm: 6,
+      includeSummer: false,
+    },
+  });
+
+  assert.equal(generatedPath.preferences.startTerm, "Fall 2027");
+  assert.ok(
+    generatedPath.terms.every((term) => !term.label.startsWith("Summer ")),
+  );
 });

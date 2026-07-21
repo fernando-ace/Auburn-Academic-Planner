@@ -1,9 +1,15 @@
 import {
   answerAuburnRagQuestion,
+  IncompleteGeminiResponseError,
   logRetrievalDebug,
   parseChatRequestBody,
 } from "../../../lib/gemini-rag.ts";
 import { checkRateLimit } from "../../../lib/api/rate-limit.ts";
+import {
+  privateJsonResponse,
+  readLimitedJsonBody,
+  validateApiRequest,
+} from "../../../lib/api/request-security.ts";
 import {
   MAX_GEMINI_CHAT_REQUEST_BYTES,
   getGeminiChatPayloadLimitIssue,
@@ -11,62 +17,17 @@ import {
 } from "../../../lib/chat-privacy.ts";
 
 export const runtime = "nodejs";
-
-type LimitedJsonBodyResult =
-  | { ok: true; value: unknown }
-  | { ok: false; tooLarge: boolean };
-
-async function readLimitedJsonBody(
-  request: Request,
-): Promise<LimitedJsonBodyResult> {
-  const declaredLength = Number(request.headers.get("content-length"));
-  if (
-    Number.isFinite(declaredLength) &&
-    declaredLength > MAX_GEMINI_CHAT_REQUEST_BYTES
-  ) {
-    return { ok: false, tooLarge: true };
-  }
-
-  if (!request.body) {
-    return { ok: false, tooLarge: false };
-  }
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-
-    totalBytes += value.byteLength;
-    if (totalBytes > MAX_GEMINI_CHAT_REQUEST_BYTES) {
-      await reader.cancel().catch(() => undefined);
-      return { ok: false, tooLarge: true };
-    }
-    chunks.push(value);
-  }
-
-  const bodyBytes = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bodyBytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
-  try {
-    return {
-      ok: true,
-      value: JSON.parse(new TextDecoder().decode(bodyBytes)) as unknown,
-    };
-  } catch {
-    return { ok: false, tooLarge: false };
-  }
-}
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
+  const requestValidation = validateApiRequest(request, "json");
+  if (!requestValidation.ok) {
+    return privateJsonResponse(
+      { error: requestValidation.error },
+      { status: requestValidation.status },
+    );
+  }
+
   const rateLimit = await checkRateLimit(request, {
     namespace: "chat",
     limit: 20,
@@ -74,15 +35,18 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.ok) {
-    return Response.json(
+    return privateJsonResponse(
       { error: rateLimit.error },
       { status: rateLimit.status },
     );
   }
 
-  const bodyResult = await readLimitedJsonBody(request);
+  const bodyResult = await readLimitedJsonBody(
+    request,
+    MAX_GEMINI_CHAT_REQUEST_BYTES,
+  );
   if (!bodyResult.ok) {
-    return Response.json(
+    return privateJsonResponse(
       {
         error: bodyResult.tooLarge
           ? "Chat request is too large. Reset Chat and try a shorter question."
@@ -96,14 +60,14 @@ export async function POST(request: Request) {
   const messages = parseChatRequestBody(body);
 
   if (!messages) {
-    return Response.json(
+    return privateJsonResponse(
       { error: "Request body must include at least one valid chat message." },
       { status: 400 },
     );
   }
 
   if (!hasCurrentGeminiChatConsent(body)) {
-    return Response.json(
+    return privateJsonResponse(
       {
         error:
           "Explicit consent to Google Gemini processing is required before sending Chat messages.",
@@ -114,7 +78,7 @@ export async function POST(request: Request) {
 
   const payloadLimitIssue = getGeminiChatPayloadLimitIssue(messages);
   if (payloadLimitIssue) {
-    return Response.json(
+    return privateJsonResponse(
       {
         error:
           payloadLimitIssue.kind === "message"
@@ -129,16 +93,18 @@ export async function POST(request: Request) {
   const fileSearchStoreName = process.env.GEMINI_FILE_SEARCH_STORE_NAME?.trim();
 
   if (!apiKey) {
-    return Response.json(
-      { error: "GEMINI_API_KEY is not configured." },
-      { status: 500 },
+    console.error("Chat service is unavailable: Gemini API key is missing.");
+    return privateJsonResponse(
+      { error: "Chat is temporarily unavailable. Please try again later." },
+      { status: 503 },
     );
   }
 
   if (!fileSearchStoreName) {
-    return Response.json(
-      { error: "GEMINI_FILE_SEARCH_STORE_NAME is not configured." },
-      { status: 500 },
+    console.error("Chat service is unavailable: Gemini source store is missing.");
+    return privateJsonResponse(
+      { error: "Chat is temporarily unavailable. Please try again later." },
+      { status: 503 },
     );
   }
 
@@ -148,14 +114,27 @@ export async function POST(request: Request) {
       fileSearchStoreName,
     });
 
-    const { sourceTitles, retrievalContext, ...responseBody } = result;
-    logRetrievalDebug(retrievalContext, sourceTitles);
+    const {
+      finishReason,
+      sourceTitles,
+      retrievalContext,
+      ...responseBody
+    } = result;
+    logRetrievalDebug(retrievalContext, sourceTitles, finishReason);
 
-    return Response.json(responseBody);
+    return privateJsonResponse(responseBody);
   } catch (error) {
-    console.error("Gemini API error", error);
-    return Response.json(
-      { error: "The assistant could not complete the request." },
+    console.error(
+      "Gemini request failed.",
+      error instanceof IncompleteGeminiResponseError
+        ? { finishReason: error.finishReason }
+        : { reason: "request_error" },
+    );
+    return privateJsonResponse(
+      {
+        error:
+          "Chat could not complete that request. Please try again in a moment.",
+      },
       { status: 502 },
     );
   }

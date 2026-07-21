@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
+
 import { StakeholderPage } from "@/components/stakeholder-page";
+
+export const metadata: Metadata = {
+  title: "Methodology",
+  description: "How the planner produces Degree Works-native, advisor-safe output.",
+};
 
 export default function MethodologyPage() {
   return (

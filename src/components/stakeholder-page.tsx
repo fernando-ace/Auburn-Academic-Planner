@@ -3,6 +3,7 @@ import { ClipboardCheck } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { StakeholderMoreMenu } from "./stakeholder-more-menu";
+import { IndependentPilotNotice } from "./independent-pilot-notice";
 
 type StakeholderSection = {
   title: string;
@@ -21,7 +22,11 @@ export function StakeholderPage({
   children?: ReactNode;
 }) {
   return (
-    <main className="min-h-dvh bg-slate-100 text-slate-950">
+    <main
+      className="min-h-dvh bg-slate-100 text-slate-950"
+      id="main-content"
+      tabIndex={-1}
+    >
       <header className="bg-[#03244d] px-4 py-4 text-white shadow-sm sm:px-6">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4">
           <Link className="flex min-w-0 items-center gap-3" href="/plan-check">
@@ -29,8 +34,9 @@ export function StakeholderPage({
               <ClipboardCheck aria-hidden="true" size={21} />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[18px] font-semibold leading-6 sm:text-[20px]">
-                Auburn Academic Planner
+              <p className="text-[17px] font-semibold leading-6 sm:text-[20px]">
+                <span className="sm:hidden">Auburn Planner</span>
+                <span className="hidden sm:inline">Auburn Academic Planner</span>
               </p>
               <p className="hidden text-[13px] text-white/75 sm:block">
                 Stakeholder review material
@@ -48,6 +54,7 @@ export function StakeholderPage({
           </nav>
         </div>
       </header>
+      <IndependentPilotNotice />
 
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:py-10">
         <section className="max-w-3xl">

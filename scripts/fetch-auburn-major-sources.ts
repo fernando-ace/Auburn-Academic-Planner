@@ -10,6 +10,10 @@ import {
   planMajorAcademicSourceFetches,
   type GeneratedMajorSourceSeed,
 } from "../src/lib/sources/major-academic-sources.ts";
+import {
+  AuburnSourceFetchPolicyError,
+  fetchAuburnSourceText,
+} from "../src/lib/sources/auburn-source-fetch.ts";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, "..");
@@ -36,7 +40,7 @@ async function main() {
   for (const plan of plans) {
     try {
       const outputPath = path.join(projectRoot, ...plan.outputPath.split("/"));
-      const html = await fetchSource(plan.seed.url);
+      const html = await fetchWithRetry(plan.seed.url);
       mkdirSync(path.dirname(outputPath), { recursive: true });
       writeFileSync(outputPath, html);
       console.log(`Fetched ${plan.seed.id} (${html.length} characters).`);
@@ -59,33 +63,13 @@ async function main() {
   }
 }
 
-async function fetchSource(url: string) {
-  const response = await fetchWithRetry(url);
-
-  if (!response.ok) {
-    throw new Error(`Fetch failed for ${url}: ${response.status} ${response.statusText}`);
-  }
-
-  const contentType = response.headers.get("content-type") ?? "";
-  if (contentType && !/text\/html|application\/xhtml\+xml|text\/plain/i.test(contentType)) {
-    throw new Error(`Fetch returned unsupported content type for ${url}: ${contentType}`);
-  }
-
-  const text = await response.text();
-  if (!text.trim()) {
-    throw new Error(`Fetch returned empty content for ${url}`);
-  }
-
-  return text;
-}
-
 async function fetchWithRetry(url: string) {
   const maxAttempts = 3;
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      return await fetch(url, {
+      return await fetchAuburnSourceText(url, {
         headers: {
           "User-Agent": "AuburnAcademicPlannerMajorSourceFetcher/1.0",
           Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1",
@@ -93,6 +77,9 @@ async function fetchWithRetry(url: string) {
       });
     } catch (error) {
       lastError = error;
+      if (error instanceof AuburnSourceFetchPolicyError) {
+        throw error;
+      }
       if (attempt < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, attempt * 750));
       }

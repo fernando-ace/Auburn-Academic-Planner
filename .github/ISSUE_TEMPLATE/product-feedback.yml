@@ -1,0 +1,43 @@
+name: Non-sensitive product feedback
+description: Report a reproducible product or accessibility issue without sharing student records or private data.
+title: "[Feedback]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form creates a public GitHub issue. Do not include names, student IDs, Degree Works records, screenshots of student data, security details, API keys, or other private information.
+
+        This public form is not a privacy-incident or security-reporting channel. A private reporting channel must be established before sponsored campus use.
+  - type: checkboxes
+    id: privacy_confirmation
+    attributes:
+      label: Public-information confirmation
+      options:
+        - label: I confirm that this report contains no student record, personal data, credential, or non-public security detail.
+          required: true
+  - type: dropdown
+    id: feedback_type
+    attributes:
+      label: Feedback type
+      options:
+        - Product behavior
+        - Accessibility barrier
+        - Documentation or wording
+        - Other non-sensitive feedback
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: What happened?
+      description: Use synthetic examples and describe the task, expected result, actual result, browser, device, and assistive technology when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Why is this useful to fix?
+      description: Explain the impact without including private or student-identifying information.
+    validations:
+      required: true

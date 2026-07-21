@@ -16,6 +16,11 @@ import {
   summarizeGeneratedPathFeasibility,
   type GeneratedPathFeasibilitySummary,
 } from "./course-feasibility.ts";
+import {
+  nextGeneratedPathTerm,
+  normalizeGeneratedPathStartTerm,
+  parseGeneratedPathTerm,
+} from "./generated-path-terms.ts";
 
 export type GeneratedPathPreferences = {
   startTerm?: string;
@@ -101,7 +106,7 @@ type PlaceableItem = GeneratedPlannedPathItem & {
 
 const defaultMaxCreditsPerTerm = 15;
 const defaultMaxSummerCredits = 6;
-const defaultMaxTerms = 8;
+const defaultMaxTerms = 12;
 const defaultCourseCredits = 3;
 const maxCreditCap = 21;
 const maxSummerCreditCap = 12;
@@ -238,18 +243,23 @@ export function parseGeneratedPathPreferences(
 export function resolveGeneratedPathPreferences(
   preferences?: GeneratedPathPreferences | null,
 ): ResolvedGeneratedPathPreferences {
+  const includeSummer = Boolean(preferences?.includeSummer);
+
   return {
-    startTerm: normalizeStartTerm(preferences?.startTerm),
+    startTerm: normalizeGeneratedPathStartTerm(
+      preferences?.startTerm,
+      includeSummer,
+    ),
     maxCreditsPerTerm: clampInteger(
       preferences?.maxCreditsPerTerm,
-      9,
+      3,
       maxCreditCap,
       defaultMaxCreditsPerTerm,
     ),
-    includeSummer: Boolean(preferences?.includeSummer),
+    includeSummer,
     maxSummerCredits: clampInteger(
       preferences?.maxSummerCredits,
-      3,
+      1,
       maxSummerCreditCap,
       defaultMaxSummerCredits,
     ),
@@ -851,9 +861,13 @@ function termLabelAtIndex(
   index: number,
   preferences: ResolvedGeneratedPathPreferences,
 ) {
-  let { term, year } = parseTerm(preferences.startTerm);
+  let { term, year } = parseGeneratedPathTerm(preferences.startTerm);
   for (let step = 0; step < index; step += 1) {
-    ({ term, year } = nextTerm({ includeSummer: preferences.includeSummer, term, year }));
+    ({ term, year } = nextGeneratedPathTerm({
+      includeSummer: preferences.includeSummer,
+      term,
+      year,
+    }));
   }
 
   return `${term} ${year}`;
@@ -867,7 +881,7 @@ function termIndexForLabel(
     return null;
   }
 
-  const normalizedLabel = normalizeStartTerm(label);
+  const normalizedLabel = normalizeGeneratedPathStartTerm(label);
 
   for (let index = 0; index < preferences.maxTerms; index += 1) {
     if (termLabelAtIndex(index, preferences) === normalizedLabel) {
@@ -878,26 +892,6 @@ function termIndexForLabel(
   return null;
 }
 
-function nextTerm({
-  includeSummer,
-  term,
-  year,
-}: {
-  includeSummer: boolean;
-  term: string;
-  year: number;
-}) {
-  if (term === "Fall") {
-    return { term: "Spring", year: year + 1 };
-  }
-
-  if (term === "Spring") {
-    return includeSummer ? { term: "Summer", year } : { term: "Fall", year };
-  }
-
-  return { term: "Fall", year };
-}
-
 function creditCapForTerm(
   termLabel: string,
   preferences: ResolvedGeneratedPathPreferences,
@@ -905,39 +899,6 @@ function creditCapForTerm(
   return /^Summer\b/i.test(termLabel)
     ? preferences.maxSummerCredits
     : preferences.maxCreditsPerTerm;
-}
-
-function normalizeStartTerm(value?: string | null) {
-  const parsed = value ? parseTerm(value) : defaultStartTerm();
-  return `${parsed.term} ${parsed.year}`;
-}
-
-function parseTerm(value: string) {
-  const match = /\b(Fall|Spring|Summer)\s+(20\d{2})\b/i.exec(value);
-  if (!match) {
-    return defaultStartTerm();
-  }
-
-  return {
-    term: capitalizeTerm(match[1]),
-    year: Number(match[2]),
-  };
-}
-
-function defaultStartTerm() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-
-  if (month <= 3) {
-    return { term: "Summer", year };
-  }
-
-  if (month <= 7) {
-    return { term: "Fall", year };
-  }
-
-  return { term: "Spring", year: year + 1 };
 }
 
 function clampInteger(
@@ -951,11 +912,6 @@ function clampInteger(
   }
 
   return Math.min(max, Math.max(min, Math.round(value)));
-}
-
-function capitalizeTerm(value: string) {
-  const lower = value.toLowerCase();
-  return `${lower.charAt(0).toUpperCase()}${lower.slice(1)}`;
 }
 
 function normalizeCourseCode(code: string) {

@@ -2,56 +2,200 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 const routes = [
-  "/plan-check",
-  "/chat",
-  "/privacy",
-  "/methodology",
-  "/accessibility",
-  "/limitations",
-  "/pilot-review",
+  { path: "/plan-check", title: "Planning Hub | Auburn Academic Planner" },
+  { path: "/chat", title: "Source-Grounded Chat | Auburn Academic Planner" },
+  { path: "/privacy", title: "Privacy | Auburn Academic Planner" },
+  { path: "/methodology", title: "Methodology | Auburn Academic Planner" },
+  { path: "/accessibility", title: "Accessibility | Auburn Academic Planner" },
+  { path: "/limitations", title: "Limitations | Auburn Academic Planner" },
+  { path: "/pilot-review", title: "Pilot Review | Auburn Academic Planner" },
+  {
+    path: "/pilot-review/template",
+    title: "Pilot Readiness Template | Auburn Academic Planner",
+  },
 ] as const;
 
 const viewports = [
   { name: "desktop", width: 1440, height: 900 },
   { name: "mobile", width: 390, height: 844 },
+  { name: "narrow mobile", width: 320, height: 700 },
 ] as const;
 
 for (const route of routes) {
   for (const viewport of viewports) {
-    test(`${route} has no horizontal overflow and passes axe on ${viewport.name}`, async ({
+    test(`${route.path} has no horizontal overflow and passes axe on ${viewport.name}`, async ({
       page,
     }) => {
+      const runtimeErrors = monitorRuntimeErrors(page);
       await page.setViewportSize(viewport);
-      await page.goto(route);
+      await page.goto(route.path);
 
       await expect(page.locator("body")).toBeVisible();
+      await expect(page).toHaveTitle(route.title);
       await expectNoHorizontalOverflow(page);
 
       const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
       expect(accessibilityScanResults.violations).toEqual([]);
+      expect(runtimeErrors).toEqual([]);
     });
   }
 }
 
-test("More menu opens and closes with pointer and keyboard", async ({ page }) => {
+test("unknown routes render the accessible recovery page", async ({ page }) => {
+  const runtimeErrors = monitorRuntimeErrors(page);
+  const response = await page.goto("/this-page-does-not-exist");
+
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Return to Planning Hub" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
+  expect(accessibilityScanResults.violations).toEqual([]);
+  expect(
+    runtimeErrors.filter(
+      (message) => !message.includes("status of 404 (Not Found)"),
+    ),
+  ).toEqual([]);
+});
+
+test("More disclosure uses ordinary link navigation and returns focus on Escape", async ({
+  page,
+}) => {
   await page.goto("/plan-check");
 
   const moreButton = page.getByRole("button", { name: /^More$/ });
-  const menu = page.getByRole("menu", { name: "Stakeholder pages" });
+  const stakeholderLinks = page.getByRole("list", {
+    name: "Stakeholder pages",
+  });
+  const privacyLink = page.getByRole("link", {
+    name: "Privacy",
+    exact: true,
+  });
 
   await moreButton.click();
-  await expect(menu).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Privacy" })).toBeVisible();
+  await expect(stakeholderLinks).toBeVisible();
+  await expect(privacyLink).toBeVisible();
+  await expect(page.getByRole("menu")).toHaveCount(0);
 
+  await privacyLink.focus();
   await page.keyboard.press("Escape");
-  await expect(menu).toBeHidden();
+  await expect(stakeholderLinks).toBeHidden();
+  await expect(moreButton).toBeFocused();
 
   await moreButton.focus();
   await page.keyboard.press("Enter");
-  await expect(menu).toBeVisible();
+  await expect(stakeholderLinks).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(privacyLink).toBeFocused();
 
   await page.keyboard.press("Escape");
-  await expect(menu).toBeHidden();
+  await expect(stakeholderLinks).toBeHidden();
+  await expect(moreButton).toBeFocused();
+});
+
+test("Chat header keeps a visible truthful brand label at narrow widths", async ({
+  page,
+}) => {
+  await page.goto("/chat");
+
+  const mainContent = page.locator("main#main-content");
+  await page.getByRole("link", { name: "Skip to main content" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(mainContent).toBeFocused();
+
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    const heading = page.getByRole("heading", {
+      name: "Auburn Planner",
+      exact: true,
+    });
+    await expect(heading).toBeVisible();
+    expect(
+      await heading.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+    await expect(
+      page.locator("header").getByRole("link", { name: "Planning Hub" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "More" })).toBeVisible();
+  }
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(
+    page.getByRole("heading", {
+      name: "Auburn Academic Planner",
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test("fresh mobile Chat starts at the welcome heading", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/chat");
+
+  const conversation = page.getByTestId("chat-scroll-container");
+  await expect(
+    page.getByRole("heading", {
+      name: "Source-grounded academic planning conversations",
+    }),
+  ).toBeVisible();
+  await expect
+    .poll(() => conversation.evaluate((element) => element.scrollTop))
+    .toBe(0);
+});
+
+test("Chat mobile drawers trap focus, inert the app, close by Escape and backdrop, and restore focus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/chat");
+
+  const appContent = page.getByTestId("chat-app-content");
+  const topicsTrigger = page.getByRole("button", {
+    name: "Open planning topics",
+  });
+  await topicsTrigger.click();
+
+  const topicsDialog = page.getByRole("dialog", {
+    name: "Planning topics",
+  });
+  const closeButton = topicsDialog.getByRole("button", {
+    name: "Close drawer",
+  });
+  await expect(topicsDialog).toBeVisible();
+  await expect(topicsDialog).toHaveAttribute("aria-modal", "true");
+  await expect(appContent).toHaveAttribute("inert", "");
+  await expect(closeButton).toBeFocused();
+
+  const focusableElements = topicsDialog.locator(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  );
+  const lastFocusableElement = focusableElements.last();
+  await lastFocusableElement.focus();
+  await page.keyboard.press("Tab");
+  await expect(closeButton).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(lastFocusableElement).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(topicsDialog).toBeHidden();
+  await expect(appContent).not.toHaveAttribute("inert", "");
+  await expect(topicsTrigger).toBeFocused();
+
+  await topicsTrigger.click();
+  await page.getByTestId("mobile-drawer-backdrop").click({
+    position: { x: 385, y: 400 },
+  });
+  await expect(topicsDialog).toBeHidden();
+  await expect(topicsTrigger).toBeFocused();
+
+  const sourcesTrigger = page.getByRole("button", { name: "Open sources" });
+  await sourcesTrigger.click();
+  await expect(page.getByRole("dialog", { name: "Sources" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Sources" })).toBeHidden();
+  await expect(sourcesTrigger).toBeFocused();
 });
 
 test("Planning Hub wizard starts on Current Progress with Advisor Summary locked", async ({
@@ -132,4 +276,15 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(overflow.bodyScrollWidth).toBeLessThanOrEqual(
     overflow.bodyClientWidth + 1,
   );
+}
+
+function monitorRuntimeErrors(page: Page) {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => errors.push(error.message));
+  return errors;
 }

@@ -1,4 +1,4 @@
-export const MAX_PDF_UPLOAD_MIB = 4;
+export const MAX_PDF_UPLOAD_MIB = 3;
 export const MAX_PDF_UPLOAD_BYTES = MAX_PDF_UPLOAD_MIB * 1024 * 1024;
 
 export function getPdfUploadSizeError(size: number) {

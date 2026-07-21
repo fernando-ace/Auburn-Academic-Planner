@@ -5,6 +5,70 @@ import { expect, test } from "@playwright/test";
 import { MAX_PDF_UPLOAD_BYTES } from "../../src/lib/api/pdf-upload-policy";
 import { PLANNING_HUB_DRAFT_STORAGE_KEY } from "../../src/lib/plan/planning-hub-device-draft";
 
+test("request-time term settings hydrate cleanly across a browser date rollover", async ({
+  page,
+}) => {
+  const hydrationErrors: string[] = [];
+  const pageErrors: string[] = [];
+  page.on("console", (message) => {
+    if (
+      message.type() === "error" &&
+      /hydration|did not match|server rendered html/i.test(message.text())
+    ) {
+      hydrationErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await page.addInitScript(`
+    (() => {
+      const NativeDate = Date;
+      const futureTimestamp = NativeDate.parse("2098-01-15T12:00:00.000Z");
+      class FutureDate extends NativeDate {
+        constructor(...args) {
+          super(...(args.length > 0 ? args : [futureTimestamp]));
+        }
+        static now() {
+          return futureTimestamp;
+        }
+      }
+      globalThis.Date = FutureDate;
+    })();
+  `);
+
+  await page.goto("/plan-check");
+  const startTerm = page.getByLabel("Start term");
+  const includeSummer = page.getByLabel("Include summer terms");
+
+  await expect(startTerm).toBeVisible();
+  await expect(startTerm).not.toHaveValue(/2098|2099/);
+  expect(
+    (await startTerm.locator("option").allTextContents()).some((option) =>
+      option.startsWith("Summer "),
+    ),
+  ).toBe(false);
+
+  await includeSummer.check();
+  const summerOption = startTerm.locator("option").filter({ hasText: "Summer " }).first();
+  await expect(summerOption).toBeAttached();
+  const selectedSummer = await summerOption.getAttribute("value");
+  expect(selectedSummer).toMatch(/^Summer 20\d{2}$/);
+  await startTerm.selectOption(selectedSummer as string);
+  await expect(startTerm).toHaveValue(selectedSummer as string);
+
+  await includeSummer.uncheck();
+  await expect(startTerm).toHaveValue(
+    (selectedSummer as string).replace("Summer", "Fall"),
+  );
+  expect(
+    (await startTerm.locator("option").allTextContents()).some((option) =>
+      option.startsWith("Summer "),
+    ),
+  ).toBe(false);
+  expect(hydrationErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
 test("Current Progress PDF generates a draft path and advisor summary", async ({
   page,
 }) => {
@@ -65,6 +129,95 @@ test("Current Progress PDF generates a draft path and advisor summary", async ({
   expect(downloadedNotes).toContain("not an official degree audit");
 });
 
+test("Current Progress survives validation errors and two successive plan comparisons", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+
+  const worksheetText = await readFile(
+    path.join(
+      process.cwd(),
+      "tests",
+      "fixtures",
+      "degreeworks",
+      "worksheet-current-audit-sample.txt",
+    ),
+    "utf8",
+  );
+
+  await page.goto("/plan-check");
+  await page.getByLabel("Worksheet PDF").setInputFiles({
+    buffer: Buffer.from(makePdf(worksheetText)),
+    mimeType: "application/pdf",
+    name: "synthetic-current-progress.pdf",
+  });
+  await page.getByRole("button", { name: "Check Current Progress" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Draft path from your Current Progress" }),
+  ).toBeVisible({ timeout: 30_000 });
+
+  await page.getByRole("button", { name: "Compare my own plan" }).click();
+  await page.getByRole("button", { name: "Compare my own plan" }).click();
+  const validationAlert = page
+    .getByRole("alert")
+    .filter({ hasText: "Choose a Degree Works Plan PDF" });
+  await expect(validationAlert).toBeVisible();
+  await expect(page.getByTestId("planning-step-current_progress")).toHaveAccessibleName(
+    /Analyzed/,
+  );
+  await expect(page.getByTestId("planning-step-advisor_summary")).toBeEnabled();
+
+  await page.getByRole("button", { name: "Paste courses" }).click();
+  const plannedCourses = page.getByLabel("Planned courses");
+  await plannedCourses.fill("Fall 2030 Credits: 3\nCOMP 1210");
+  await page.getByRole("button", { name: "Compare my own plan" }).click();
+  await expect(
+    page.getByText("Your own plan was compared with Current Progress."),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Revise or check another plan" }).click();
+  await expect(page.getByTestId("planning-step-current_progress")).toHaveAccessibleName(
+    /Analyzed/,
+  );
+  await plannedCourses.fill("Spring 2031 Credits: 3\nBIOL 1020");
+  await page.getByRole("button", { name: "Compare my own plan" }).click();
+  await expect(
+    page.getByText("Your own plan was compared with Current Progress."),
+  ).toBeVisible();
+  await expect(page.getByText("BIOL 1020", { exact: true }).first()).toBeVisible();
+});
+
+test("Planning API errors are announced beside the triggering form on mobile", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/api/plan/analyze-degreeworks-current/upload", async (route) => {
+    await route.fulfill({
+      body: JSON.stringify({ error: "Planning is temporarily unavailable." }),
+      contentType: "application/json",
+      status: 503,
+    });
+  });
+
+  await page.goto("/plan-check");
+  await page.getByLabel("Worksheet PDF").setInputFiles({
+    buffer: Buffer.from(makePdf("Degree Works Worksheet\nStill needed: COMP 1210")),
+    mimeType: "application/pdf",
+    name: "synthetic-current-progress.pdf",
+  });
+  await page.getByRole("button", { name: "Check Current Progress" }).click();
+
+  const error = page
+    .getByRole("alert")
+    .filter({ hasText: "Planning is temporarily unavailable." });
+  await expect(error).toBeVisible();
+  await expect(error).toBeFocused();
+  const errorBox = await error.boundingBox();
+  expect(errorBox).not.toBeNull();
+  expect((errorBox?.y ?? 9999) + (errorBox?.height ?? 0)).toBeLessThanOrEqual(844);
+  await expect(page.getByText("Selected: PDF ready")).toBeVisible();
+});
+
 test("manual plan device draft is opt-in, minimized, restorable, and deletable", async ({
   page,
 }) => {
@@ -101,21 +254,32 @@ test("manual plan device draft is opt-in, minimized, restorable, and deletable",
   expect(serializedDraft).not.toContain("903123456");
   expect(serializedDraft).not.toContain("Dr. Example");
 
-  await page.reload();
-  const restoreButton = page.getByRole("button", { name: "Restore" });
+  const browserContext = page.context();
+  await page.close();
+  const restoredPage = await browserContext.newPage();
+  await restoredPage.goto("/plan-check");
+  const restoreButton = restoredPage.getByRole("button", {
+    name: "Restore plan",
+  });
   await expect(restoreButton).toBeEnabled();
   await restoreButton.click();
 
-  const restoredPlan = page.getByLabel("Planned courses");
+  const restoredPlan = restoredPage.getByLabel("Planned courses");
   await expect(restoredPlan).toHaveValue(/Fall 2026 Credits: 6/);
   await expect(restoredPlan).toHaveValue(/COMP 1210, MATH 1610/);
   await expect(restoredPlan).not.toHaveValue(/Aubie Tiger/);
-  await expect(page.getByRole("status")).toContainText("Manual plan draft restored");
+  await expect(restoredPage.getByRole("status")).toContainText(
+    "Manual plan draft restored",
+  );
 
-  await page.getByRole("button", { name: "Delete saved draft" }).click();
-  await expect(page.getByRole("status")).toContainText("Saved draft deleted");
+  await restoredPage
+    .getByRole("button", { name: "Delete saved draft" })
+    .click();
+  await expect(restoredPage.getByRole("status")).toContainText(
+    "Saved draft deleted",
+  );
   expect(
-    await page.evaluate(
+    await restoredPage.evaluate(
       (storageKey) => window.localStorage.getItem(storageKey),
       PLANNING_HUB_DRAFT_STORAGE_KEY,
     ),
@@ -142,21 +306,35 @@ test("Current Progress saves settings only and rechecks expiry before restore", 
   if (!serializedDraft) {
     throw new Error("Expected a Current Progress settings draft.");
   }
+  expect(
+    (
+      JSON.parse(serializedDraft) as {
+        generatedPathPreferences: { maxCreditsPerTerm: number };
+      }
+    ).generatedPathPreferences.maxCreditsPerTerm,
+  ).toBe(18);
   expect(serializedDraft).not.toContain("manualPlan");
   expect(serializedDraft).not.toContain("sourceFileName");
   expect(serializedDraft).not.toContain("currentProgressAnalysis");
 
-  await page.reload();
-  const restoreSettingsButton = page.getByRole("button", {
+  const browserContext = page.context();
+  await page.close();
+  const restoredPage = await browserContext.newPage();
+  await restoredPage.goto("/plan-check");
+  const restoreSettingsButton = restoredPage.getByRole("button", {
     name: "Restore settings",
   });
   await expect(restoreSettingsButton).toBeEnabled();
   await restoreSettingsButton.click();
-  await expect(page.getByLabel("Max fall/spring credits")).toHaveValue("18");
-  await expect(page.getByLabel("Include summer terms")).toBeChecked();
-  await expect(page.getByRole("status")).toContainText("Path settings restored");
+  await expect(restoredPage.getByLabel("Max fall/spring credits")).toHaveValue(
+    "18",
+  );
+  await expect(restoredPage.getByLabel("Include summer terms")).toBeChecked();
+  await expect(restoredPage.getByRole("status")).toContainText(
+    "Path settings restored",
+  );
 
-  await page.evaluate((storageKey) => {
+  await restoredPage.evaluate((storageKey) => {
     const serialized = window.localStorage.getItem(storageKey);
     if (!serialized) {
       throw new Error("Expected saved settings draft.");
@@ -174,12 +352,12 @@ test("Current Progress saves settings only and rechecks expiry before restore", 
   }, PLANNING_HUB_DRAFT_STORAGE_KEY);
 
   await restoreSettingsButton.click();
-  await expect(page.getByRole("status")).toContainText(
+  await expect(restoredPage.getByRole("status")).toContainText(
     "saved device draft expired and was deleted",
   );
   await expect(restoreSettingsButton).toBeDisabled();
   expect(
-    await page.evaluate(
+    await restoredPage.evaluate(
       (storageKey) => window.localStorage.getItem(storageKey),
       PLANNING_HUB_DRAFT_STORAGE_KEY,
     ),
@@ -292,6 +470,154 @@ test("Chat reset ignores a response that resolves after consent is revoked", asy
   ).toHaveCount(0);
 });
 
+test("Chat renders failures as student-safe alerts and retries without duplicating the question", async ({
+  page,
+}) => {
+  let attemptCount = 0;
+  await page.route("**/api/chat", async (route) => {
+    attemptCount += 1;
+    if (attemptCount === 1) {
+      await route.fulfill({
+        body: JSON.stringify({ error: "GEMINI_API_KEY is not configured." }),
+        contentType: "application/json",
+        status: 503,
+      });
+      return;
+    }
+
+    await route.fulfill({
+      body: JSON.stringify({
+        advisorVerificationNote: "Verify this with an Auburn academic advisor.",
+        answer: "Retry completed with source-grounded guidance.",
+        confidence: "Medium",
+        sources: [],
+      }),
+      contentType: "application/json",
+      status: 200,
+    });
+  });
+
+  await page.goto("/chat");
+  const question = "How should I prepare for registration?";
+  await page.getByLabel("Ask about Auburn academic requirements").fill(question);
+  await page
+    .getByRole("checkbox", {
+      name: /I agree to send this Chat content to Google Gemini/,
+    })
+    .click();
+  await page.getByRole("button", { name: "Send question" }).click();
+
+  const errorAlert = page
+    .getByRole("alert")
+    .filter({ hasText: "Chat couldn't answer that question" });
+  await expect(errorAlert).toBeVisible();
+  await expect(page.getByText("GEMINI_API_KEY is not configured.")).toHaveCount(0);
+  await expect(errorAlert.getByText(/Confidence:/)).toHaveCount(0);
+  await expect(errorAlert.getByText(/Sources used:/)).toHaveCount(0);
+  await expect(errorAlert.getByText(/Advisor verification/)).toHaveCount(0);
+
+  await errorAlert.getByRole("button", { name: "Try again" }).click();
+  await expect(
+    page.getByText("Retry completed with source-grounded guidance."),
+  ).toBeVisible();
+  await expect(errorAlert).toHaveCount(0);
+  await expect(page.getByText(question, { exact: true })).toHaveCount(1);
+  expect(attemptCount).toBe(2);
+});
+
+test("Chat auto-scrolls only while the reader remains near the conversation bottom", async ({
+  page,
+}) => {
+  let answerCount = 0;
+  await page.route("**/api/chat", async (route) => {
+    answerCount += 1;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await route.fulfill({
+      body: JSON.stringify({
+        advisorVerificationNote: "Verify this with an Auburn academic advisor.",
+        answer: `Answer ${answerCount}: ${"Planning detail. ".repeat(240)}`,
+        confidence: "Medium",
+        sources: [],
+      }),
+      contentType: "application/json",
+      status: 200,
+    });
+  });
+
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.goto("/chat");
+  await page
+    .getByRole("checkbox", {
+      name: /I agree to send this Chat content to Google Gemini/,
+    })
+    .click();
+
+  const input = page.getByLabel("Ask about Auburn academic requirements");
+  const sendButton = page.getByRole("button", { name: "Send question" });
+  const scrollContainer = page.getByTestId("chat-scroll-container");
+
+  await input.fill("First question");
+  await sendButton.click();
+  await expect(page.locator("#chat-consent-status")).toContainText(
+    "Submitting your question",
+  );
+  await expect(page.getByRole("log")).toHaveAttribute("aria-busy", "true");
+  await expect(page.getByText(/^Answer 1:/)).toBeVisible();
+  await expect(page.getByRole("log")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator("#chat-consent-status")).toContainText(
+    "Gemini response received",
+  );
+
+  await scrollContainer.evaluate((element) => {
+    element.scrollTop = 0;
+    element.dispatchEvent(new Event("scroll"));
+  });
+  await input.fill("Second question");
+  await sendButton.click();
+  await expect(page.getByText(/^Answer 2:/)).toBeVisible();
+  expect(await scrollContainer.evaluate((element) => element.scrollTop)).toBeLessThanOrEqual(1);
+
+  await scrollContainer.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    element.dispatchEvent(new Event("scroll"));
+  });
+  await input.fill("Third question");
+  await sendButton.click();
+  await expect(page.getByText(/^Answer 3:/)).toBeVisible();
+  await expect
+    .poll(() =>
+      scrollContainer.evaluate(
+        (element) =>
+          element.scrollHeight - element.scrollTop - element.clientHeight,
+      ),
+    )
+    .toBeLessThanOrEqual(2);
+
+  await scrollContainer.evaluate((element) => {
+    element.scrollTop = 0;
+    element.dispatchEvent(new Event("scroll"));
+  });
+  await page
+    .getByRole("button", { name: "Reset chat and revoke consent" })
+    .click();
+  await page
+    .getByRole("checkbox", {
+      name: /I agree to send this Chat content to Google Gemini/,
+    })
+    .click();
+  await input.fill("New thread after reset");
+  await sendButton.click();
+  await expect(page.getByText(/^Answer 4:/)).toBeVisible();
+  await expect
+    .poll(() =>
+      scrollContainer.evaluate(
+        (element) =>
+          element.scrollHeight - element.scrollTop - element.clientHeight,
+      ),
+    )
+    .toBeLessThanOrEqual(2);
+});
+
 test("oversized PDFs are rejected before upload", async ({ page }) => {
   await page.goto("/plan-check");
   await page.getByLabel("Worksheet PDF").setInputFiles({
@@ -301,7 +627,7 @@ test("oversized PDFs are rejected before upload", async ({ page }) => {
   });
 
   await expect(
-    page.getByRole("alert").filter({ hasText: "Choose a PDF that is 4 MiB or smaller." }),
+    page.getByRole("alert").filter({ hasText: "Choose a PDF that is 3 MiB or smaller." }),
   ).toBeVisible();
   await expect(page.getByText("Selected: PDF ready")).toHaveCount(0);
 });

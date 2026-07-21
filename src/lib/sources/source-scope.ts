@@ -80,21 +80,21 @@ export function classifyAcademicSource(
   const rawUrl = typeof sourceOrUrl === "string" ? sourceOrUrl : sourceOrUrl.url;
   const seed = source ?? seeds.find((entry) => entry.url === rawUrl);
 
-  if (seed?.status === "excluded") {
+  const url = parseAllowedAuburnSourceUrl(rawUrl);
+  if (!url) {
     return "excluded";
   }
 
-  if (seed?.status === "rag_only") {
-    return "rag_only";
-  }
-
-  const url = parseUrl(rawUrl);
-  if (!url) {
+  if (seed?.status === "excluded") {
     return "excluded";
   }
 
   if (isExcludedUrl(url)) {
     return "excluded";
+  }
+
+  if (seed?.status === "rag_only") {
+    return "rag_only";
   }
 
   if (isAcademicBulletinUrl(url)) {
@@ -155,8 +155,10 @@ export function validateAcademicSourceSeeds(
       }
       seenUrls.add(url);
 
-      if (!parseUrl(url)) {
-        errors.push(`${label}.url must be an absolute URL.`);
+      if (!parseAllowedAuburnSourceUrl(url)) {
+        errors.push(
+          `${label}.url must use HTTPS on auburn.edu or an auburn.edu subdomain.`,
+        );
       }
     }
 
@@ -191,6 +193,28 @@ function parseUrl(value: string) {
   }
 }
 
+export function isAllowedAuburnSourceUrl(value: string | URL) {
+  const url = typeof value === "string" ? parseUrl(value) : value;
+  return Boolean(
+    url &&
+      url.protocol === "https:" &&
+      isAuburnHostname(url.hostname),
+  );
+}
+
+export function parseAllowedAuburnSourceUrl(value: string) {
+  const url = parseUrl(value);
+  return url && isAllowedAuburnSourceUrl(url) ? url : undefined;
+}
+
+function isAuburnHostname(hostname: string) {
+  const normalizedHostname = hostname.toLowerCase();
+  return (
+    normalizedHostname === "auburn.edu" ||
+    normalizedHostname.endsWith(".auburn.edu")
+  );
+}
+
 function isAcademicBulletinUrl(url: URL) {
   return (
     url.protocol === "https:" &&
@@ -207,24 +231,19 @@ function isCuratedNonBulletinAcademicSource(
     if (seed.status === "excluded") {
       return false;
     }
-    const seedUrl = parseUrl(seed.url);
+    const seedUrl = parseAllowedAuburnSourceUrl(seed.url);
     return seedUrl?.href === url.href && seed.status === "rag_only";
   });
 }
 
 function isExcludedUrl(url: URL) {
-  const hostname = url.hostname.toLowerCase();
   const pathname = url.pathname.toLowerCase();
 
-  if (hostname === "auburntigers.com" || hostname.endsWith(".auburntigers.com")) {
+  if (!isAllowedAuburnSourceUrl(url)) {
     return true;
   }
 
-  if (!hostname.endsWith("auburn.edu")) {
-    return true;
-  }
-
-  if (pathname.endsWith(".pdf") && !url.hostname.endsWith("bulletin.auburn.edu")) {
+  if (pathname.endsWith(".pdf") && url.hostname !== "bulletin.auburn.edu") {
     return true;
   }
 

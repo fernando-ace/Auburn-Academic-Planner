@@ -83,6 +83,58 @@ test("device draft restores parser-compatible planned course text", () => {
   );
 });
 
+test("device draft restore normalizes a disabled Summer start to Fall", () => {
+  const draft = createPlanningHubDeviceDraft({
+    activeStep: "current_progress",
+    generatedPathPreferences: {
+      startTerm: "Summer 2027",
+      maxCreditsPerTerm: 15,
+      includeSummer: true,
+      maxSummerCredits: 6,
+    },
+    manualPlannedCoursesText: "",
+    now: savedAt,
+    plannedPathInputMode: "pdf",
+  });
+  const readResult = readPlanningHubDeviceDraft(
+    JSON.stringify({
+      ...draft,
+      generatedPathPreferences: {
+        ...draft.generatedPathPreferences,
+        includeSummer: false,
+      },
+    }),
+    savedAt,
+  );
+
+  assert.equal(readResult.status, "valid");
+  if (readResult.status === "valid") {
+    assert.equal(readResult.draft.generatedPathPreferences.startTerm, "Fall 2027");
+  }
+});
+
+test("device draft preserves supported part-time credit limits", () => {
+  const draft = createPlanningHubDeviceDraft({
+    activeStep: "current_progress",
+    generatedPathPreferences: {
+      startTerm: "Summer 2027",
+      maxCreditsPerTerm: 3,
+      includeSummer: true,
+      maxSummerCredits: 1,
+    },
+    manualPlannedCoursesText: "",
+    now: savedAt,
+    plannedPathInputMode: "pdf",
+  });
+
+  assert.equal(draft.generatedPathPreferences.maxCreditsPerTerm, 3);
+  assert.equal(draft.generatedPathPreferences.maxSummerCredits, 1);
+  assert.deepEqual(
+    readPlanningHubDeviceDraft(JSON.stringify(draft), savedAt),
+    { status: "valid", draft },
+  );
+});
+
 test("device draft expires after 30 days", () => {
   const draft = createPlanningHubDeviceDraft({
     activeStep: "current_progress",

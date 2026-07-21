@@ -109,6 +109,20 @@ test("manual planned-path route rate limits repeated requests", async () => {
   assert.equal(result.error, "Too many requests. Try again in a few minutes.");
 });
 
+test("manual planned-path route rejects cross-site requests without caching the response", async () => {
+  resetInMemoryRateLimits();
+
+  const response = await POST(
+    jsonRequest(
+      { plannedCoursesText: "Fall 2026: COMP 1210" },
+      { Origin: "https://malicious.example" },
+    ),
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+});
+
 function jsonRequest(body: unknown, headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/plan/analyze-degreeworks/manual", {
     method: "POST",

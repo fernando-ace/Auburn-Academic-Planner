@@ -230,7 +230,7 @@ export function PlannedPathCoverageCard({
         {coverage.plannedButUnmatchedCourses.length > 0 ? (
           <ResultSection title="Courses in your plan that need applicability review">
             <div className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-              {coverage.plannedButUnmatchedCourses.slice(0, 24).map((code) => (
+              {coverage.plannedButUnmatchedCourses.map((code) => (
                 <span className="rounded-sm border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-700" key={code}>
                   {code}
                 </span>
@@ -344,7 +344,7 @@ export function PlannedPathFixListCard({
       </div>
       {fixItems.length > 0 ? (
         <ol className="mt-4 grid gap-2">
-          {fixItems.slice(0, 16).map((item, index) => (
+          {fixItems.map((item, index) => (
             <li className="rounded-md border border-slate-200 bg-slate-50 p-3 text-[13px] leading-5 text-slate-700" key={`${index}-${item}`}>
               {item}
             </li>

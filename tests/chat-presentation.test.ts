@@ -86,6 +86,42 @@ const psychologyMajor: PresentableChatSource = {
   fileName: "auburn/majors/auburn-major-psychology.html",
 };
 
+const aerospaceEngineeringMajor: PresentableChatSource = {
+  title: "Aerospace Engineering",
+  sourceType: "bulletin_major",
+  fileName: "auburn/majors/auburn-major-aerospaceengineering.html",
+};
+
+const computerEngineeringMajor: PresentableChatSource = {
+  title: "Computer Engineering",
+  sourceType: "bulletin_major",
+  fileName: "auburn/majors/auburn-major-computerengineering.html",
+};
+
+const mathematicsMajor: PresentableChatSource = {
+  title: "Mathematics",
+  sourceType: "bulletin_major",
+  fileName: "auburn/majors/auburn-major-mathematics.html",
+};
+
+const computerScienceMajor: PresentableChatSource = {
+  title: "Computer Science",
+  sourceType: "bulletin_major",
+  fileName: "auburn/majors/auburn-major-computerscience.html",
+};
+
+const computerScienceOnlineMajor: PresentableChatSource = {
+  title: "Computer Science — Online Degree Completer Program",
+  sourceType: "bulletin_major",
+  fileName: "auburn/majors/auburn-major-bachelorofcomputerscience.html",
+};
+
+const softwareEngineeringMajor: PresentableChatSource = {
+  title: "Software Engineering",
+  sourceType: "bulletin_major",
+  fileName: "auburn/majors/auburn-major-softwareengineering.html",
+};
+
 test("sanitizes assistant markdown without removing supported markdown syntax", () => {
   const result = sanitizeAssistantMarkdown(
     "\u0000**Requirements**\r\n\r\n<script>alert('no')</script>\r\n- `ENGL 1100`",
@@ -134,6 +170,18 @@ test("transfer credit questions prefer curated transfer policy sources", () => {
   );
 });
 
+test("transfer-hour wording suppresses unrelated major source cards", () => {
+  const result = selectDisplaySources(
+    "What is Auburn's maximum number of degree-applicable transfer hours from a two-year institution?",
+    [nursingTraditional, coreCurriculum, transferCreditPolicy, registrarCreditTables],
+  );
+
+  assert.deepEqual(
+    result.map((source) => source.title),
+    [transferCreditPolicy.title, registrarCreditTables.title],
+  );
+});
+
 test("Finance major questions prioritize Finance and suppress unrelated major cards", () => {
   const result = selectDisplaySources(
     "What are the requirements for the Finance major?",
@@ -143,7 +191,7 @@ test("Finance major questions prioritize Finance and suppress unrelated major ca
   assert.equal(result[0].title, financeMajor.title);
   assert.deepEqual(
     result.map((source) => source.title),
-    [financeMajor.title, coreCurriculum.title],
+    [financeMajor.title],
   );
 });
 
@@ -197,6 +245,44 @@ test("Degree Works questions prefer the curated registrar source", () => {
   );
 
   assert.equal(result[0].title, degreeWorksSource.title);
+  assert.deepEqual(
+    result.map((source) => source.title),
+    [degreeWorksSource.title],
+  );
+});
+
+test("major total-hour questions suppress token-adjacent major pages", () => {
+  const result = selectDisplaySources(
+    "According to Auburn's undergraduate bulletin, how many total hours are in the Aerospace Engineering major curriculum?",
+    [
+      mathematicsMajor,
+      computerEngineeringMajor,
+      aerospaceEngineeringMajor,
+      coreCurriculum,
+    ],
+  );
+
+  assert.deepEqual(
+    result.map((source) => source.title),
+    [aerospaceEngineeringMajor.title],
+  );
+});
+
+test("exact named-major course questions suppress adjacent and completer programs", () => {
+  const result = selectDisplaySources(
+    "What courses are required for the Computer Science major?",
+    [
+      softwareEngineeringMajor,
+      computerScienceOnlineMajor,
+      computerScienceMajor,
+      mathematicsMajor,
+    ],
+  );
+
+  assert.deepEqual(
+    result.map((source) => source.title),
+    [computerScienceMajor.title],
+  );
 });
 
 test("formats curated source type labels for source cards", () => {

@@ -1,6 +1,12 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { StakeholderPage } from "@/components/stakeholder-page";
+
+export const metadata: Metadata = {
+  title: "Pilot Review",
+  description: "Operational checklist for a responsible Auburn-facing pilot review.",
+};
 
 export default function PilotReviewPage() {
   return (

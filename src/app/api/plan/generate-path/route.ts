@@ -1,5 +1,11 @@
 import { checkRateLimit } from "../../../../lib/api/rate-limit.ts";
 import {
+  MAX_PLANNING_JSON_REQUEST_BYTES,
+  privateJsonResponse,
+  readLimitedJsonBody,
+  validateApiRequest,
+} from "../../../../lib/api/request-security.ts";
+import {
   buildCurrentProgressAdvisorSummary,
   buildCurrentStateGapReport,
   buildCurrentStateNextSteps,
@@ -13,6 +19,14 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const requestValidation = validateApiRequest(request, "json");
+  if (!requestValidation.ok) {
+    return privateJsonResponse(
+      { error: requestValidation.error },
+      { status: requestValidation.status },
+    );
+  }
+
   const rateLimit = await checkRateLimit(request, {
     namespace: "generated-planned-path",
     limit: 30,
@@ -20,15 +34,30 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.ok) {
-    return Response.json(
+    return privateJsonResponse(
       { error: rateLimit.error },
       { status: rateLimit.status },
     );
   }
 
-  const body = await request.json().catch(() => null);
+  const bodyResult = await readLimitedJsonBody(
+    request,
+    MAX_PLANNING_JSON_REQUEST_BYTES,
+  );
+  if (!bodyResult.ok) {
+    return privateJsonResponse(
+      {
+        error: bodyResult.tooLarge
+          ? "Request body is too large to process safely."
+          : "Request body must be JSON.",
+      },
+      { status: bodyResult.tooLarge ? 413 : 400 },
+    );
+  }
+
+  const body = bodyResult.value;
   if (!body || typeof body !== "object") {
-    return Response.json(
+    return privateJsonResponse(
       { error: "Request body must be JSON." },
       { status: 400 },
     );
@@ -38,14 +67,14 @@ export async function POST(request: Request) {
     (body as { currentProgressAnalysis?: unknown }).currentProgressAnalysis,
   );
   if (currentProgressInput.status === "invalid") {
-    return Response.json(
+    return privateJsonResponse(
       { error: currentProgressInput.error },
       { status: 400 },
     );
   }
 
   if (currentProgressInput.status === "absent") {
-    return Response.json(
+    return privateJsonResponse(
       { error: "Current Progress analysis is required before generating a path." },
       { status: 400 },
     );
@@ -72,7 +101,7 @@ export async function POST(request: Request) {
     nextSteps: currentStateNextSteps,
   });
 
-  return Response.json({
+  return privateJsonResponse({
     generatedPlannedPath,
     advisorMeetingSummary,
     notes: [

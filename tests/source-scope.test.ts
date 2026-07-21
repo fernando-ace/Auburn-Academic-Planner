@@ -69,3 +69,35 @@ test("athletics, news, random pages, and unrelated PDFs are excluded", () => {
     assert.equal(classifyAcademicSource(url, seeds), "excluded", url);
   }
 });
+
+test("rag_only metadata cannot override the Auburn HTTPS trust boundary", () => {
+  const untrustedUrls = [
+    "https://example.com/auburn-degree-requirements",
+    "https://notauburn.edu/undergraduate/majors/",
+    "https://evilauburn.edu/undergraduate/majors/",
+    "https://auburn.edu.evil.example/undergraduate/majors/",
+    "http://www.auburn.edu/administration/registrar/degreeworks",
+  ];
+
+  for (const [index, url] of untrustedUrls.entries()) {
+    const seed = {
+      ...seeds[0],
+      id: `untrusted-${index}`,
+      url,
+      status: "rag_only" as const,
+    };
+
+    assert.equal(classifyAcademicSource(seed, [seed]), "excluded", url);
+
+    const validation = validateAcademicSourceSeeds([seed]);
+    assert.equal(validation.passed, false, url);
+    assert.ok(
+      validation.errors.some((error) =>
+        error.includes(
+          "must use HTTPS on auburn.edu or an auburn.edu subdomain",
+        ),
+      ),
+      url,
+    );
+  }
+});

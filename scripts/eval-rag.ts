@@ -2,54 +2,67 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { answerAuburnRagQuestion } from "../src/lib/gemini-rag.ts";
+import { FinishReason } from "@google/genai";
+
+import {
+  answerAuburnRagQuestion,
+  dedupeRepeatedMarkdownBlocks,
+} from "../src/lib/gemini-rag.ts";
 import type { GeminiRagConfig } from "../src/lib/gemini-rag.ts";
 
 type EvalCase = {
   question: string;
   expectedTerms: string[];
+  expectedSourceTitles: string[];
 };
 
 const evalCases: EvalCase[] = [
   {
     question:
-      "What courses are required for the Artificial Intelligence Engineering certificate?",
+      "Where does Auburn say a student should open DegreeWorks in AUAccess? Answer in one sentence.",
     expectedTerms: [
-      "COMP 5600",
-      "COMP 5630",
-      "COMP 5130",
-      "12 credit hours",
-      "approved AI elective",
+      "AUAccess",
+      "DegreeWorks icon",
+      "Academic Portals card",
     ],
+    expectedSourceTitles: ["DegreeWorks"],
   },
   {
     question:
-      "Based on my Degree Works Plan Sample, what courses in my plan count toward the Artificial Intelligence Engineering certificate?",
-    expectedTerms: ["COMP 5600", "COMP 5630", "COMP 5130", "COMP 5610"],
+      "What is Auburn's maximum number of degree-applicable transfer hours from a two-year institution? Answer in one sentence.",
+    expectedTerms: ["one-half", "64 hours"],
+    expectedSourceTitles: ["Undergraduate Transfer Credit Policy"],
   },
   {
     question:
-      "How many total planned credits are in the Degree Works Plan Sample?",
-    expectedTerms: ["122"],
+      "How many semester credit hours in either History or Literature does Auburn's Core Curriculum require? Answer in one sentence.",
+    expectedTerms: ["six", "semester credit hour", "History", "Literature"],
+    expectedSourceTitles: ["Core Curriculum and General Education Outcomes"],
   },
   {
     question:
-      "Based on my Degree Works Dashboard Sample, how many credits are required, applied, and still needed?",
-    expectedTerms: ["122 required", "83 applied", "39 needed"],
+      "According to Auburn's undergraduate bulletin, how many total hours are in the Aerospace Engineering major curriculum? Answer in one sentence.",
+    expectedTerms: ["125"],
+    expectedSourceTitles: ["Aerospace Engineering"],
   },
   {
     question:
-      "What courses are preregistered in the Degree Works Dashboard Sample?",
+      "In Auburn's Computer Science major curriculum, what are COMP 1210 and COMP 2210 called, and how many hours is each? Answer in two bullets.",
     expectedTerms: [
-      "COMP 2710",
-      "COMP 2800",
-      "COMP 3270",
-      "COMP 3350",
-      "STAT 3010",
-      "STAT 3600",
+      "COMP 1210",
+      "Fundamentals of Computing I",
+      "3 hours",
+      "COMP 2210",
+      "Fundamentals of Computing II",
+      "4 hours",
     ],
+    expectedSourceTitles: ["Computer Science"],
   },
 ];
+
+const fallbackAnswerPattern =
+  /did not return|do not contain enough information|does not contain enough information|cannot answer (?:it )?confidently|matching file was not retrieved/i;
+const advisorReminderPattern = /verify[\s\S]*academic advisor/i;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, "..");
@@ -231,6 +244,7 @@ async function runEvalCase(
   evalCase: EvalCase,
   config: GeminiRagConfig,
 ) {
+  const startedAt = Date.now();
   const result = await answerAuburnRagQuestion(
     [{ role: "user", content: evalCase.question }],
     config,
@@ -239,10 +253,27 @@ async function runEvalCase(
   const missingTerms = evalCase.expectedTerms.filter(
     (term) => !answerIncludesTerm(result.answer, term),
   );
-  const passed = missingTerms.length === 0;
+  const displayedSourceTitles = result.sources.map((source) => source.title);
+  const missingSourceTitles = evalCase.expectedSourceTitles.filter(
+    (title) => !displayedSourceTitles.includes(title),
+  );
+  const hasAdvisorReminder = advisorReminderPattern.test(result.answer);
+  const usedFallbackAnswer = fallbackAnswerPattern.test(result.answer);
+  const hasRepeatedBlocks =
+    dedupeRepeatedMarkdownBlocks(result.answer) !== result.answer.trim();
+  const stoppedNormally = result.finishReason === FinishReason.STOP;
+  const latencyMs = Date.now() - startedAt;
+  const passed =
+    missingTerms.length === 0 &&
+    missingSourceTitles.length === 0 &&
+    hasAdvisorReminder &&
+    !usedFallbackAnswer &&
+    !hasRepeatedBlocks &&
+    stoppedNormally;
 
   console.log(`\n[${index}] ${passed ? "PASS" : "FAIL"}`);
   console.log(`Question: ${evalCase.question}`);
+  console.log(`Latency: ${latencyMs}ms`);
   console.log(`Answer: ${result.answer}`);
   console.log(
     `Source titles returned: ${
@@ -250,9 +281,30 @@ async function runEvalCase(
     }`,
   );
   console.log(
+    `Displayed source titles: ${
+      displayedSourceTitles.length > 0
+        ? displayedSourceTitles.join(", ")
+        : "(none)"
+    }`,
+  );
+  console.log(
     `Expected terms: ${evalCase.expectedTerms
       .map((term) => (missingTerms.includes(term) ? `MISS ${term}` : `OK ${term}`))
       .join("; ")}`,
+  );
+  console.log(
+    `Required displayed sources: ${evalCase.expectedSourceTitles
+      .map((title) =>
+        missingSourceTitles.includes(title) ? `MISS ${title}` : `OK ${title}`,
+      )
+      .join("; ")}`,
+  );
+  console.log(
+    `Quality checks: ${
+      hasAdvisorReminder ? "OK advisor reminder" : "MISS advisor reminder"
+    }; ${usedFallbackAnswer ? "FAIL fallback answer" : "OK grounded answer"}; ${
+      hasRepeatedBlocks ? "FAIL repeated blocks" : "OK no repeated blocks"
+    }; ${stoppedNormally ? "OK finish STOP" : `FAIL finish ${result.finishReason}`}`,
   );
 
   return passed;

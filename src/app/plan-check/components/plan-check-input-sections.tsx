@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
@@ -9,10 +10,13 @@ import {
 } from "lucide-react";
 import type {
   ChangeEventHandler,
+  Dispatch,
   MouseEventHandler,
+  SetStateAction,
   TextareaHTMLAttributes,
 } from "react";
 import type { GeneratedPathPreferences } from "@/lib/plan/generated-planned-path";
+import { normalizeGeneratedPathStartTerm } from "@/lib/plan/generated-path-terms";
 
 export type PlanCheckStep =
   | "current_progress"
@@ -31,6 +35,7 @@ export function DegreeWorksWorkflowUploadSection({
   advisorSummaryAvailable = false,
   analyzedFileSummary,
   generatedPathPreferences,
+  generatedPathStartTermOptions,
   hasCurrentProgressResult = false,
   hasPlannedPathComparison = false,
   hasPlannedPathResult = false,
@@ -42,10 +47,12 @@ export function DegreeWorksWorkflowUploadSection({
   onManualPlannedCoursesChange,
   onPlannedPathInputModeChange,
   onRegenerateGeneratedPath,
+  onRevisePlannedPath,
   onStepChange,
   plannedPathInputMode,
   manualPlannedCoursesText,
   selectedFile,
+  submissionError,
   validationError,
 }: {
   activeStep: PlanCheckStep;
@@ -57,6 +64,7 @@ export function DegreeWorksWorkflowUploadSection({
     creditsSummary?: string | null;
   };
   generatedPathPreferences: GeneratedPathPreferences;
+  generatedPathStartTermOptions: string[];
   isLoading: boolean;
   hasCurrentProgressResult?: boolean;
   hasPlannedPathComparison?: boolean;
@@ -64,14 +72,18 @@ export function DegreeWorksWorkflowUploadSection({
   onAnalyze: MouseEventHandler<HTMLButtonElement>;
   onClearAnalysis?: MouseEventHandler<HTMLButtonElement>;
   onFileChange: ChangeEventHandler<HTMLInputElement>;
-  onGeneratedPathPreferencesChange: (preferences: GeneratedPathPreferences) => void;
+  onGeneratedPathPreferencesChange: Dispatch<
+    SetStateAction<GeneratedPathPreferences>
+  >;
   onManualPlannedCoursesChange: TextareaHTMLAttributes<HTMLTextAreaElement>["onChange"];
   onPlannedPathInputModeChange: (mode: PlannedPathInputMode) => void;
   onRegenerateGeneratedPath?: MouseEventHandler<HTMLButtonElement>;
+  onRevisePlannedPath?: () => void;
   onStepChange: (step: PlanCheckStep) => void;
   plannedPathInputMode: PlannedPathInputMode;
   manualPlannedCoursesText: string;
   selectedFile: File | null;
+  submissionError: string | null;
   validationError: string | null;
 }) {
   const currentProgressExportSteps = [
@@ -228,6 +240,24 @@ export function DegreeWorksWorkflowUploadSection({
                 : "Degree Works-native analysis is used for all readable Auburn audits."}
             </p>
 
+            {submissionError ? (
+              <div
+                className="mt-3 rounded-md border border-orange-200 bg-orange-50 p-3 text-[13px] leading-5 text-orange-900"
+                id="planning-workflow-error"
+                role="alert"
+                tabIndex={-1}
+              >
+                <div className="flex gap-2">
+                  <AlertCircle
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0"
+                    size={16}
+                  />
+                  <p>{submissionError}</p>
+                </div>
+              </div>
+            ) : null}
+
             {isAdvisorSummary ? (
               <div className="mt-4 grid gap-3">
                 <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-[13px] leading-5 text-emerald-900">
@@ -271,6 +301,7 @@ export function DegreeWorksWorkflowUploadSection({
                   disabled={isLoading}
                   onChange={onGeneratedPathPreferencesChange}
                   preferences={generatedPathPreferences}
+                  startTermOptions={generatedPathStartTermOptions}
                 />
                 <button
                   className={primaryButtonClass}
@@ -328,6 +359,16 @@ export function DegreeWorksWorkflowUploadSection({
                   <ArrowLeft aria-hidden="true" size={16} />
                   Back to Current Progress
                 </button>
+                {onRevisePlannedPath ? (
+                  <button
+                    className={secondaryButtonClass}
+                    disabled={isLoading}
+                    onClick={onRevisePlannedPath}
+                    type="button"
+                  >
+                    Revise or check another plan
+                  </button>
+                ) : null}
                 {onClearAnalysis ? (
                   <button
                     className={secondaryButtonClass}
@@ -357,6 +398,16 @@ export function DegreeWorksWorkflowUploadSection({
                   Add Current Progress to compare
                   <ArrowRight aria-hidden="true" size={16} />
                 </button>
+                {onRevisePlannedPath ? (
+                  <button
+                    className={secondaryButtonClass}
+                    disabled={isLoading}
+                    onClick={onRevisePlannedPath}
+                    type="button"
+                  >
+                    Revise or check another plan
+                  </button>
+                ) : null}
                 {onClearAnalysis ? (
                   <button
                     className={secondaryButtonClass}
@@ -445,6 +496,7 @@ export function DegreeWorksWorkflowUploadSection({
                         disabled={isLoading}
                         onChange={onGeneratedPathPreferencesChange}
                         preferences={generatedPathPreferences}
+                        startTermOptions={generatedPathStartTermOptions}
                       />
                     ) : null}
                   </>
@@ -494,15 +546,26 @@ function GeneratedPathPreferencesControls({
   disabled,
   onChange,
   preferences,
+  startTermOptions,
 }: {
   disabled: boolean;
-  onChange: (preferences: GeneratedPathPreferences) => void;
+  onChange: Dispatch<SetStateAction<GeneratedPathPreferences>>;
   preferences: GeneratedPathPreferences;
+  startTermOptions: string[];
 }) {
-  const startTerm = preferences.startTerm ?? "Fall 2026";
   const maxCreditsPerTerm = preferences.maxCreditsPerTerm ?? 15;
   const maxSummerCredits = preferences.maxSummerCredits ?? 6;
   const includeSummer = Boolean(preferences.includeSummer);
+  const startTerm = normalizeGeneratedPathStartTerm(
+    preferences.startTerm ?? startTermOptions[0] ?? "Fall 2026",
+    includeSummer,
+  );
+  const eligibleStartTerms = includeSummer
+    ? startTermOptions
+    : startTermOptions.filter((term) => !term.startsWith("Summer "));
+  const selectableStartTerms = eligibleStartTerms.includes(startTerm)
+    ? eligibleStartTerms
+    : [startTerm, ...eligibleStartTerms];
 
   return (
     <div className="mt-4 rounded-md border border-slate-200 bg-white p-3">
@@ -516,20 +579,16 @@ function GeneratedPathPreferencesControls({
             className="min-h-10 rounded-md border border-slate-300 bg-white px-2 text-[13px] font-medium text-slate-700 outline-none focus:border-[#dd550c] focus:ring-4 focus:ring-[#dd550c]/15"
             disabled={disabled}
             id="generated-path-start-term"
-            onChange={(event) =>
-              onChange({ ...preferences, startTerm: event.currentTarget.value })
-            }
+            onChange={(event) => {
+              const nextStartTerm = event.currentTarget.value;
+              onChange((current) => ({
+                ...current,
+                startTerm: nextStartTerm,
+              }));
+            }}
             value={startTerm}
           >
-            {[
-              "Fall 2026",
-              "Spring 2027",
-              "Summer 2027",
-              "Fall 2027",
-              "Spring 2028",
-              "Summer 2028",
-              "Fall 2028",
-            ].map((term) => (
+            {selectableStartTerms.map((term) => (
               <option key={term} value={term}>
                 {term}
               </option>
@@ -544,16 +603,20 @@ function GeneratedPathPreferencesControls({
             disabled={disabled}
             id="generated-path-max-credits"
             max={21}
-            min={9}
-            onChange={(event) =>
-              onChange({
-                ...preferences,
-                maxCreditsPerTerm: Number(event.currentTarget.value),
-              })
-            }
+            min={3}
+            onInput={(event) => {
+              const nextMaxCreditsPerTerm = Number(event.currentTarget.value);
+              onChange((current) => ({
+                ...current,
+                maxCreditsPerTerm: nextMaxCreditsPerTerm,
+              }));
+            }}
             type="number"
             value={maxCreditsPerTerm}
           />
+          <span className="font-normal text-slate-500">
+            Choose as low as 3 credits for a part-time draft.
+          </span>
         </label>
 
         <label className="flex items-start gap-2 text-[12px] font-semibold leading-5 text-slate-700" htmlFor="generated-path-include-summer">
@@ -562,12 +625,17 @@ function GeneratedPathPreferencesControls({
             className="mt-1 h-4 w-4 rounded border-slate-300 text-[#b84300] focus:ring-[#dd550c]"
             disabled={disabled}
             id="generated-path-include-summer"
-            onChange={(event) =>
-              onChange({
-                ...preferences,
-                includeSummer: event.currentTarget.checked,
-              })
-            }
+            onChange={(event) => {
+              const nextIncludeSummer = event.currentTarget.checked;
+              onChange((current) => ({
+                ...current,
+                includeSummer: nextIncludeSummer,
+                startTerm: normalizeGeneratedPathStartTerm(
+                  current.startTerm ?? startTermOptions[0] ?? "Fall 2026",
+                  nextIncludeSummer,
+                ),
+              }));
+            }}
             type="checkbox"
           />
           Include summer terms
@@ -581,13 +649,14 @@ function GeneratedPathPreferencesControls({
               disabled={disabled}
               id="generated-path-summer-credits"
               max={12}
-              min={3}
-              onChange={(event) =>
-                onChange({
-                  ...preferences,
-                  maxSummerCredits: Number(event.currentTarget.value),
-                })
-              }
+              min={1}
+              onInput={(event) => {
+                const nextMaxSummerCredits = Number(event.currentTarget.value);
+                onChange((current) => ({
+                  ...current,
+                  maxSummerCredits: nextMaxSummerCredits,
+                }));
+              }}
               type="number"
               value={maxSummerCredits}
             />

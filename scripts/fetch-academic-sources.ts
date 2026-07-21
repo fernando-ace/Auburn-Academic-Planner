@@ -13,6 +13,7 @@ import {
   validateAcademicSourceSeeds,
   type AcademicSourceSeed,
 } from "../src/lib/sources/source-scope.ts";
+import { fetchAuburnSourceText } from "../src/lib/sources/auburn-source-fetch.ts";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, "..");
@@ -48,7 +49,12 @@ async function main() {
 
   for (const plan of plans) {
     const outputPath = path.join(projectRoot, ...plan.outputPath.split("/"));
-    const html = await fetchSource(plan.seed.url);
+    const html = await fetchAuburnSourceText(plan.seed.url, {
+      headers: {
+        "User-Agent": "AuburnAcademicPlannerSourceFetcher/1.0",
+        Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1",
+      },
+    });
     mkdirSync(path.dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, html);
     console.log(`Fetched ${plan.seed.id} (${html.length} characters).`);
@@ -61,31 +67,6 @@ async function main() {
 
 function readSeeds() {
   return JSON.parse(readFileSync(seedPath, "utf8")) as AcademicSourceSeed[];
-}
-
-async function fetchSource(url: string) {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "AuburnAcademicPlannerSourceFetcher/1.0",
-      Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Fetch failed for ${url}: ${response.status} ${response.statusText}`);
-  }
-
-  const contentType = response.headers.get("content-type") ?? "";
-  if (contentType && !/text\/html|application\/xhtml\+xml|text\/plain/i.test(contentType)) {
-    throw new Error(`Fetch returned unsupported content type for ${url}: ${contentType}`);
-  }
-
-  const text = await response.text();
-  if (!text.trim()) {
-    throw new Error(`Fetch returned empty content for ${url}`);
-  }
-
-  return text;
 }
 
 main().catch((error) => {

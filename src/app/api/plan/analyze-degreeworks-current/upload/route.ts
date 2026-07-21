@@ -1,5 +1,13 @@
-import { validatePdfUpload } from "../../../../../lib/api/pdf-upload-validation.ts";
+import {
+  MAX_PDF_MULTIPART_REQUEST_BYTES,
+  validatePdfUpload,
+} from "../../../../../lib/api/pdf-upload-validation.ts";
 import { checkRateLimit } from "../../../../../lib/api/rate-limit.ts";
+import {
+  isDeclaredBodyTooLarge,
+  privateJsonResponse,
+  validateApiRequest,
+} from "../../../../../lib/api/request-security.ts";
 import {
   analyzeCurrentDegreeAuditText,
   emptyCurrentDegreeAuditAnalysis,
@@ -18,6 +26,21 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const requestValidation = validateApiRequest(request, "multipart");
+  if (!requestValidation.ok) {
+    return privateJsonResponse(
+      { error: requestValidation.error },
+      { status: requestValidation.status },
+    );
+  }
+
+  if (isDeclaredBodyTooLarge(request, MAX_PDF_MULTIPART_REQUEST_BYTES)) {
+    return privateJsonResponse(
+      { error: "Upload request is too large to process safely." },
+      { status: 413 },
+    );
+  }
+
   const rateLimit = await checkRateLimit(request, {
     namespace: "current-progress-pdf",
     limit: 8,
@@ -25,7 +48,7 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.ok) {
-    return Response.json(
+    return privateJsonResponse(
       { error: rateLimit.error },
       { status: rateLimit.status },
     );
@@ -34,7 +57,7 @@ export async function POST(request: Request) {
   const formData = await request.formData().catch(() => null);
 
   if (!formData) {
-    return Response.json(
+    return privateJsonResponse(
       { error: "Request body must be multipart/form-data." },
       { status: 400 },
     );
@@ -45,7 +68,7 @@ export async function POST(request: Request) {
   const upload = await validatePdfUpload(uploadedFile);
 
   if (!upload.ok) {
-    return Response.json({ error: upload.error }, { status: upload.status });
+    return privateJsonResponse({ error: upload.error }, { status: upload.status });
   }
 
   const documentTypeDetection = detectDegreeWorksDocumentType(upload.text);
@@ -55,7 +78,7 @@ export async function POST(request: Request) {
       documentTypeDetection.documentType,
     );
 
-    return Response.json({
+    return privateJsonResponse({
       sourceFileName: "Uploaded Degree Works PDF",
       selectedTargetPath: "degreeworks_native",
       documentType: documentTypeDetection.documentType,
@@ -139,7 +162,7 @@ export async function POST(request: Request) {
     nextSteps: currentStateNextSteps,
   });
 
-  return Response.json({
+  return privateJsonResponse({
     sourceFileName: "Uploaded Degree Works PDF",
     selectedTargetPath: "degreeworks_native",
     documentType: "worksheet_audit",

@@ -92,6 +92,35 @@ test("Chat API rejects an oversized request body before parsing", async () => {
   assert.match(result.error, /Chat request is too large/);
 });
 
+test("Chat API returns a private student-safe error when service configuration is absent", async () => {
+  const previousApiKey = process.env.GEMINI_API_KEY;
+  const previousStore = process.env.GEMINI_FILE_SEARCH_STORE_NAME;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_FILE_SEARCH_STORE_NAME;
+
+  try {
+    const response = await POST(
+      jsonRequest({
+        messages: [{ role: "user", content: "What is Degree Works?" }],
+        geminiConsent: true,
+        geminiConsentVersion: GEMINI_CHAT_CONSENT_VERSION,
+      }),
+    );
+    const result = await response.json();
+
+    assert.equal(response.status, 503);
+    assert.equal(
+      result.error,
+      "Chat is temporarily unavailable. Please try again later.",
+    );
+    assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+    assert.doesNotMatch(JSON.stringify(result), /GEMINI|FILE_SEARCH|API_KEY/);
+  } finally {
+    restoreEnv("GEMINI_API_KEY", previousApiKey);
+    restoreEnv("GEMINI_FILE_SEARCH_STORE_NAME", previousStore);
+  }
+});
+
 function jsonRequest(body: unknown) {
   return new Request("http://localhost/api/chat", {
     method: "POST",
@@ -101,4 +130,13 @@ function jsonRequest(body: unknown) {
     },
     body: JSON.stringify(body),
   });
+}
+
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+
+  process.env[name] = value;
 }

@@ -12,6 +12,7 @@ test("Planning Hub public copy is Degree Works-native", async () => {
     "src/app/limitations/page.tsx",
     "src/app/methodology/page.tsx",
     "src/app/plan-check/page.tsx",
+    "src/app/plan-check/plan-check-client.tsx",
     "src/app/plan-check/components/advisor-meeting-summary.tsx",
     "src/app/plan-check/components/plan-check-input-sections.tsx",
     "src/app/plan-check/components/planning-hub-draft-controls.tsx",
@@ -80,6 +81,7 @@ test("More menu contains stakeholder links without promoting them in Planning Hu
   );
   const planningHub = await readUiSources([
     "src/app/plan-check/page.tsx",
+    "src/app/plan-check/plan-check-client.tsx",
     "src/app/plan-check/components/plan-check-input-sections.tsx",
   ]);
 

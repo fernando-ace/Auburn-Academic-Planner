@@ -1,11 +1,19 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { GoogleGenAI, type Content, type GroundingChunk } from "@google/genai";
+import {
+  FinishReason,
+  GoogleGenAI,
+  ThinkingLevel,
+  type Content,
+  type FileSearch,
+  type GroundingChunk,
+} from "@google/genai";
 
 import { minimizeGeminiChatMessages } from "./chat-privacy.ts";
 import { selectDisplaySources } from "./chat-presentation.ts";
 import { getGeminiModel } from "./gemini-config.ts";
+import { isAllowedAuburnSourceUrl } from "./sources/source-scope.ts";
 
 const curatedManifestPath = path.resolve(
   process.cwd(),
@@ -36,7 +44,7 @@ export type ManifestSource = {
   fileName: string;
 };
 
-type RawManifestSource = {
+export type RawManifestSource = {
   id?: unknown;
   title?: unknown;
   type?: unknown;
@@ -71,6 +79,7 @@ export type ModelAnswer = {
 };
 
 export type AuburnRagResult = ModelAnswer & {
+  finishReason: FinishReason;
   sourceTitles: string[];
   retrievalContext: RetrievalContext;
 };
@@ -98,6 +107,8 @@ Product boundaries:
 - Use language like academic planning assistant, advisor prep, and verify with your advisor.
 
 Return a concise, readable Markdown answer for the student. Use short headings only when useful and bullets or numbered lists for requirements. Do not return JSON, markdown tables, raw HTML, model-written citations, or raw source excerpts.
+Hard limit: keep the complete answer at or below 600 words. Prioritize the facts directly requested, avoid repeating any paragraph or list, and do not start a section that you cannot finish within that limit.
+When the student names one exact major, option, track, or program, answer only for that named program. Do not append similarly named online, completer, option, or adjacent-program requirements unless the student explicitly asks for a comparison.
 End the answer with a brief reminder to verify degree requirements and planning decisions with an Auburn academic advisor.
 The server will attach retrieved sources, confidence, and advisor verification metadata separately.
 `;
@@ -107,6 +118,78 @@ const FALLBACK_ADVISOR_NOTE =
 
 const NO_RETRIEVAL_ANSWER =
   "The Gemini File Search tool did not return Auburn source material for this question, so I cannot answer it confidently from the uploaded Auburn sources.";
+const GEMINI_REQUEST_TIMEOUT_MS = 45_000;
+const GEMINI_REQUEST_ABORT_MS = 50_000;
+const GEMINI_TRANSIENT_RETRY_DELAY_MS = 500;
+const GEMINI_MAX_GENERATION_ATTEMPTS = 2;
+const GEMINI_MAX_OUTPUT_TOKENS = 2_048;
+export const MAX_GEMINI_ANSWER_WORDS = 600;
+const COMPACT_RETRY_INSTRUCTIONS = `
+The previous generation could not finish within the response budget.
+Return a complete answer in no more than 450 words.
+For a long curriculum, group course codes compactly by year or requirement area, omit repeated course descriptions and credit-hour labels, and do not discuss similarly named programs.
+Do not mention this retry or the response budget.
+`;
+
+export class IncompleteGeminiResponseError extends Error {
+  readonly finishReason: string;
+
+  constructor(finishReason: string) {
+    super(`Gemini response did not finish normally (${finishReason}).`);
+    this.name = "IncompleteGeminiResponseError";
+    this.finishReason = finishReason;
+  }
+}
+
+export async function runBoundedGeminiGeneration<T>({
+  generate,
+  shouldRetryCompactly,
+  retryDelayMs = GEMINI_TRANSIENT_RETRY_DELAY_MS,
+}: {
+  generate: (systemInstruction: string) => Promise<T>;
+  shouldRetryCompactly: (response: T) => boolean;
+  retryDelayMs?: number;
+}) {
+  let attemptCount = 0;
+
+  const generateWithTransientRetry = async (systemInstruction: string) => {
+    attemptCount += 1;
+
+    try {
+      return await generate(systemInstruction);
+    } catch (error) {
+      if (
+        !isRetryableGeminiRequestError(error) ||
+        attemptCount >= GEMINI_MAX_GENERATION_ATTEMPTS
+      ) {
+        throw error;
+      }
+
+      console.warn(
+        "[chat] Transient Gemini request failure; retrying once without logging question content.",
+      );
+      if (retryDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      }
+      attemptCount += 1;
+      return generate(systemInstruction);
+    }
+  };
+
+  let response = await generateWithTransientRetry(SYSTEM_INSTRUCTIONS);
+  if (!shouldRetryCompactly(response)) {
+    return response;
+  }
+
+  if (attemptCount >= GEMINI_MAX_GENERATION_ATTEMPTS) {
+    throw new IncompleteGeminiResponseError("ATTEMPT_BUDGET_EXHAUSTED");
+  }
+
+  response = await generateWithTransientRetry(
+    `${SYSTEM_INSTRUCTIONS}\n${COMPACT_RETRY_INSTRUCTIONS}`,
+  );
+  return response;
+}
 
 const typedManifest = manifestSources
   .map(normalizeManifestSource)
@@ -116,6 +199,7 @@ export type RetrievalContext = {
   userQuestion: string;
   expandedQuery: string;
   expectedSources: ManifestSource[];
+  metadataFilter?: string;
 };
 
 function isIncomingMessage(value: unknown): value is IncomingMessage {
@@ -167,7 +251,9 @@ function stringValue(value: unknown) {
     : undefined;
 }
 
-function normalizeManifestSource(source: RawManifestSource): ManifestSource | null {
+export function normalizeManifestSource(
+  source: RawManifestSource,
+): ManifestSource | null {
   const id = stringValue(source.id);
   const title = stringValue(source.title);
   const type = stringValue(source.type);
@@ -177,13 +263,19 @@ function normalizeManifestSource(source: RawManifestSource): ManifestSource | nu
     return null;
   }
 
+  const candidateUrl = stringValue(source.url);
+  const url =
+    candidateUrl && isAllowedAuburnSourceUrl(candidateUrl)
+      ? candidateUrl
+      : undefined;
+
   return {
     id,
     title,
     type,
     catalogYear: stringValue(source.catalogYear),
     program: stringValue(source.program),
-    url: stringValue(source.url),
+    url,
     lastChecked:
       stringValue(source.lastChecked) ??
       stringValue(source.seedLastChecked) ??
@@ -212,6 +304,78 @@ function latestUserQuestion(messages: IncomingMessage[]) {
     ?.content.trim();
 }
 
+function normalizedSourceMatchText(value: string) {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const CROSS_SOURCE_MAJOR_INTENT =
+  /\b(?:compare|comparison|versus|vs\.?|difference|transfer|degree\s*works|core\s+curriculum|general\s+education)\b/i;
+const MAJOR_CURRICULUM_INTENT =
+  /\b(?:major|curriculum|program\s+requirements?|required\s+courses?|total\s+(?:hours|credits))\b/i;
+
+export function findExactlyNamedMajorSource(
+  question: string,
+  sources: ManifestSource[] = typedManifest,
+) {
+  const normalizedQuestion = ` ${normalizedSourceMatchText(question)} `;
+  const matchingSources = sources
+    .filter((source) => source.type === "bulletin_major")
+    .map((source) => ({
+      source,
+      normalizedTitle: normalizedSourceMatchText(source.title),
+    }))
+    .filter(
+      ({ normalizedTitle }) =>
+        normalizedTitle.length > 0 &&
+        normalizedQuestion.includes(` ${normalizedTitle} `),
+    );
+
+  const mostSpecificMatches = matchingSources.filter(
+    ({ source, normalizedTitle }) =>
+      !matchingSources.some(
+        (other) =>
+          other.source.id !== source.id &&
+          ` ${other.normalizedTitle} `.includes(` ${normalizedTitle} `),
+      ),
+  );
+
+  return mostSpecificMatches.length === 1
+    ? mostSpecificMatches[0].source
+    : undefined;
+}
+
+export function buildExactMajorMetadataFilter(
+  question: string,
+  sources: ManifestSource[] = typedManifest,
+) {
+  if (
+    CROSS_SOURCE_MAJOR_INTENT.test(question) ||
+    !MAJOR_CURRICULUM_INTENT.test(question)
+  ) {
+    return undefined;
+  }
+
+  const source = findExactlyNamedMajorSource(question, sources);
+  return source ? buildSourceMetadataFilter([source]) : undefined;
+}
+
+export function buildSourceMetadataFilter(sources: ManifestSource[]) {
+  const clauses = uniqueStrings(sources.map((source) => source.id)).map(
+    (id) => `id="${id.replace(/([\\"])/g, "\\$1")}"`,
+  );
+
+  if (clauses.length === 0) {
+    return undefined;
+  }
+
+  return clauses.length === 1 ? clauses[0] : `(${clauses.join(" OR ")})`;
+}
+
 function buildRetrievalContext(messages: IncomingMessage[]): RetrievalContext {
   const userQuestion = latestUserQuestion(messages) ?? messages.at(-1)?.content.trim() ?? "";
   const lowerQuestion = userQuestion.toLowerCase();
@@ -224,6 +388,19 @@ function buildRetrievalContext(messages: IncomingMessage[]): RetrievalContext {
       expectedSources.push(source);
     }
   };
+
+  const exactMajorSource = findExactlyNamedMajorSource(
+    userQuestion,
+    typedManifest,
+  );
+  if (exactMajorSource) {
+    addSource(exactMajorSource.id);
+    expansions.push(
+      exactMajorSource.title,
+      exactMajorSource.fileName,
+      "exact named Auburn bulletin major curriculum",
+    );
+  }
 
   if (
     includesPattern(
@@ -261,11 +438,25 @@ function buildRetrievalContext(messages: IncomingMessage[]): RetrievalContext {
     );
   }
 
+  if (
+    includesPattern(
+      lowerQuestion,
+      /\bcore\s+curriculum\b|\bgeneral\s+education\b|\b(?:history|literature)\b.*\bsemester\s+credit\s+hours?\b/,
+    )
+  ) {
+    addSource("auburn-core-curriculum");
+    expansions.push(
+      "Core Curriculum and General Education Outcomes",
+      "auburn/curated/auburn-core-curriculum.html",
+    );
+  }
+
   const expandedQuery = uniqueStrings(expansions).join("; ");
   return {
     userQuestion,
     expandedQuery,
     expectedSources,
+    metadataFilter: buildSourceMetadataFilter(expectedSources),
   };
 }
 
@@ -333,20 +524,34 @@ function metadataValue(
   return entry?.stringValue ?? entry?.stringListValue?.values?.[0];
 }
 
-function findManifestSourceFromChunk(chunk: GroundingChunk) {
+function findManifestSourceFromChunk(
+  chunk: GroundingChunk,
+  sources: ManifestSource[],
+) {
   const context = chunk.retrievedContext;
   const metadata = context?.customMetadata ?? [];
-  const sourceId = metadataValue(metadata, "id");
-  const fileName = metadataValue(metadata, "fileName");
-  const title = context?.title;
+  const sourceId = stringValue(metadataValue(metadata, "id"));
+  const fileName = stringValue(metadataValue(metadata, "fileName"));
+  const sourceById = sourceId
+    ? sources.find((source) => source.id === sourceId)
+    : undefined;
+  const sourceByFileName = fileName
+    ? sources.find((source) => source.fileName === fileName)
+    : undefined;
 
-  return typedManifest.find((source) => {
-    return (
-      source.id === sourceId ||
-      source.fileName === fileName ||
-      source.title === title
-    );
-  });
+  if ((sourceId && !sourceById) || (fileName && !sourceByFileName)) {
+    return undefined;
+  }
+
+  if (
+    sourceById &&
+    sourceByFileName &&
+    sourceById.id !== sourceByFileName.id
+  ) {
+    return undefined;
+  }
+
+  return sourceById ?? sourceByFileName;
 }
 
 function sourceFromManifest(
@@ -359,33 +564,31 @@ function sourceFromManifest(
     sourceType: source.type,
     catalogYear: source.catalogYear,
     program: source.program,
-    url: source.url || context?.uri,
+    url:
+      source.url && isAllowedAuburnSourceUrl(source.url)
+        ? source.url
+        : undefined,
     lastCheckedDate: source.lastChecked,
     fileName: source.fileName,
     snippet: context?.text ? context.text.slice(0, 420) : undefined,
   };
 }
 
-function sourceFromChunk(chunk: GroundingChunk): AuburnSource | null {
+export function resolveGroundingChunkSource(
+  chunk: GroundingChunk,
+  sources: ManifestSource[] = typedManifest,
+): AuburnSource | null {
   const context = chunk.retrievedContext;
   if (!context) {
     return null;
   }
 
-  const manifestSource = findManifestSourceFromChunk(chunk);
+  const manifestSource = findManifestSourceFromChunk(chunk, sources);
   if (manifestSource) {
     return sourceFromManifest(manifestSource, chunk);
   }
 
-  if (!context.title && !context.text) {
-    return null;
-  }
-
-  return {
-    title: context.title ?? "Retrieved Auburn source",
-    url: context.uri,
-    snippet: context.text ? context.text.slice(0, 420) : undefined,
-  };
+  return null;
 }
 
 function extractGroundedSources(response: Awaited<ReturnType<GoogleGenAI["models"]["generateContent"]>>) {
@@ -395,7 +598,7 @@ function extractGroundedSources(response: Awaited<ReturnType<GoogleGenAI["models
   const sources: AuburnSource[] = [];
 
   for (const chunk of chunks) {
-    const source = sourceFromChunk(chunk);
+    const source = resolveGroundingChunkSource(chunk);
     if (!source) {
       continue;
     }
@@ -419,15 +622,9 @@ function extractGroundingSourceTitles(
     response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
 
   return uniqueStrings(
-    chunks.map((chunk) => {
-      const metadata = chunk.retrievedContext?.customMetadata ?? [];
-      return (
-        metadataValue(metadata, "title") ??
-        chunk.retrievedContext?.title ??
-        metadataValue(metadata, "fileName") ??
-        "Untitled retrieved source"
-      );
-    }),
+    chunks
+      .map((chunk) => resolveGroundingChunkSource(chunk)?.title)
+      .filter((title): title is string => Boolean(title)),
   );
 }
 
@@ -443,12 +640,80 @@ function noRetrievalAnswer(retrievalContext: RetrievalContext) {
   return `Gemini File Search did not return grounding metadata for ${expectedTitles}, so I cannot answer this document-specific question confidently. The matching file was not retrieved from the uploaded Auburn sources.`;
 }
 
+function normalizedMarkdownBlock(value: string) {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[`*_>#~\[\](){}|\\/.,:;!?"'\-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function dedupeRepeatedMarkdownBlocks(value: string) {
+  const seen = new Set<string>();
+  const uniqueBlocks: string[] = [];
+
+  for (const rawBlock of value.replace(/\r\n?/g, "\n").split(/\n{2,}/)) {
+    const block = rawBlock.trim();
+    if (!block) {
+      continue;
+    }
+
+    const normalized = normalizedMarkdownBlock(block);
+    if (normalized && seen.has(normalized)) {
+      continue;
+    }
+
+    if (normalized) {
+      seen.add(normalized);
+    }
+    uniqueBlocks.push(block);
+  }
+
+  return uniqueBlocks.join("\n\n");
+}
+
+export function requireStoppedGeminiResponse(
+  finishReason: FinishReason | undefined,
+): asserts finishReason is FinishReason.STOP {
+  if (finishReason !== FinishReason.STOP) {
+    throw new IncompleteGeminiResponseError(
+      finishReason ?? FinishReason.FINISH_REASON_UNSPECIFIED,
+    );
+  }
+}
+
+export function geminiAnswerWordCount(value: string) {
+  return value.trim() ? value.trim().split(/\s+/).length : 0;
+}
+
+export function isRetryableGeminiRequestError(error: unknown) {
+  const status =
+    error &&
+    typeof error === "object" &&
+    "status" in error &&
+    typeof error.status === "number"
+      ? error.status
+      : error instanceof Error
+        ? Number(error.message.match(/"code"\s*:\s*(\d{3})/)?.[1])
+        : Number.NaN;
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    [500, 502, 503, 504].includes(status) ||
+    (error instanceof Error && error.name === "TimeoutError") ||
+    /DEADLINE_EXCEEDED|\bUNAVAILABLE\b|ECONNRESET|ETIMEDOUT|fetch failed/i.test(
+      message,
+    )
+  );
+}
+
 function buildModelAnswer(
   outputText: string,
   retrievedSources: AuburnSource[],
   retrievalContext: RetrievalContext,
 ): ModelAnswer {
-  const answer = outputText.trim();
+  const answer = dedupeRepeatedMarkdownBlocks(outputText);
 
   if (retrievedSources.length === 0) {
     return {
@@ -477,17 +742,19 @@ function buildModelAnswer(
 export function logRetrievalDebug(
   retrievalContext: RetrievalContext,
   sourceTitles: string[],
+  finishReason?: FinishReason,
 ) {
   if (process.env.NODE_ENV !== "development") {
     return;
   }
 
-  console.info("[chat] user question:", retrievalContext.userQuestion);
-  console.info("[chat] expanded retrieval query:", retrievalContext.expandedQuery);
-  console.info(
-    "[chat] grounding source titles:",
-    sourceTitles.length > 0 ? sourceTitles : [],
-  );
+  console.info("[chat] retrieval diagnostics", {
+    expectedSourceCount: retrievalContext.expectedSources.length,
+    expandedQueryCharacters: retrievalContext.expandedQuery.length,
+    finishReason: finishReason ?? FinishReason.FINISH_REASON_UNSPECIFIED,
+    groundedSourceCount: sourceTitles.length,
+    questionCharacters: retrievalContext.userQuestion.length,
+  });
 }
 
 export async function answerAuburnRagQuestion(
@@ -495,36 +762,77 @@ export async function answerAuburnRagQuestion(
   config: GeminiRagConfig,
 ): Promise<AuburnRagResult> {
   const ai = new GoogleGenAI({ apiKey: config.apiKey });
+  const model = getGeminiModel();
   const retrievalContext = buildRetrievalContext(messages);
-  const fileSearch = {
+  const fileSearch: FileSearch = {
     fileSearchStoreNames: [config.fileSearchStoreName],
     topK: 12,
+    ...(retrievalContext.metadataFilter
+      ? { metadataFilter: retrievalContext.metadataFilter }
+      : {}),
   };
 
-  const response = await ai.models.generateContent({
-    model: getGeminiModel(),
-    contents: toGeminiContents(messages, retrievalContext),
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTIONS,
-      temperature: 0.2,
-      tools: [
-        {
-          fileSearch,
-        },
-      ],
+  const generateAnswer = (systemInstruction: string) =>
+    ai.models.generateContent({
+      model,
+      contents: toGeminiContents(messages, retrievalContext),
+      config: {
+        abortSignal: AbortSignal.timeout(GEMINI_REQUEST_ABORT_MS),
+        httpOptions: { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+        maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
+        systemInstruction,
+        ...(model.startsWith("gemini-3")
+          ? {
+              thinkingConfig: {
+                thinkingLevel: ThinkingLevel.LOW,
+              },
+            }
+          : { temperature: 0.2 }),
+        tools: [
+          {
+            fileSearch,
+          },
+        ],
+      },
+    });
+
+  const response = await runBoundedGeminiGeneration({
+    generate: generateAnswer,
+    shouldRetryCompactly: (candidateResponse) => {
+      const candidateFinishReason =
+        candidateResponse.candidates?.[0]?.finishReason;
+      const candidateSources = extractGroundedSources(candidateResponse);
+      const candidateAnswer =
+        candidateFinishReason === FinishReason.STOP
+          ? dedupeRepeatedMarkdownBlocks(candidateResponse.text ?? "")
+          : "";
+
+      return (
+        candidateFinishReason === FinishReason.MAX_TOKENS ||
+        (candidateFinishReason === FinishReason.STOP &&
+          candidateSources.length > 0 &&
+          geminiAnswerWordCount(candidateAnswer) > MAX_GEMINI_ANSWER_WORDS)
+      );
     },
   });
-
+  const finishReason = response.candidates?.[0]?.finishReason;
   const retrievedSources = extractGroundedSources(response);
+
+  requireStoppedGeminiResponse(finishReason);
+
   const sourceTitles = extractGroundingSourceTitles(response);
   const normalized = buildModelAnswer(
     response.text ?? "",
     retrievedSources,
     retrievalContext,
   );
+  if (geminiAnswerWordCount(normalized.answer) > MAX_GEMINI_ANSWER_WORDS) {
+    throw new IncompleteGeminiResponseError("WORD_LIMIT");
+  }
 
   return {
     ...normalized,
+    finishReason,
     sourceTitles,
     retrievalContext,
   };

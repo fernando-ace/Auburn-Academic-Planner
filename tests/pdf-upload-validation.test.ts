@@ -3,9 +3,21 @@ import test from "node:test";
 
 import {
   MAX_EXTRACTED_PDF_TEXT_LENGTH,
+  MAX_PDF_MULTIPART_REQUEST_BYTES,
   MAX_PDF_UPLOAD_BYTES,
+  VERCEL_FUNCTION_REQUEST_BODY_LIMIT_BYTES,
   validatePdfUpload,
 } from "../src/lib/api/pdf-upload-validation.ts";
+
+test("keeps the multipart cap below Vercel with room for comparison context", () => {
+  assert.ok(
+    MAX_PDF_MULTIPART_REQUEST_BYTES <
+      VERCEL_FUNCTION_REQUEST_BODY_LIMIT_BYTES,
+  );
+  assert.ok(
+    MAX_PDF_MULTIPART_REQUEST_BYTES - MAX_PDF_UPLOAD_BYTES >= 800_000,
+  );
+});
 
 test("rejects a missing PDF file", async () => {
   const result = await validatePdfUpload(null);
@@ -35,7 +47,7 @@ test("rejects a PDF larger than the deployment-safe upload limit", async () => {
   assert.equal(result.ok, false);
   if (!result.ok) {
     assert.equal(result.status, 413);
-    assert.match(result.error, /4 MiB or smaller/);
+    assert.match(result.error, /3 MiB or smaller/);
   }
 });
 
