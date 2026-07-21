@@ -3,17 +3,24 @@ import test, { afterEach } from "node:test";
 
 import { GET } from "../src/app/api/health/route.ts";
 import { UPSTASH_HEALTH_CHECK_TIMEOUT_MS } from "../src/lib/api/rate-limit.ts";
+import { RELEASE_HEALTH_TOKEN_MIN_LENGTH } from "../src/lib/api/release-health-auth.ts";
+import { SUPPORTED_NODE_MAJOR } from "../src/lib/runtime-support.ts";
 
 const originalFetch = globalThis.fetch;
+const originalNodeVersion = process.versions.node;
 const originalEnv = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   GEMINI_FILE_SEARCH_STORE_NAME: process.env.GEMINI_FILE_SEARCH_STORE_NAME,
+  RELEASE_HEALTH_TOKEN: process.env.RELEASE_HEALTH_TOKEN,
   UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+  VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
 };
+const releaseHealthToken = "release-health-token-for-test-only";
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  setNodeVersion(originalNodeVersion);
   for (const [name, value] of Object.entries(originalEnv)) {
     restoreEnv(name, value);
   }
@@ -22,6 +29,7 @@ afterEach(() => {
 test("shallow health clearly reports missing configuration without a live check", async () => {
   delete process.env.GEMINI_API_KEY;
   delete process.env.GEMINI_FILE_SEARCH_STORE_NAME;
+  delete process.env.RELEASE_HEALTH_TOKEN;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
   delete process.env.UPSTASH_REDIS_REST_URL;
 
@@ -32,14 +40,8 @@ test("shallow health clearly reports missing configuration without a live check"
   assert.equal(response.headers.get("cache-control"), "no-store, max-age=0");
   assert.equal(result.check, "shallow_configuration");
   assert.equal(result.status, "degraded");
-  assert.deepEqual(result.services, {
-    planning: "ready",
-    chatConfiguration: "missing",
-    requestProtection: {
-      configuration: "missing",
-      connectivity: "not_checked",
-    },
-  });
+  assert.equal(result.services, undefined);
+  assert.equal(result.commit, undefined);
 });
 
 test("shallow health labels configured services without claiming live readiness", async () => {
@@ -54,29 +56,40 @@ test("shallow health labels configured services without claiming live readiness"
   assert.equal(response.status, 200);
   assert.equal(result.check, "shallow_configuration");
   assert.equal(result.status, "configured");
-  assert.deepEqual(result.services.requestProtection, {
-    configuration: "configured",
-    connectivity: "not_checked",
-  });
+  assert.equal(result.services, undefined);
+  assert.equal(result.commit, undefined);
 });
 
 test("deep health reports ready only after a live Upstash ping", async () => {
   configureRequiredServices();
+  process.env.VERCEL_GIT_COMMIT_SHA =
+    "0123456789abcdef0123456789abcdef01234567";
   globalThis.fetch = (async () =>
     new Response(JSON.stringify([{ result: "UE9ORw==" }]), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     })) as typeof fetch;
 
-  const response = await GET(healthRequest("?check=deep"));
+  const response = await GET(
+    healthRequest("?check=deep", releaseHealthToken),
+  );
   const result = await response.json();
 
   assert.equal(response.status, 200);
   assert.equal(result.check, "deep_readiness");
   assert.equal(result.status, "ready");
+  assert.equal(
+    result.commit,
+    "0123456789abcdef0123456789abcdef01234567",
+  );
   assert.deepEqual(result.services, {
     planning: "ready",
     chatConfiguration: "configured",
+    runtime: {
+      nodeMajor: SUPPORTED_NODE_MAJOR,
+      support: "supported",
+    },
+    releaseProbe: "configured",
     requestProtection: {
       configuration: "configured",
       connectivity: "ready",
@@ -108,7 +121,9 @@ test("deep health fails closed within its bounded Upstash timeout", async () => 
     })) as typeof fetch;
 
   const startedAt = Date.now();
-  const response = await GET(healthRequest("?check=deep"));
+  const response = await GET(
+    healthRequest("?check=deep", releaseHealthToken),
+  );
   const elapsedMs = Date.now() - startedAt;
   const result = await response.json();
 
@@ -122,15 +137,59 @@ test("deep health fails closed within its bounded Upstash timeout", async () => 
   });
 });
 
-function healthRequest(search = "") {
-  return new Request(`https://planner.example/api/health${search}`);
+test("deep health rejects unauthorized probes without contacting Upstash", async () => {
+  configureRequiredServices();
+  let fetchCalled = false;
+  globalThis.fetch = (async () => {
+    fetchCalled = true;
+    throw new Error("unauthorized deep health must not contact Upstash");
+  }) as typeof fetch;
+
+  for (const token of [undefined, "wrong-release-health-token-value-000"] as const) {
+    const response = await GET(healthRequest("?check=deep", token));
+    const result = await response.json();
+
+    assert.equal(response.status, 401);
+    assert.equal(response.headers.get("cache-control"), "no-store, max-age=0");
+    assert.equal(response.headers.get("www-authenticate"), "Bearer");
+    assert.equal(result.status, "unauthorized");
+  }
+  assert.equal(fetchCalled, false);
+});
+
+test("shallow health degrades coherently on an unsupported runtime", async () => {
+  configureRequiredServices();
+  setNodeVersion("24.0.0");
+
+  const response = await GET(healthRequest());
+  const result = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(result.status, "degraded");
+  assert.equal(result.services, undefined);
+});
+
+function healthRequest(search = "", token?: string) {
+  return new Request(`https://planner.example/api/health${search}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
 }
 
 function configureRequiredServices() {
+  assert.ok(releaseHealthToken.length >= RELEASE_HEALTH_TOKEN_MIN_LENGTH);
   process.env.GEMINI_API_KEY = "test-key";
   process.env.GEMINI_FILE_SEARCH_STORE_NAME = "test-store";
+  process.env.RELEASE_HEALTH_TOKEN = releaseHealthToken;
   process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
   process.env.UPSTASH_REDIS_REST_URL = "https://redis.example";
+}
+
+function setNodeVersion(version: string) {
+  Object.defineProperty(process.versions, "node", {
+    configurable: true,
+    enumerable: true,
+    value: version,
+  });
 }
 
 function restoreEnv(name: string, value: string | undefined) {

@@ -76,15 +76,32 @@ Production request protection for `/chat` and Planning Hub API routes uses Upsta
 ```env
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
+RELEASE_HEALTH_TOKEN=...
 ```
 
-If Upstash is not configured, unavailable, or slower than the bounded request-protection timeout, the app falls back to a bounded in-memory per-runtime rate limiter so local demos keep working. `/api/health` is a clearly labeled shallow configuration check; `/api/health?check=deep` also verifies live Upstash connectivity with a bounded timeout. Configure Upstash and require a successful deep check before production rollout so limits hold across server instances and restarts.
+If Upstash is not configured, unavailable, or slower than the bounded request-protection timeout, the app falls back to a bounded in-memory per-runtime rate limiter so local demos keep working. `/api/health` exposes only a cheap aggregate public status. `/api/health?check=deep` returns release identity and service details, and verifies live Upstash connectivity with a bounded timeout, only when it receives the 32-or-more-character `RELEASE_HEALTH_TOKEN` as a bearer token. Generate a dedicated secret with the PowerShell command below or `openssl rand -hex 32`, store it in a password manager, and configure it as a sensitive Vercel **Production-only** variable. Do not reuse it for Preview or Development and never expose it through a `NEXT_PUBLIC_` variable.
+
+```powershell
+$tokenBytes = New-Object byte[] 32
+$tokenGenerator = [Security.Cryptography.RandomNumberGenerator]::Create()
+try {
+  $tokenGenerator.GetBytes($tokenBytes)
+  -join ($tokenBytes | ForEach-Object { $_.ToString("x2") })
+} finally {
+  $tokenGenerator.Dispose()
+  [Array]::Clear($tokenBytes, 0, $tokenBytes.Length)
+}
+```
+
+Configure Upstash and require the authenticated deep check to pass before production rollout so limits hold across server instances and restarts.
 
 ```env
 SITE_URL=https://your-production-origin.example
 ```
 
 `SITE_URL` sets canonical, sitemap, robots, and social-sharing URLs. It must be the final HTTPS production origin. The current public Vercel origin is used as a safe fallback until a custom Auburn-reviewed domain exists.
+
+Before deploying on Vercel, select Node.js `22.x` and enable [Automatically expose System Environment Variables](https://vercel.com/docs/environment-variables/system-environment-variables) so the runtime receives `VERCEL_GIT_COMMIT_SHA`. The strict smoke gate fails closed when either setting is wrong or missing. The package engine also pins Node `22.x`, matching [Vercel's supported runtime selector](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions).
 
 ## Trust And Safety
 
@@ -123,10 +140,45 @@ Confirm no console errors, no horizontal overflow, source-grounded chat still wo
 
 After deployment, run the strict remote smoke gate against the exact production origin:
 
-```bash
-DEPLOYED_APP_URL=https://your-production-origin.example npm run smoke:production
+PowerShell:
+
+```powershell
+$env:DEPLOYED_APP_URL = "https://your-production-origin.example"
+$env:EXPECTED_COMMIT_SHA = git rev-parse HEAD
+$secureReleaseHealthToken = Read-Host "Production release-probe token" -AsSecureString
+$env:RELEASE_HEALTH_TOKEN = [System.Net.NetworkCredential]::new("", $secureReleaseHealthToken).Password
+$smokeExitCode = 1
+try {
+  npm.cmd run smoke:production
+  $smokeExitCode = $LASTEXITCODE
+} finally {
+  Remove-Item Env:DEPLOYED_APP_URL,Env:EXPECTED_COMMIT_SHA,Env:RELEASE_HEALTH_TOKEN -ErrorAction SilentlyContinue
+  $secureReleaseHealthToken = $null
+}
+if ($smokeExitCode -ne 0) {
+  throw "Production smoke failed with exit code $smokeExitCode."
+}
 ```
 
-The smoke gate requires route-specific page titles, production security headers, a `ready` deep health response with live Upstash connectivity, a working deterministic planning request, Chat validation, a benign source-grounded DegreeWorks answer with its Auburn source and advisor boundary, and non-cacheable student API responses. It intentionally fails when Chat, grounding, or distributed request protection is missing or unreachable.
+Bash:
+
+```bash
+(
+  export DEPLOYED_APP_URL=https://your-production-origin.example
+  export EXPECTED_COMMIT_SHA="$(git rev-parse HEAD)"
+  cleanup_release_smoke() {
+    unset DEPLOYED_APP_URL EXPECTED_COMMIT_SHA RELEASE_HEALTH_TOKEN
+  }
+  trap cleanup_release_smoke EXIT INT TERM
+  read -rsp "Production release-probe token: " RELEASE_HEALTH_TOKEN
+  printf '\n'
+  export RELEASE_HEALTH_TOKEN
+  npm run smoke:production
+)
+```
+
+The smoke gate requires the permanent Planning Hub redirect; route-specific titles; exact canonical, sitemap, robots, and social origins; install assets; production security headers; the expected Git commit; the supported Node 22 runtime; a `ready` deep health response with live Upstash connectivity; a synthetic Current Progress PDF upload and generated-path regeneration; manual planning; Chat validation; a benign source-grounded DegreeWorks answer with its Auburn source and advisor boundary; and non-cacheable student API responses. It intentionally fails on a stale commit, misconfigured canonical origin, unsupported runtime, missing flagship planning flow, missing Chat grounding, or unavailable distributed request protection.
+
+Each successful smoke run uploads one generated synthetic PDF, consumes request-protection counters, and makes one live Gemini request. It never sends a real student record. Avoid rapid retries; if a release runner reaches the ten-minute planning or Chat limit, wait for that window to reset before treating the rate-limit response as a deployment failure.
 
 Before sponsored campus use, enable GitHub private vulnerability reporting, verify security-alert notifications, publish a private incident contact, and complete Auburn FERPA/vendor review. Public GitHub issues are restricted to non-sensitive product feedback; see [SECURITY.md](SECURITY.md).
