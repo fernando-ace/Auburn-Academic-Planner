@@ -74,6 +74,6 @@ test("does not apply a Bulletin ordering hint from a different catalog year", as
 
   assert.equal(resolution.ordering, null);
   assert.match(resolution.warning ?? "", /2022-2023/);
-  assert.match(resolution.warning ?? "", /2025-2026/);
+  assert.match(resolution.warning ?? "", /2026-2027/);
   assert.match(resolution.warning ?? "", /was not applied/);
 });

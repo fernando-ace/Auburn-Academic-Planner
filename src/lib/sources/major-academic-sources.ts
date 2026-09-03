@@ -11,6 +11,10 @@ export const MAJOR_ACADEMIC_SOURCE_MANIFEST_PATH =
   "sources/auburn/majors/manifest.json";
 
 const bulletinMajorBaseUrl = "https://bulletin.auburn.edu/undergraduate/majors/";
+const unavailableMajorUrls = new Set([
+  // The 2026-2027 majors index still advertises this removed program page.
+  "https://bulletin.auburn.edu/undergraduate/collegeofeducation/curriculumandteaching/agriscienceeducation_major/",
+]);
 const ragOnlyNotes =
   "Generated from the official Auburn Bulletin Undergraduate Majors index for RAG-only chat grounding. This source must not be used as a deterministic degree-audit rule source.";
 
@@ -86,6 +90,12 @@ export function discoverAuburnMajorSourcesFromIndex({
     const normalizedUrl = normalizeMajorUrl(candidate.href);
     if (!normalizedUrl) {
       skippedCount += 1;
+      continue;
+    }
+
+    if (unavailableMajorUrls.has(normalizedUrl)) {
+      skippedCount += 1;
+      warnings.push(`Skipped unavailable major page ${normalizedUrl}.`);
       continue;
     }
 

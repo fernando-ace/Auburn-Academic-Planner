@@ -87,6 +87,25 @@ test("major URL normalization rejects non-major and non-Bulletin URLs", () => {
   );
 });
 
+test("major discovery skips Bulletin index links to known unavailable pages", () => {
+  const report = discoverAuburnMajorSourcesFromIndex({
+    generatedAt: "2026-09-03T12:00:00.000Z",
+    html: `
+      <html><body><div id="textcontainer">
+        <a href="/undergraduate/collegeofeducation/curriculumandteaching/agriscienceeducation_major/">
+          Agriscience Education
+        </a>
+      </div>Auburn Bulletin 2026-2027</body></html>
+    `,
+  });
+
+  assert.equal(report.discoveredCount, 0);
+  assert.equal(report.skippedCount, 1);
+  assert.deepEqual(report.warnings, [
+    "Skipped unavailable major page https://bulletin.auburn.edu/undergraduate/collegeofeducation/curriculumandteaching/agriscienceeducation_major/.",
+  ]);
+});
+
 test("major fetch planning and manifest preserve RAG-only metadata", () => {
   const seeds = discoverAuburnMajorSourcesFromIndex({
     generatedAt: "2026-06-22T12:00:00.000Z",

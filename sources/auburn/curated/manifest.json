@@ -9,7 +9,7 @@
     "department": null,
     "catalogYear": "2025-2026",
     "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
+    "fetchedAt": "2026-09-03",
     "fileName": "auburn/curated/auburn-undergraduate-majors-index.html",
     "contentType": "text/html"
   },
@@ -23,7 +23,7 @@
     "department": null,
     "catalogYear": "2025-2026",
     "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
+    "fetchedAt": "2026-09-03",
     "fileName": "auburn/curated/auburn-courses-of-instruction-index.html",
     "contentType": "text/html"
   },
@@ -37,7 +37,7 @@
     "department": null,
     "catalogYear": "2025-2026",
     "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
+    "fetchedAt": "2026-09-03",
     "fileName": "auburn/curated/auburn-core-curriculum.html",
     "contentType": "text/html"
   },
@@ -51,7 +51,7 @@
     "department": "Office of the Registrar",
     "catalogYear": null,
     "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
+    "fetchedAt": "2026-09-03",
     "fileName": "auburn/curated/auburn-registrar-degreeworks.html",
     "contentType": "text/html"
   },
@@ -65,7 +65,7 @@
     "department": "Office of the Registrar",
     "catalogYear": null,
     "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
+    "fetchedAt": "2026-09-03",
     "fileName": "auburn/curated/auburn-registrar-credit-tables.html",
     "contentType": "text/html"
   },
@@ -79,7 +79,7 @@
     "department": null,
     "catalogYear": "2025-2026",
     "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
+    "fetchedAt": "2026-09-03",
     "fileName": "auburn/curated/auburn-transfer-credit-policy.html",
     "contentType": "text/html"
   },
@@ -93,7 +93,7 @@
     "department": "Provost Pathways",
     "catalogYear": null,
     "seedLastChecked": "2026-06-21",
-    "fetchedAt": "2026-06-21",
+    "fetchedAt": "2026-09-03",
     "fileName": "auburn/curated/auburn-pathways-transfer-credit.html",
     "contentType": "text/html"
   }

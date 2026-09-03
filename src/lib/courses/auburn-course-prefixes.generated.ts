@@ -27,6 +27,7 @@ export const AUBURN_COURSE_PREFIXES = [
   "CHEM",
   "CHEN",
   "CIVL",
+  "CLPG",
   "CMJN",
   "COMM",
   "COMP",
