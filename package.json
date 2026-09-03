@@ -42,25 +42,25 @@
     "@upstash/redis": "^1.38.0",
     "cheerio": "^1.2.0",
     "lucide-react": "^1.18.0",
-    "next": "16.2.10",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-markdown": "^10.1.0",
     "unpdf": "^1.6.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.61.1",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
-    "tailwindcss": "^4",
+    "eslint-config-next": "16.3.4",
+    "tailwindcss": "4.3.3",
     "typescript": "^5"
   },
   "overrides": {
-    "postcss": "8.5.20"
+    "postcss": "8.5.26"
   }
 }
