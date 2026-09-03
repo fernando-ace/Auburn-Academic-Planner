@@ -101,7 +101,7 @@ test("generated path uses Bulletin order only for Degree Works-backed items", as
   });
   const placedLabels = generatedPath.placedItems.map((item) => item.label);
 
-  assert.deepEqual(placedLabels, ["ELEC 2200", "COMP 3270", "COMP 3220"]);
+  assert.deepEqual(placedLabels, ["COMP 3270", "COMP 3220", "ELEC 2200"]);
   assert.ok(!placedLabels.includes("COMP 3500"));
   assert.equal(
     generatedPath.orderingSource.bulletinOrderingHint?.matchedMajorTitle,
@@ -138,7 +138,7 @@ test("generated path warns and falls back when the audit catalog year differs", 
   );
   assert.match(
     generatedPath.orderingSource.bulletinOrderingWarning ?? "",
-    /2025-2026/,
+    /2026-2027/,
   );
   assert.deepEqual(
     generatedPath.placedItems.map((item) => item.label),

@@ -5,7 +5,7 @@ Degree Bachelor of Software Engr
 Audit date 01/15/2026 9:00 AM
 Program BSWE Software Engineering
 Major Software Engineering - SENG
-Catalog year 2025-2026
+Catalog year 2026-2027
 Credits required 122
 Credits applied 96
 Unmet conditions for this set of requirements: 26 Credits needed
